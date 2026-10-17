@@ -44,6 +44,7 @@ class MainWindow(QMainWindow):
         self.encoder_report: EncoderReport | None = None
 
         self.player = PlayerWidget(self)
+        self.player.double_clicked.connect(self.toggle_fullscreen)
         self.setCentralWidget(self.player)
 
         self._ffmpeg_status = QLabel("ffmpeg: wird geprüft …")
@@ -67,6 +68,10 @@ class MainWindow(QMainWindow):
         self._add_action(play_menu, "5 s vor", "L", lambda: self.player.seek_relative(5))
         self._add_action(play_menu, "5 s zurück", "J", lambda: self.player.seek_relative(-5))
 
+        play_menu.addSeparator()
+        self._add_action(play_menu, "Vollbild", "F11", self.toggle_fullscreen)
+        self._add_action(play_menu, "Vollbild beenden", "Esc", self.exit_fullscreen)
+
         help_menu = self.menuBar().addMenu("&Hilfe")
         self._add_action(help_menu, "&Systemcheck …", None, self.show_system_check)
 
@@ -76,6 +81,8 @@ class MainWindow(QMainWindow):
             action.setShortcut(QKeySequence(shortcut))
         action.triggered.connect(slot)
         menu.addAction(action)
+        # Auch am Fenster registrieren, sonst greifen die Kürzel bei ausgeblendetem Menü nicht.
+        self.addAction(action)
         return action
 
     def open_video_dialog(self) -> None:
@@ -86,6 +93,25 @@ class MainWindow(QMainWindow):
     def open_video(self, path: Path) -> None:
         self.player.open(path)
         self.statusBar().showMessage(str(path))
+
+    def toggle_fullscreen(self) -> None:
+        if self.isFullScreen():
+            self.exit_fullscreen()
+            return
+        self._was_maximized = self.isMaximized()
+        self.menuBar().hide()
+        self.statusBar().hide()
+        self.showFullScreen()
+
+    def exit_fullscreen(self) -> None:
+        if not self.isFullScreen():
+            return
+        self.menuBar().show()
+        self.statusBar().show()
+        if getattr(self, "_was_maximized", False):
+            self.showMaximized()
+        else:
+            self.showNormal()
 
     # --- Systemcheck -----------------------------------------------------
 

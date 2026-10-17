@@ -51,6 +51,8 @@ class PlayerWidget(QWidget):
 
     position_changed = Signal(float)
     duration_changed = Signal(float)
+    double_clicked = Signal()
+    _mpv_click = Signal()
     _mpv_time = Signal(object)
     _mpv_duration = Signal(object)
     _mpv_pause = Signal(bool)
@@ -99,6 +101,7 @@ class PlayerWidget(QWidget):
         layout.addLayout(self._stack, 1)
         layout.addLayout(controls)
 
+        self._mpv_click.connect(self.toggle_pause)
         self._mpv_time.connect(self._on_time)
         self._mpv_duration.connect(self._on_duration)
         self._mpv_pause.connect(lambda paused: self._play_button.setText("▶" if paused else "⏸"))
@@ -137,6 +140,23 @@ class PlayerWidget(QWidget):
         self._player.observe_property("time-pos", lambda _n, v: self._mpv_time.emit(v))
         self._player.observe_property("duration", lambda _n, v: self._mpv_duration.emit(v))
         self._player.observe_property("pause", lambda _n, v: self._mpv_pause.emit(bool(v)))
+        # Mausklicks landen im nativen mpv-Fenster, nicht bei Qt; daher als mpv-Bindings.
+        self._player.register_key_binding("MBTN_LEFT", self._on_mpv_key(self._mpv_click))
+        self._player.register_key_binding("MBTN_LEFT_DBL", self._on_mpv_key(self.double_clicked))
+
+    @staticmethod
+    def _on_mpv_key(signal):
+        """Reagiert einmal pro Klick (aus dem mpv-Thread).
+
+        mpv meldet ``d`` (gedrückt), ``u`` (losgelassen) oder ``p`` (beides auf einmal,
+        z. B. beim Doppelklick).
+        """
+
+        def handler(state: str, *_args) -> None:
+            if state[:1] in ("d", "p"):
+                signal.emit()
+
+        return handler
 
     def _show_message(self, text: str) -> None:
         self._message.setText(text)

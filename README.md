@@ -10,7 +10,8 @@ Der Gesamtplan mit allen Meilensteinen liegt in [docs/plan.md](docs/plan.md).
 Meilenstein 1 (Grundgerüst):
 
 - Fenster mit eingebettetem mpv-Player: Video öffnen (Strg+O), Leertaste = Play/Pause,
-  ←/→ = ein Frame, Shift+←/→ = 1 s, J/L = 5 s, Zeitleiste zum Springen
+  ←/→ = ein Frame, Shift+←/→ = 1 s, J/L = 5 s, Zeitleiste zum Springen,
+  Klick aufs Video = Play/Pause, Doppelklick oder F11 = Vollbild (Esc beendet)
 - Systemcheck (Hilfe → Systemcheck, Status unten rechts): findet ffmpeg/ffprobe und prüft per
   Testencode, welche Encoder wirklich funktionieren (NVENC wird von ffmpeg auch ohne passende GPU
   gelistet, daher der Test)
