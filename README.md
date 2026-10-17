@@ -102,6 +102,11 @@ Meilenstein 6 (Rendern):
    uv run fpvcut                      # oder: uv run fpvcut E:\FPV_Videos\...\clip.mp4
    ```
 
+   uv nimmt dabei sein eigenes Python (`python-preference = "only-managed"` in `pyproject.toml`),
+   nicht das aus dem Microsoft Store. Mit dem Store-Python zeigt die Taskleiste das Python-Icon
+   statt des FPVCut-Icons. Wer die `.venv` noch mit dem Store-Python angelegt hat, löscht sie
+   einmal und ruft `uv sync` erneut auf.
+
 Der Ordner `vendor/` ist in `.gitignore`, die DLLs landen also nicht im Repository.
 
 ## Entwicklung

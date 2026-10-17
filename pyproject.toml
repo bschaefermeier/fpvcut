@@ -25,3 +25,8 @@ packages = ["src/fpvcut"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.uv]
+# Eigenes Python von uv statt Microsoft-Store-Python: Store-Apps zeigen in der Windows-
+# Taskleiste immer das Python-Icon, egal welches Icon die App setzt.
+python-preference = "only-managed"
