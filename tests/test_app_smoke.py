@@ -211,3 +211,18 @@ def test_app_icon_renders_all_sizes():
     assert image.pixelColor(0, 0).alpha() == 0  # runde Ecken transparent
     sizes = {s.width() for s in app_icon().availableSizes()}
     assert sizes == set(SIZES)
+
+
+def test_alt_f4_closes_window(monkeypatch, tmp_path):
+    from fpvcut.ui import player
+
+    monkeypatch.setattr(player, "load_mpv", lambda: (None, "test"))
+    from fpvcut.ui.main_window import MainWindow
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    window = MainWindow(db_path=tmp_path / "lib.sqlite")
+    window.show()
+    quit_action = next(a for a in window.actions() if "Alt+F4" in [k.toString() for k in a.shortcuts()])
+    quit_action.trigger()
+    app.processEvents()
+    assert not window.isVisible()

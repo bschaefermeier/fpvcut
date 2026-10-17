@@ -181,7 +181,9 @@ class MainWindow(QMainWindow):
         self._add_action(file_menu, "Bibliotheksordner &hinzufügen …", "Ctrl+Shift+O", self.add_root_dialog)
         self._add_action(file_menu, "Bibliothek neu &scannen", "F5", self.rescan_library)
         file_menu.addSeparator()
-        self._add_action(file_menu, "&Beenden", "Ctrl+Q", self.close)
+        quit_action = self._add_action(file_menu, "&Beenden", "Ctrl+Q", self.close)
+        # Alt+F4 erledigt sonst Windows, kommt aber nicht an, wenn der eingebettete Player den Fokus hat.
+        quit_action.setShortcuts([QKeySequence("Ctrl+Q"), QKeySequence("Alt+F4")])
 
         play_menu = self.menuBar().addMenu("&Wiedergabe")
         self._add_action(play_menu, "Abspielen/Pause", "Space", self.player.toggle_pause)
