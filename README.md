@@ -3,11 +3,30 @@
 Schlanke Desktop-Software zum Sichten, Markieren und Schneiden von FPV-Videos.
 Python + PySide6 als Oberfläche, libmpv als Player, ffmpeg (mit NVIDIA NVENC) zum Rendern.
 
-Der Gesamtplan mit allen Meilensteinen liegt in [docs/plan.md](docs/plan.md).
+![FPVCut mit Favoriten-Browser, Vorschau, Farbkorrektur und Timeline](docs/bilder/fpvcut.png)
 
-## Stand
+Aktuelle Version: siehe [Releases](https://github.com/bschaefermeier/fpvcut/releases) und
+[CHANGELOG.md](CHANGELOG.md). Der ursprüngliche Plan liegt in [docs/plan.md](docs/plan.md).
 
-Meilenstein 1 (Grundgerüst):
+## Installation (Windows)
+
+Unter [Releases](https://github.com/bschaefermeier/fpvcut/releases) das neueste
+`FPVCut-…-windows.zip` herunterladen, irgendwohin entpacken (z. B. nach
+`Dokumente\FPVCut`) und `FPVCut.exe` starten. libmpv und ffmpeg sind dabei, sonst muss nichts
+installiert werden. Beim ersten Start warnt Windows SmartScreen evtl., weil die .exe nicht signiert
+ist: "Weitere Informationen" → "Trotzdem ausführen".
+
+Die Daten liegen wie bei der Entwicklerversion in `%APPDATA%\FPVCut`, beide Varianten teilen sie
+sich. Ein Update ist: alten Programmordner löschen, neues ZIP entpacken.
+
+Mitgeliefert werden ffmpeg von [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) und
+libmpv von [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), beide
+unter GPL.
+
+
+## Funktionen
+
+### Player und Systemcheck
 
 - Fenster mit eingebettetem mpv-Player: Video öffnen (Strg+O), Leertaste = Play/Pause,
   ←/→ = ein Frame, Shift+←/→ = 1 s, J/L = 5 s, Zeitleiste zum Springen,
@@ -16,7 +35,7 @@ Meilenstein 1 (Grundgerüst):
   Testencode, welche Encoder wirklich funktionieren (NVENC wird von ffmpeg auch ohne passende GPU
   gelistet, daher der Test)
 
-Meilenstein 2 (Bibliothek):
+### Bibliothek
 
 - Datei → Bibliotheksordner hinzufügen (z. B. `E:\FPV_Videos`); beim Start und mit F5 wird neu gescannt
 - Videos gruppiert nach Flugtag, neueste oben. Das Datum kommt aus dem Ordnernamen
@@ -29,7 +48,7 @@ Meilenstein 2 (Bibliothek):
   Dateien werden als "fehlt" angezeigt, nicht vergessen
 - Datenbank: `%APPDATA%\FPVCut\library.sqlite`
 
-Meilenstein 3 (Sichten, Favoriten, Tags):
+### Sichten, Favoriten, Tags
 
 - I = In-Punkt, O = Out-Punkt, F = Ausschnitt als Favorit speichern, Shift+F = ganzes Video,
   Esc = Auswahl aufheben. Ohne Out-Punkt reicht der Ausschnitt bis zur aktuellen Position
@@ -40,7 +59,7 @@ Meilenstein 3 (Sichten, Favoriten, Tags):
 - Videos mit Favoriten tragen in der Bibliothek ein ★ mit der Anzahl
 - Favoriten hängen am Fingerprint und überleben Umbenennen und Verschieben
 
-Meilenstein 4 (Favoriten-Browser):
+### Favoriten-Browser
 
 - Reiter "Favoriten" neben der Bibliothek: alle Favoriten aller Videos, neueste Flugtage oben
 - Tags anklicken filtert die Liste; bei mehreren Tags wählbar, ob einer reicht oder alle passen müssen
@@ -49,7 +68,7 @@ Meilenstein 4 (Favoriten-Browser):
 - Doppelklick öffnet das Video und spielt den Favoriten direkt in Schleife ab; Rechtsklick =
   bearbeiten/löschen, Entf = löschen
 
-Meilenstein 5 (Timeline):
+### Timeline
 
 - Timeline unter dem Player mit Videospur und Musikspur
 - Clips hinzufügen: Favoriten aus dem Favoriten-Reiter oder ganze Videos (auch ganze Flugtage) aus der
@@ -73,7 +92,7 @@ Meilenstein 5 (Timeline):
   geladen. Timeline → Speichern unter/Öffnen für weitere Projekte. Clips hängen am Fingerprint und
   finden umbenannte Videos wieder
 
-Meilenstein 6 (Rendern):
+### Rendern
 
 - "Rendern …" in der Timeline-Leiste oder Strg+R
 - Profile: **Original** (H.265, sehr hohe Qualität), **Web** (H.264, läuft überall, kleiner),
@@ -85,7 +104,7 @@ Meilenstein 6 (Rendern):
 - Fortschritt mit Restzeit, Abbrechen löscht die halbfertige Datei. Standardordner:
   `Videos\FPVCut`, danach der zuletzt benutzte
 
-Meilenstein 7 (Umbenennungs-Helfer):
+### Umbenennungs-Helfer
 
 - Datei → "Ordner ins Schema umbenennen …" schlägt für alle Flugtag-Ordner den Namen
   `JJJJ-MM-TT_Spot` vor, z. B. `2026-10-17_Flugspot` (aus `28_08_26_Spot`, `Spot_28_08_26`,
@@ -99,7 +118,7 @@ Meilenstein 7 (Umbenennungs-Helfer):
   Neu-Scan), Favoriten und Timeline bleiben erhalten. "Rückgängig" nimmt die Umbenennung zurück,
   ein Protokoll alt → neu liegt im App-Datenordner unter `umbenannt\`
 
-Meilenstein 8 (Farbkorrektur):
+### Farbkorrektur
 
 - Clip in der Timeline anklicken, rechts den Reiter **Farbe** öffnen: Helligkeit, Kontrast,
   Sättigung, Gamma und Farbtemperatur per Regler, dazu optional eine 3D-LUT (`.cube`, z. B. um
@@ -123,21 +142,6 @@ von Ordnern auf Wunsch). Der Ordner bleibt beim Neuinstallieren von FPVCut oder 
   vorhandene Favoriten werden nicht verdoppelt.
 - **Neuanfang:** Startet FPVCut mit einer leeren Bibliothek und findet eine Sicherung, bietet es die
   Wiederherstellung an. Weil alles am Fingerprint hängt, funktioniert das auch vor dem ersten Scan.
-
-## Installation (Windows)
-
-Unter [Releases](https://github.com/bschaefermeier/fpvcut/releases) das neueste
-`FPVCut-…-windows.zip` herunterladen, irgendwohin entpacken (z. B. nach
-`Dokumente\FPVCut`) und `FPVCut.exe` starten. libmpv und ffmpeg sind dabei, sonst muss nichts
-installiert werden. Beim ersten Start warnt Windows SmartScreen evtl., weil die .exe nicht signiert
-ist: "Weitere Informationen" → "Trotzdem ausführen".
-
-Die Daten liegen wie bei der Entwicklerversion in `%APPDATA%\FPVCut`, beide Varianten teilen sie
-sich. Ein Update ist: alten Programmordner löschen, neues ZIP entpacken.
-
-Mitgeliefert werden ffmpeg von [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) und
-libmpv von [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), beide
-unter GPL.
 
 ## Einrichtung zum Entwickeln (Windows)
 
