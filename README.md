@@ -40,6 +40,15 @@ Meilenstein 3 (Sichten, Favoriten, Tags):
 - Videos mit Favoriten tragen in der Bibliothek ein ★ mit der Anzahl
 - Favoriten hängen am Fingerprint und überleben Umbenennen und Verschieben
 
+Meilenstein 4 (Favoriten-Browser):
+
+- Reiter "Favoriten" neben der Bibliothek: alle Favoriten aller Videos, neueste Flugtage oben
+- Tags anklicken filtert die Liste; bei mehreren Tags wählbar, ob einer reicht oder alle passen müssen
+- Suchfeld durchsucht Dateiname, Flugtag, Notiz und Tags (mehrere Wörter müssen alle vorkommen)
+- Unten steht, wie viele Favoriten passen und wie lang sie zusammen sind
+- Doppelklick öffnet das Video und spielt den Favoriten direkt in Schleife ab; Rechtsklick =
+  bearbeiten/löschen, Entf = löschen
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):

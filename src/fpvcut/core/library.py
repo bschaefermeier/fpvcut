@@ -298,15 +298,16 @@ class Library:
             self.conn.execute("DELETE FROM clip WHERE id = ?", (clip_id,))
             self.conn.execute("DELETE FROM tag WHERE id NOT IN (SELECT tag_id FROM clip_tag)")
 
-    def clips_for(self, media_id: int) -> list[Clip]:
+    def clips_for(self, media_id: int | None) -> list[Clip]:
+        """Favoriten eines Videos; ``None`` liefert alle Favoriten der Bibliothek."""
         rows = self.conn.execute(
             """SELECT c.*, GROUP_CONCAT(t.name, char(31)) AS tag_names
                FROM clip c
                LEFT JOIN clip_tag ct ON ct.clip_id = c.id
                LEFT JOIN tag t ON t.id = ct.tag_id
-               WHERE c.media_id = ?
+               WHERE ?1 IS NULL OR c.media_id = ?1
                GROUP BY c.id
-               ORDER BY c.in_ms, c.id""",
+               ORDER BY c.media_id, c.in_ms, c.id""",
             (media_id,),
         )
         return [
@@ -317,6 +318,18 @@ class Library:
             )
             for r in rows
         ]
+
+    def all_clips(self) -> list[tuple[Clip, LibraryEntry]]:
+        """Alle Favoriten mit ihrem Video (für den Favoriten-Browser)."""
+        entries = {e.media_id: e for e in self.entries()}
+        return [(c, entries[c.media_id]) for c in self.clips_for(None) if c.media_id in entries]
+
+    def tag_counts(self) -> list[tuple[str, int]]:
+        rows = self.conn.execute(
+            """SELECT t.name, COUNT(ct.clip_id) AS n FROM tag t JOIN clip_tag ct ON ct.tag_id = t.id
+               GROUP BY t.id ORDER BY n DESC, t.name COLLATE NOCASE"""
+        )
+        return [(r["name"], r["n"]) for r in rows]
 
     def all_tags(self) -> list[str]:
         """Alle Tags, die meistbenutzten zuerst."""

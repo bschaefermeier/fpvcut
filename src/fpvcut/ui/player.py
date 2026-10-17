@@ -222,12 +222,23 @@ class PlayerWidget(QWidget):
 
     # --- Steuerung -------------------------------------------------------
 
-    def open(self, path: str | Path) -> None:
+    def open(self, path: str | Path, start: float | None = None, end: float | None = None) -> None:
+        """Video öffnen; mit ``start``/``end`` direkt den Ausschnitt in Schleife abspielen."""
         self.clear_marks()
         self.set_clips([])
+        if start is not None:
+            self.in_point, self.out_point = start, end
+            self._marks_updated()
         if self._player is None:
             return
-        self._player.play(str(path))
+        if start is None:
+            self._player.play(str(path))
+        else:
+            # Als Datei-Optionen, damit mpv gleich an der richtigen Stelle beginnt.
+            options = {"start": f"{start:.3f}"}
+            if end is not None:
+                options |= {"ab_loop_a": f"{start:.3f}", "ab_loop_b": f"{end:.3f}"}
+            self._player.loadfile(str(path), **options)
         self._player.pause = False
 
     def seek_absolute(self, seconds: float) -> None:

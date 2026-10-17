@@ -7,7 +7,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, QStandardPaths, Qt, QThreadPool, Signal
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter, QTabWidget
 
 from fpvcut import __version__
 from fpvcut.core.ffmpeg_tools import EncoderReport, FFmpegNotFound, check_encoders, find_tool
@@ -17,6 +17,7 @@ from fpvcut.core.marks import resolve_range
 from fpvcut.core.probe import probe
 from fpvcut.core.scanner import ScanResult, scan_library
 from fpvcut.ui.favorite_dialog import FavoriteDialog
+from fpvcut.ui.favorites_panel import FavoritesPanel
 from fpvcut.ui.info_panel import InfoPanel, clip_range_text
 from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
@@ -101,13 +102,20 @@ class MainWindow(QMainWindow):
         self.library_panel = LibraryPanel(self)
         self.library_panel.video_activated.connect(self.open_entry)
         self.library_panel.review_toggled.connect(self._on_review_toggled)
+        self.favorites_panel = FavoritesPanel(self)
+        self.favorites_panel.clip_activated.connect(self.play_favorite)
+        self.favorites_panel.clip_edit_requested.connect(self.edit_clip)
+        self.favorites_panel.clip_delete_requested.connect(self.delete_clip)
+        self.side_tabs = QTabWidget(self)
+        self.side_tabs.addTab(self.library_panel, "Bibliothek")
+        self.side_tabs.addTab(self.favorites_panel, "Favoriten")
         self.info_panel = InfoPanel(self)
         self.info_panel.clip_activated.connect(self.play_clip)
         self.info_panel.clip_edit_requested.connect(self.edit_clip)
         self.info_panel.clip_delete_requested.connect(self.delete_clip)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
-        self._splitter.addWidget(self.library_panel)
+        self._splitter.addWidget(self.side_tabs)
         self._splitter.addWidget(self.player)
         self._splitter.addWidget(self.info_panel)
         self._splitter.setStretchFactor(1, 1)
@@ -168,10 +176,12 @@ class MainWindow(QMainWindow):
         if path:
             self.open_video(Path(path))
 
-    def open_video(self, path: Path, entry: LibraryEntry | None = None) -> None:
+    def open_video(
+        self, path: Path, entry: LibraryEntry | None = None, start: float | None = None, end: float | None = None
+    ) -> None:
         if entry is None:
             entry = self._entry_for_file(path)
-        self.player.open(path)
+        self.player.open(path, start, end)
         self.current_entry = entry
         self._refresh_clips()
         self.statusBar().showMessage(str(path))
@@ -188,6 +198,7 @@ class MainWindow(QMainWindow):
 
     def reload_library(self) -> None:
         self.library_panel.set_entries(self.library.entries())
+        self.favorites_panel.set_data(self.library.all_clips(), self.library.tag_counts())
 
     def add_root_dialog(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Bibliotheksordner wählen")
@@ -224,8 +235,8 @@ class MainWindow(QMainWindow):
             message += f" · {len(result.errors)} Problem(e): {result.errors[0]}"
         self.statusBar().showMessage(message)
 
-    def open_entry(self, entry: LibraryEntry) -> None:
-        self.open_video(entry.path, entry)
+    def open_entry(self, entry: LibraryEntry, start: float | None = None, end: float | None = None) -> None:
+        self.open_video(entry.path, entry, start, end)
         if entry.is_new:
             self.library.set_reviewed([entry.media_id])
             self.reload_library()
@@ -272,6 +283,13 @@ class MainWindow(QMainWindow):
     def play_clip(self, clip: Clip) -> None:
         self.player.play_range(clip.in_s, clip.out_s)
 
+    def play_favorite(self, clip: Clip, entry: LibraryEntry) -> None:
+        """Favorit aus dem Browser: Video öffnen (falls nötig) und Ausschnitt in Schleife abspielen."""
+        if self.current_entry is not None and self.current_entry.media_id == entry.media_id:
+            self.play_clip(clip)
+        else:
+            self.open_entry(entry, clip.in_s, clip.out_s)
+
     def edit_clip(self, clip: Clip) -> None:
         dialog = FavoriteDialog(
             clip_range_text(clip.in_s, clip.out_s), self.library.all_tags(), clip.tags, clip.note,
@@ -280,6 +298,7 @@ class MainWindow(QMainWindow):
         if dialog.exec() == FavoriteDialog.DialogCode.Accepted:
             self.library.update_clip(clip.id, dialog.tags, dialog.note)
             self._refresh_clips()
+            self.reload_library()
 
     def delete_clip(self, clip: Clip) -> None:
         answer = QMessageBox.question(
@@ -305,7 +324,7 @@ class MainWindow(QMainWindow):
         self._was_maximized = self.isMaximized()
         self.menuBar().hide()
         self.statusBar().hide()
-        self.library_panel.hide()
+        self.side_tabs.hide()
         self.info_panel.hide()
         self.showFullScreen()
 
@@ -314,7 +333,7 @@ class MainWindow(QMainWindow):
             return
         self.menuBar().show()
         self.statusBar().show()
-        self.library_panel.show()
+        self.side_tabs.show()
         self.info_panel.show()
         if getattr(self, "_was_maximized", False):
             self.showMaximized()
