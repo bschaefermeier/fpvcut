@@ -208,24 +208,27 @@ class TimelineView(QWidget):
     def hit(self, pos: QPointF) -> tuple:
         """Was liegt unter der Maus? ("clip", i, "start"|"end"|"body"), ("music",), ("empty",)."""
         if self._video_rect().contains(pos):
-            hits = []
-            for index, rect in enumerate(self.clip_rects()):
-                if rect.left() - 1 <= pos.x() <= rect.right() + 1:
-                    edge = min(self.EDGE, rect.width() / 3)
-                    if pos.x() <= rect.left() + edge:
-                        hits.append(("clip", index, "start"))
-                    elif pos.x() >= rect.right() - edge:
-                        hits.append(("clip", index, "end"))
-                    else:
-                        return ("clip", index, "body")
-            if hits:
-                # Zwischen zwei Clips gewinnt der ausgewählte, sonst der, in dem die Maus liegt.
-                for hit in hits:
+            x = pos.x()
+            rects = self.clip_rects()
+            # Kantenzonen reichen EDGE Pixel nach beiden Seiten über die Kante hinaus, so liegen an
+            # einer Grenze immer beide Clips zur Auswahl, egal auf welcher Seite die Maus steht.
+            edges = []
+            for index, rect in enumerate(rects):
+                inner = min(self.EDGE, rect.width() / 3)
+                if rect.left() - self.EDGE <= x <= rect.left() + inner:
+                    edges.append(("clip", index, "start"))
+                if rect.right() - inner <= x <= rect.right() + self.EDGE:
+                    edges.append(("clip", index, "end"))
+            if edges:
+                # Der ausgewählte Clip gewinnt, sonst der, in dem die Maus liegt.
+                for hit in edges:
                     if hit[1] == self.selected:
                         return hit
-                rects = self.clip_rects()
-                inside = [h for h in hits if rects[h[1]].left() <= pos.x() < rects[h[1]].right()]
-                return (inside or hits)[0]
+                inside = [h for h in edges if rects[h[1]].left() <= x < rects[h[1]].right()]
+                return (inside or edges)[0]
+            for index, rect in enumerate(rects):
+                if rect.left() <= x < rect.right():
+                    return ("clip", index, "body")
         if (rect := self.music_rect()) is not None and rect.contains(pos):
             return ("music",)
         return ("empty",)

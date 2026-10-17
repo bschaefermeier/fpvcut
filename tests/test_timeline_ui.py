@@ -168,10 +168,13 @@ def test_edge_between_clips_belongs_to_selected_clip():
     panel = panel_with_clips()
     view = panel.view
     boundary = QPointF(view.clip_rects()[0].right(), view.clip_rects()[0].center().y())
+    left, right = boundary - QPointF(5, 0), boundary + QPointF(5, 0)
     view.select(0)
-    assert view.hit(boundary)[1:] == (0, "end")
-    view.select(1)
-    assert view.hit(boundary)[1:] == (1, "start")
+    assert {view.hit(p)[1:] for p in (left, boundary, right)} == {(0, "end")}
+    view.select(1)  # auch knapp links der Grenze gehört die Kante dem ausgewählten rechten Clip
+    assert {view.hit(p)[1:] for p in (left, boundary, right)} == {(1, "start")}
+    view.select(None)
+    assert view.hit(left)[1:] == (0, "end") and view.hit(right)[1:] == (1, "start")
 
 
 def test_trim_beyond_favorite_is_painted(monkeypatch):
