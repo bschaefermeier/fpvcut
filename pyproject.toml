@@ -3,6 +3,7 @@ name = "fpvcut"
 version = "1.0.0rc1"
 description = "Schlanke Schnittsoftware für FPV-Videos"
 readme = "README.md"
+license = "GPL-3.0-or-later"
 requires-python = ">=3.11"
 dependencies = [
     "PySide6>=6.7",

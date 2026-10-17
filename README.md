@@ -199,3 +199,10 @@ src/fpvcut/
   ui/        PySide6-Oberfläche (Hauptfenster, Bibliothek, Favoriten, Player, Timeline)
 tests/
 ```
+
+## Lizenz
+
+FPVCut steht unter der [GNU General Public License v3.0 oder später](LICENSE) (GPL-3.0-or-later):
+Nutzen, auch kommerziell, Verändern und Weitergeben sind erlaubt, solange Weitergaben den Quellcode
+mitliefern und unter derselben Lizenz bleiben. Die Lizenzen der mitgelieferten Bestandteile (mpv,
+ffmpeg, Qt, …) stehen in [packaging/lizenzen/LIESMICH.txt](packaging/lizenzen/LIESMICH.txt).

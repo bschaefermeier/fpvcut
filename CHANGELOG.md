@@ -32,3 +32,4 @@ Erster Release-Kandidat mit allen Funktionen aus dem [Plan](docs/plan.md).
   gleiche Filter in Vorschau und Render
 - **Eigenes App-Icon** in Fenster und Taskleiste
 - **Windows-Programm:** `FPVCut.exe` als ZIP zum Herunterladen, libmpv und ffmpeg sind dabei
+- **Lizenz:** GPL-3.0-or-later; die Lizenztexte der mitgelieferten Bestandteile liegen im ZIP unter `lizenzen\`

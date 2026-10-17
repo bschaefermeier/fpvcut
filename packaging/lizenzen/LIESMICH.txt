@@ -1,7 +1,7 @@
 FPVCut – Lizenzen der mitgelieferten Bestandteile
 =================================================
 
-FPVCut selbst: siehe FPVCut-LICENSE.txt (falls vorhanden) und
+FPVCut selbst: GPL-3.0-or-later, siehe FPVCut-LICENSE.txt und
 https://github.com/bschaefermeier/fpvcut (dort liegt auch der vollständige Quellcode).
 
 Diese .exe enthält folgende Fremdsoftware. Ihr Quellcode ist unter den genannten Adressen
