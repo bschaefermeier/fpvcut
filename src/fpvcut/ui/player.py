@@ -6,6 +6,7 @@ import locale
 import os
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
@@ -73,6 +74,8 @@ class PlayerWidget(QWidget):
         self._slider_dragging = False
         self._player = None
         self._loaded = False
+        # Ersetzt Sprünge, z. B. durch Neuladen der Timeline-Vorschau ab der Zielposition.
+        self.seek_handler: Callable[[float], None] | None = None
 
         self._video = QWidget(self)
         self._video.setAttribute(Qt.WidgetAttribute.WA_NativeWindow)
@@ -232,6 +235,7 @@ class PlayerWidget(QWidget):
         """Video öffnen; mit ``start``/``end`` direkt den Ausschnitt in Schleife abspielen."""
         self.clear_marks()
         self.set_clips([])
+        self.seek_handler = None
         if start is not None:
             self.in_point, self.out_point = start, end
             self._marks_updated()
@@ -264,6 +268,7 @@ class PlayerWidget(QWidget):
 
     def stop(self) -> None:
         self._loaded = False
+        self.seek_handler = None
         if self._player is not None:
             self._player.command("stop")
 
@@ -272,7 +277,9 @@ class PlayerWidget(QWidget):
         return True if self._player is None else bool(self._player.pause)
 
     def seek_absolute(self, seconds: float) -> None:
-        if self._player is not None:
+        if self.seek_handler is not None:
+            self.seek_handler(max(seconds, 0.0))
+        elif self._player is not None:
             self._player.seek(seconds, reference="absolute", precision="exact")
 
     # --- In/Out-Punkte und Favoriten -------------------------------------
@@ -335,11 +342,18 @@ class PlayerWidget(QWidget):
             self._player.pause = not self._player.pause
 
     def seek_relative(self, seconds: float) -> None:
-        if self._player is not None:
+        if self.seek_handler is not None:
+            if (pos := self.position()) is not None:
+                self.seek_absolute(pos + seconds)
+        elif self._player is not None:
             self._player.seek(seconds, reference="relative", precision="exact")
 
     def step_frame(self, forward: bool = True) -> None:
-        if self._player is not None:
+        if not forward and self.seek_handler is not None:
+            if (pos := self.position()) is not None:
+                fps = self._player.container_fps or 30.0
+                self.seek_absolute(pos - 1.0 / fps)
+        elif self._player is not None:
             self._player.command("frame-step" if forward else "frame-back-step")
 
     def position(self) -> float | None:
@@ -368,5 +382,4 @@ class PlayerWidget(QWidget):
     def _on_slider_released(self) -> None:
         self._slider_dragging = False
         if self._player is not None and self._duration > 0:
-            target = self._slider.value() / self.SLIDER_STEPS * self._duration
-            self._player.seek(target, reference="absolute", precision="exact")
+            self.seek_absolute(self._slider.value() / self.SLIDER_STEPS * self._duration)

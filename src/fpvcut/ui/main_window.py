@@ -468,7 +468,8 @@ class MainWindow(QMainWindow):
         self.timeline_mode = True
         self.current_entry = None
         self._refresh_clips()
-        self.player.open_timeline(build_edl(timeline), build_lavfi(timeline), start, paused)
+        self.player.open_timeline(build_edl(timeline), build_lavfi(timeline, start), start, paused)
+        self.player.seek_handler = self._seek_timeline
         self.timeline_panel.set_playhead(start)
         self.statusBar().showMessage("Timeline-Vorschau")
 
@@ -484,9 +485,14 @@ class MainWindow(QMainWindow):
         if self.timeline_mode:
             self.timeline_panel.set_playhead(t)
 
+    def _seek_timeline(self, t: float) -> None:
+        """Sprung in der Vorschau: ab ``t`` neu laden, damit Musik und Originalton synchron bleiben."""
+        end = self.timeline_panel.timeline.duration
+        self.play_timeline(min(max(t, 0.0), max(end - 0.1, 0.0)), self.player.paused)
+
     def _on_timeline_seek(self, t: float) -> None:
         if self.timeline_mode:
-            self.player.seek_absolute(t)
+            self._seek_timeline(t)
         else:
             self.play_timeline(t, paused=True)  # Klick in die Timeline zeigt das Bild an dieser Stelle
 

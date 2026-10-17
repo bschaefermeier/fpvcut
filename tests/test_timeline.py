@@ -1,3 +1,6 @@
+import array
+import cmath
+import math
 import shutil
 import subprocess
 from pathlib import Path
@@ -78,15 +81,17 @@ def test_music_length():
 def test_edl_and_filter():
     tl = Timeline([clip("a", 1, 3)])
     assert build_edl(tl) == "edl://!new_stream;%8%/v/a.mp4,1.000,2.000"
-    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]aresample=async=1:first_pts=0,volume=1.00[ao]"
+    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]aresample=48000:async=1:first_pts=0,volume=1.00[ao]"
     tl.music = MusicTrack("/m/x, y.mp3", duration=60, volume=0.5, fade_in=0.5, fade_out=1)
     assert build_edl(tl).endswith(";!new_stream;%11%/m/x, y.mp3,0.000,2.000")
     lavfi = build_lavfi(tl)
-    assert "[aid2]volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[a2]" in lavfi
-    assert lavfi.endswith("amix=inputs=2:normalize=0:duration=first[ao]")
+    assert "[aid2]aresample=48000:async=1:first_pts=0,volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[a2]" in lavfi
+    assert lavfi.endswith("amix=inputs=2:normalize=0:duration=longest[ao]")
+    # Start mitten in der Timeline: beide Spuren beginnen an der Startposition.
+    assert build_lavfi(tl, 1.5).count("first_pts=72000,") == 2
     # Kein Clip mit Ton: die Musik ist die erste Audiospur.
     tl.clips[0].has_audio = False
-    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[ao]"
+    assert build_lavfi(tl) == f"[vid1]null[vo];[aid1]aresample=48000:async=1:first_pts=0,volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[ao]"
     tl.music = None
     assert build_lavfi(tl) == "[vid1]null[vo]"
 
@@ -115,3 +120,49 @@ def test_mpv_plays_edl_with_music(tmp_path):
         assert [t["type"] for t in player.track_list].count("audio") == 2
     finally:
         player.terminate()
+
+
+def _tone(samples: array.array, freqs) -> int | None:
+    """Lauteste der Frequenzen in einem Mono-Ausschnitt (48 kHz), None bei Stille."""
+    levels = {
+        f: abs(sum(v * cmath.exp(-2j * math.pi * f * i / 48000) for i, v in enumerate(samples))) / len(samples)
+        for f in freqs
+    }
+    best = max(levels, key=levels.get)
+    return best if levels[best] > 300 else None
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg fehlt")
+def test_mpv_music_stays_in_sync_when_starting_mid_timeline(tmp_path):
+    """Start hinter einem stummen Clip: Musik und Originalton laufen an der richtigen Stelle."""
+    from fpvcut.ui.player import load_mpv
+
+    mpv, _error = load_mpv()
+    if mpv is None:
+        pytest.skip("libmpv fehlt")
+    loud, silent, music = tmp_path / "loud.mp4", tmp_path / "silent.mp4", tmp_path / "music.wav"
+    out = tmp_path / "out.wav"
+    run = ["ffmpeg", "-loglevel", "error", "-y"]
+    subprocess.run([*run, "-f", "lavfi", "-i", "testsrc=size=160x90:rate=25:duration=3",
+                    "-f", "lavfi", "-i", "sine=f=2000:d=3:sample_rate=48000", "-shortest", str(loud)], check=True)
+    subprocess.run([*run, "-f", "lavfi", "-i", "testsrc=size=160x90:rate=25:duration=3", str(silent)], check=True)
+    # Jede Sekunde der Musik hat ihren eigenen Ton: 300 Hz, 400 Hz, ...
+    subprocess.run([*run, "-f", "lavfi", "-i", "aevalsrc=sin(2*PI*(300+100*floor(t))*t):d=8:s=48000",
+                    str(music)], check=True)
+    tl = Timeline([TimelineClip("a", 0, 2, 3, path=loud), TimelineClip("s", 0, 2, 3, path=silent, has_audio=False),
+                   TimelineClip("a", 0, 2, 3, path=loud)])
+    tl.music = MusicTrack(str(music), duration=8, volume=1, fade_out=0)
+    start = 3.1
+    lavfi = build_lavfi(tl, start)
+    player = mpv.MPV(vo="null", ao="pcm", ao_pcm_file=str(out), keep_open="yes")
+    try:
+        player.loadfile(build_edl(tl), start=str(start), lavfi_complex=f"%{len(lavfi.encode())}%{lavfi}")
+        player.wait_for_property("eof-reached", lambda v: v, timeout=20)
+    finally:
+        player.terminate()
+    for t in (3.4, 4.4, 5.4):
+        raw = subprocess.run([*run, "-ss", str(t - start), "-t", "0.05", "-i", str(out), "-ac", "1",
+                              "-ar", "48000", "-f", "s16le", "-"], capture_output=True, check=True).stdout
+        samples = array.array("h", raw)
+        assert _tone(samples, range(300, 1100, 100)) == 300 + 100 * math.floor(t), f"Musik bei {t} s"
+        assert _tone(samples, (2000,)) == (None if t < 4 else 2000), f"Originalton bei {t} s"

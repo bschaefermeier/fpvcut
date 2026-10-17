@@ -221,6 +221,16 @@ def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp
     window.timeline_mode = False
     window._on_timeline_seek(7.0)  # Klick ins Lineal
     assert window.timeline_mode and calls[-1] == (7.0, True)
+    # Sprünge in der laufenden Vorschau laden sie ab der neuen Stelle neu (Musik bleibt synchron).
+    lavfis = []
+    monkeypatch.setattr(window.player, "open_timeline",
+                        lambda edl, lavfi, start=0, paused=False: (calls.append((start, paused)), lavfis.append(lavfi)))
+    window._on_timeline_seek(11.0)
+    window.player.seek_absolute(20.0)  # Schieberegler des Players, hinter das Ende
+    assert [c[0] for c in calls[-2:]] == [11.0, pytest.approx(14.9)]
+    assert "first_pts=528000" in lavfis[0]
+    window.player.stop()
+    assert window.player.seek_handler is None
     window.close()
 
 
