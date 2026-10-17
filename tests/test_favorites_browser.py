@@ -63,6 +63,7 @@ def test_favorites_panel_filters_and_plays(monkeypatch, tmp_path):
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     QtWidgets = pytest.importorskip("PySide6.QtWidgets")
     from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
 
     from fpvcut.ui import player
     from fpvcut.ui.main_window import MainWindow
@@ -74,9 +75,16 @@ def test_favorites_panel_filters_and_plays(monkeypatch, tmp_path):
     window = MainWindow(db_path=tmp_path / "lib.sqlite")
     panel = window.favorites_panel
     assert panel._tree.topLevelItemCount() == 3
-    assert [panel._tags.item(i).text() for i in range(panel._tags.count())] == ["Flip (2)", "Crash (1)", "Gap (1)"]
+    assert [b.text() for b in panel._tag_buttons.values()] == ["Flip (2)", "Crash (1)", "Gap (1)"]
 
-    panel._tags.item(1).setCheckState(Qt.CheckState.Checked)  # Crash
+    # Jeder Klick schaltet um, auch zwei schnell hintereinander (Doppelklick).
+    crash = panel._tag_buttons["Crash"]
+    QTest.mouseClick(crash, Qt.MouseButton.LeftButton)
+    assert panel.selected_tags() == ["Crash"]
+    QTest.mouseClick(crash, Qt.MouseButton.LeftButton)
+    assert panel.selected_tags() == []
+    QTest.mouseClick(crash, Qt.MouseButton.LeftButton)
+    assert panel.selected_tags() == ["Crash"]
     assert panel.selected_tags() == ["Crash"]
     assert panel._tree.topLevelItemCount() == 1
     assert panel._summary.text().startswith("1 von 3 Favoriten")

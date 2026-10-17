@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QCursor, QKeySequence, QShortcut
+from PySide6.QtGui import QBrush, QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QAbstractItemView,
     QComboBox,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
-    QListView,
-    QListWidget,
-    QListWidgetItem,
     QMenu,
     QPushButton,
+    QScrollArea,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -24,11 +23,11 @@ from PySide6.QtWidgets import (
 
 from fpvcut.core.clip_filter import clip_duration, filter_clips
 from fpvcut.core.library import Clip, LibraryEntry
+from fpvcut.ui.flow_layout import FlowLayout
 from fpvcut.ui.info_panel import clip_range_text
 from fpvcut.ui.library_panel import format_duration
 
 ITEM_ROLE = Qt.ItemDataRole.UserRole
-TAG_ROLE = Qt.ItemDataRole.UserRole
 
 
 class FavoritesPanel(QWidget):
@@ -45,15 +44,15 @@ class FavoritesPanel(QWidget):
         self._search.setClearButtonEnabled(True)
         self._search.textChanged.connect(lambda _text: self._rebuild())
 
-        # Tags als anklickbare "Chips", die umbrechen.
-        self._tags = QListWidget(self)
-        self._tags.setFlow(QListView.Flow.LeftToRight)
-        self._tags.setWrapping(True)
-        self._tags.setResizeMode(QListView.ResizeMode.Adjust)
-        self._tags.setSpacing(2)
-        self._tags.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
-        self._tags.itemChanged.connect(lambda _item: self._rebuild())
-        self._tags.itemClicked.connect(self._toggle_tag)
+        # Tags als umschaltbare Knöpfe, die wie Text umbrechen; ab drei Zeilen wird gescrollt.
+        self._tag_buttons: dict[str, QToolButton] = {}
+        self._tag_box = QWidget()
+        self._tag_flow = FlowLayout(self._tag_box)
+        self._tags = QScrollArea(self)
+        self._tags.setWidget(self._tag_box)
+        self._tags.setWidgetResizable(True)
+        self._tags.setFrameShape(QFrame.Shape.NoFrame)
+        self._tags.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         self._mode = QComboBox(self)
         self._mode.addItems(["mind. ein Tag", "alle Tags"])
@@ -106,45 +105,44 @@ class FavoritesPanel(QWidget):
     def set_data(self, items: list[tuple[Clip, LibraryEntry]], tag_counts: list[tuple[str, int]]) -> None:
         self._items = items
         checked = set(self.selected_tags())
-        self._tags.blockSignals(True)
-        self._tags.clear()
+        for button in self._tag_buttons.values():
+            self._tag_flow.removeWidget(button)
+            button.deleteLater()
+        self._tag_buttons = {}
         for name, count in tag_counts:
-            item = QListWidgetItem(f"{name} ({count})", self._tags)
-            item.setData(TAG_ROLE, name)
-            item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Checked if name in checked else Qt.CheckState.Unchecked)
-        self._tags.blockSignals(False)
+            button = QToolButton(self._tag_box)
+            button.setText(f"{name} ({count})")
+            button.setCheckable(True)
+            button.setChecked(name in checked)
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            button.toggled.connect(lambda _checked: self._rebuild())
+            self._tag_flow.addWidget(button)
+            self._tag_buttons[name] = button
         self._tags.setVisible(bool(tag_counts))
         self._fit_tags()
         self._rebuild()
 
     def _fit_tags(self) -> None:
         """Tag-Feld nur so hoch wie nötig, höchstens drei Zeilen (dann mit Scrollbalken)."""
-        count = self._tags.count()
-        if not count:
+        if not self._tag_buttons:
             return
-        self._tags.doItemsLayout()
-        bottom = max(self._tags.visualItemRect(self._tags.item(i)).bottom() for i in range(count))
-        bottom += self._tags.verticalScrollBar().value()
-        self._tags.setFixedHeight(min(bottom + 2 * self._tags.frameWidth() + 6, 78))
+        row = next(iter(self._tag_buttons.values())).sizeHint().height()
+        needed = self._tag_flow.heightForWidth(self._tags.viewport().width() or self._tags.width())
+        self._tags.setFixedHeight(min(needed, 3 * row + 2 * self._tag_flow.spacing()))
 
     def resizeEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
         super().resizeEvent(event)
         self._fit_tags()
 
     def selected_tags(self) -> list[str]:
-        return [
-            self._tags.item(i).data(TAG_ROLE)
-            for i in range(self._tags.count())
-            if self._tags.item(i).checkState() == Qt.CheckState.Checked
-        ]
+        return [name for name, button in self._tag_buttons.items() if button.isChecked()]
 
     def reset_filter(self) -> None:
         self._search.clear()
-        self._tags.blockSignals(True)
-        for i in range(self._tags.count()):
-            self._tags.item(i).setCheckState(Qt.CheckState.Unchecked)
-        self._tags.blockSignals(False)
+        for button in self._tag_buttons.values():
+            button.blockSignals(True)
+            button.setChecked(False)
+            button.blockSignals(False)
         self._rebuild()
 
     def visible_items(self) -> list[tuple[Clip, LibraryEntry]]:
@@ -187,17 +185,6 @@ class FavoritesPanel(QWidget):
         self._placeholder.setVisible(empty)
 
     # --- Interaktion -----------------------------------------------------
-
-    def _toggle_tag(self, item: QListWidgetItem) -> None:
-        """Klick auf den ganzen Chip schaltet um, nicht nur auf das Kästchen."""
-        hit_checkbox = self._tags.visualItemRect(item).left() + 20 > self._tags.mapFromGlobal(
-            QCursor.pos()
-        ).x()
-        if not hit_checkbox:
-            new_state = (
-                Qt.CheckState.Unchecked if item.checkState() == Qt.CheckState.Checked else Qt.CheckState.Checked
-            )
-            item.setCheckState(new_state)
 
     def _on_activated(self, item: QTreeWidgetItem, _column: int) -> None:
         clip, entry = item.data(0, ITEM_ROLE)
