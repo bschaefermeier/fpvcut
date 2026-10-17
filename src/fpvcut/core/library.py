@@ -192,10 +192,11 @@ class Library:
 
     # --- Sichtungsstatus -------------------------------------------------
 
-    def set_reviewed(self, media_id: int, reviewed: bool = True) -> None:
+    def set_reviewed(self, media_ids: list[int], reviewed: bool = True) -> None:
+        stamp = time.time() if reviewed else None
         with self.conn:
-            self.conn.execute(
-                "UPDATE media_file SET reviewed_at = ? WHERE id = ?", (time.time() if reviewed else None, media_id)
+            self.conn.executemany(
+                "UPDATE media_file SET reviewed_at = ? WHERE id = ?", [(stamp, mid) for mid in media_ids]
             )
 
     # --- Abfragen für die Oberfläche ------------------------------------

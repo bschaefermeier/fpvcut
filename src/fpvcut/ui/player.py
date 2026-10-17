@@ -5,10 +5,12 @@ from __future__ import annotations
 import locale
 import os
 import sys
+import time
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -53,6 +55,7 @@ class PlayerWidget(QWidget):
     duration_changed = Signal(float)
     double_clicked = Signal()
     _mpv_click = Signal()
+    _mpv_double = Signal()
     _mpv_time = Signal(object)
     _mpv_duration = Signal(object)
     _mpv_pause = Signal(bool)
@@ -70,6 +73,10 @@ class PlayerWidget(QWidget):
         self._video.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors)
         self._video.setStyleSheet("background: black;")
         self._video.setMinimumSize(320, 180)
+        # Unter Windows deaktiviert mpv sein eingebettetes Fenster, Klicks landen dann hier bei Qt.
+        self._video.installEventFilter(self)
+        self._last_press = 0.0
+        self._last_double = 0.0
 
         self._message = QLabel(self)
         self._message.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -101,7 +108,8 @@ class PlayerWidget(QWidget):
         layout.addLayout(self._stack, 1)
         layout.addLayout(controls)
 
-        self._mpv_click.connect(self.toggle_pause)
+        self._mpv_click.connect(self._on_video_press)
+        self._mpv_double.connect(self._on_video_double_click)
         self._mpv_time.connect(self._on_time)
         self._mpv_duration.connect(self._on_duration)
         self._mpv_pause.connect(lambda paused: self._play_button.setText("▶" if paused else "⏸"))
@@ -140,9 +148,9 @@ class PlayerWidget(QWidget):
         self._player.observe_property("time-pos", lambda _n, v: self._mpv_time.emit(v))
         self._player.observe_property("duration", lambda _n, v: self._mpv_duration.emit(v))
         self._player.observe_property("pause", lambda _n, v: self._mpv_pause.emit(bool(v)))
-        # Mausklicks landen im nativen mpv-Fenster, nicht bei Qt; daher als mpv-Bindings.
+        # Unter Linux/X11 bekommt mpv die Klicks selbst; daher zusätzlich als mpv-Bindings.
         self._player.register_key_binding("MBTN_LEFT", self._on_mpv_key(self._mpv_click))
-        self._player.register_key_binding("MBTN_LEFT_DBL", self._on_mpv_key(self.double_clicked))
+        self._player.register_key_binding("MBTN_LEFT_DBL", self._on_mpv_key(self._mpv_double))
 
     @staticmethod
     def _on_mpv_key(signal):
@@ -157,6 +165,42 @@ class PlayerWidget(QWidget):
                 signal.emit()
 
         return handler
+
+    # --- Mausklicks aufs Video ------------------------------------------
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802  (Qt-Name)
+        kind = event.type()
+        if watched is self._video and kind in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick):
+            if event.button() == Qt.MouseButton.LeftButton:
+                if kind == QEvent.Type.MouseButtonPress:
+                    self._on_video_press()
+                else:
+                    self._on_video_double_click()
+                return True
+        return super().eventFilter(watched, event)
+
+    def _on_video_press(self) -> None:
+        """Ein Klick schaltet Play/Pause. Ein zweiter Klick kurz danach gehört zum Doppelklick.
+
+        Je nach System melden Qt, mpv oder beide denselben Klick; die Zeitfenster sorgen dafür,
+        dass er trotzdem nur einmal zählt.
+        """
+        now = time.monotonic()
+        if now - self._last_press >= self._double_click_interval():
+            self.toggle_pause()
+        self._last_press = now
+
+    def _on_video_double_click(self) -> None:
+        now = time.monotonic()
+        if now - self._last_double < self._double_click_interval():
+            return
+        self._last_double = now
+        self.toggle_pause()  # den ersten Klick des Doppelklicks rückgängig machen
+        self.double_clicked.emit()
+
+    @staticmethod
+    def _double_click_interval() -> float:
+        return QApplication.doubleClickInterval() / 1000
 
     def _show_message(self, text: str) -> None:
         self._message.setText(text)

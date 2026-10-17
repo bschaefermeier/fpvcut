@@ -60,7 +60,7 @@ def test_renamed_folder_keeps_media_and_review_state(lib, tmp_path):
     lib.add_root(root)
     scan_library(lib, fake_probe)
     media_id = by_name(lib)["28_08_26_Wiese/a.mp4"].media_id
-    lib.set_reviewed(media_id)
+    lib.set_reviewed([media_id])
 
     (root / "28_08_26_Wiese").rename(root / "2026_08_28_Wiese")
     result = scan_library(lib, fake_probe)

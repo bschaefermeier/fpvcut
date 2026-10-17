@@ -199,11 +199,11 @@ class MainWindow(QMainWindow):
     def open_entry(self, entry: LibraryEntry) -> None:
         self.open_video(entry.path)
         if entry.is_new:
-            self.library.set_reviewed(entry.media_id)
+            self.library.set_reviewed([entry.media_id])
             self.reload_library()
 
-    def _on_review_toggled(self, media_id: int, reviewed: bool) -> None:
-        self.library.set_reviewed(media_id, reviewed)
+    def _on_review_toggled(self, media_ids: list[int], reviewed: bool) -> None:
+        self.library.set_reviewed(media_ids, reviewed)
         self.reload_library()
 
     # --- Vollbild --------------------------------------------------------

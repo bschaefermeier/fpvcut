@@ -7,6 +7,7 @@ from collections import defaultdict
 from PySide6.QtCore import QPoint, Qt, QUrl, Signal
 from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QCheckBox,
     QHBoxLayout,
     QHeaderView,
@@ -58,7 +59,7 @@ def group_sort_key(day: FlightDay) -> tuple:
 
 class LibraryPanel(QWidget):
     video_activated = Signal(object)  # LibraryEntry
-    review_toggled = Signal(int, bool)  # media_id, gesichtet
+    review_toggled = Signal(list, bool)  # media_ids, gesichtet
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -77,6 +78,8 @@ class LibraryPanel(QWidget):
         self._tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self._tree.header().setStretchLastSection(False)
         self._tree.setUniformRowHeights(True)
+        # Strg/Shift+Klick wählt mehrere Videos; ein Flugtag steht für alle seine Videos.
+        self._tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._tree.itemActivated.connect(self._on_item_activated)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
@@ -100,7 +103,7 @@ class LibraryPanel(QWidget):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        expanded, selected = self._view_state()
+        expanded, current, selected = self._view_state()
         first_load = self._tree.topLevelItemCount() == 0
         self._tree.clear()
 
@@ -111,7 +114,8 @@ class LibraryPanel(QWidget):
 
         bold = QFont()
         bold.setBold(True)
-        selected_item = None
+        current_item = None
+        selected_items = []
         for index, day in enumerate(sorted(groups, key=group_sort_key)):
             entries = groups[day]
             new_count = sum(e.is_new for e in entries)
@@ -124,14 +128,18 @@ class LibraryPanel(QWidget):
             for entry in entries:
                 item = self._make_item(entry, bold)
                 group.addChild(item)
-                if entry.media_id == selected:
-                    selected_item = item
+                if entry.media_id == current:
+                    current_item = item
+                if entry.media_id in selected:
+                    selected_items.append(item)
             self._tree.addTopLevelItem(group)
             if day.folder_name in expanded or new_count or (first_load and index == 0):
                 group.setExpanded(True)
 
-        if selected_item is not None:
-            self._tree.setCurrentItem(selected_item)
+        if current_item is not None:
+            self._tree.setCurrentItem(current_item)
+        for item in selected_items:
+            item.setSelected(True)
         self._update_summary()
         self._update_placeholder()
 
@@ -150,7 +158,7 @@ class LibraryPanel(QWidget):
             item.setForeground(0, QBrush(NEW_COLOR))
         return item
 
-    def _view_state(self) -> tuple[set[str], int | None]:
+    def _view_state(self) -> tuple[set[str], int | None, set[int]]:
         expanded = set()
         for i in range(self._tree.topLevelItemCount()):
             group = self._tree.topLevelItem(i)
@@ -158,7 +166,19 @@ class LibraryPanel(QWidget):
                 expanded.add(group.toolTip(0))
         current = self._tree.currentItem()
         entry = current.data(0, ENTRY_ROLE) if current else None
-        return expanded, entry.media_id if entry else None
+        selected = {e.media_id for e in self.selected_entries()}
+        return expanded, entry.media_id if entry else None, selected
+
+    def selected_entries(self) -> list[LibraryEntry]:
+        """Ausgewählte Videos; ein ausgewählter Flugtag zählt mit all seinen Videos."""
+        seen: dict[int, LibraryEntry] = {}
+        for item in self._tree.selectedItems():
+            children = [item.child(i) for i in range(item.childCount())] or [item]
+            for child in children:
+                entry = child.data(0, ENTRY_ROLE)
+                if entry is not None:
+                    seen.setdefault(entry.media_id, entry)
+        return list(seen.values())
 
     def _update_summary(self) -> None:
         new = sum(e.is_new for e in self._entries)
@@ -183,18 +203,30 @@ class LibraryPanel(QWidget):
 
     def _show_context_menu(self, pos: QPoint) -> None:
         item = self._tree.itemAt(pos)
-        entry = item.data(0, ENTRY_ROLE) if item else None
-        if entry is None:
+        if item is None:
             return
+        if not item.isSelected():
+            self._tree.setCurrentItem(item)  # Rechtsklick außerhalb der Auswahl wählt nur diese Zeile
+        entries = self.selected_entries()
+        if not entries:
+            return
+        new = [e.media_id for e in entries if e.is_new]
+        seen = [e.media_id for e in entries if not e.is_new]
+
+        def plural(ids: list[int]) -> str:
+            return "Video" if len(ids) == 1 else f"{len(ids)} Videos"
+
         menu = QMenu(self)
-        if entry.is_new:
-            menu.addAction("Als gesichtet markieren", lambda: self.review_toggled.emit(entry.media_id, True))
-        else:
-            menu.addAction("Als neu markieren", lambda: self.review_toggled.emit(entry.media_id, False))
-        open_folder = menu.addAction(
-            "Ordner im Explorer öffnen",
-            lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(entry.path.parent))),
-        )
-        open_folder.setEnabled(not entry.missing)
+        if new:
+            menu.addAction(f"{plural(new)} als gesichtet markieren", lambda: self.review_toggled.emit(new, True))
+        if seen:
+            menu.addAction(f"{plural(seen)} als neu markieren", lambda: self.review_toggled.emit(seen, False))
+        available = [e for e in entries if not e.missing]
+        if len({e.path.parent for e in available}) == 1:
+            folder = available[0].path.parent
+            menu.addSeparator()
+            menu.addAction(
+                "Ordner im Explorer öffnen", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+            )
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 

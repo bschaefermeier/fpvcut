@@ -22,7 +22,8 @@ Meilenstein 2 (Bibliothek):
 - Videos gruppiert nach Flugtag, neueste oben. Das Datum kommt aus dem Ordnernamen
   (`2026_08_28_Spot`, `28_08_26_Spot` oder `Spot_28_08_26`)
 - Neue, noch nicht gesichtete Videos sind blau mit ● markiert; "Nur neue" blendet den Rest aus.
-  Ein Video gilt als gesichtet, sobald es geöffnet wird (oder per Rechtsklick)
+  Ein Video gilt als gesichtet, sobald es geöffnet wird. Per Rechtsklick lassen sich auch mehrere
+  Videos (Strg/Shift+Klick) oder ganze Flugtage auf einmal markieren
 - Jede Datei bekommt einen Fingerprint (Größe + je 4 MB von Anfang, Mitte und Ende). Umbenannte oder
   verschobene Ordner werden dadurch wiedererkannt, der Sichtungsstatus bleibt erhalten. Gelöschte
   Dateien werden als "fehlt" angezeigt, nicht vergessen
