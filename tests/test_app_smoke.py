@@ -200,3 +200,14 @@ def test_save_favorite_from_marks(monkeypatch, tmp_path):
     assert "1 Favoriten" in video_item.data(0, QtCore.Qt.ItemDataRole.AccessibleTextRole)
     window.play_clip(clip)  # ohne mpv: darf nicht abstürzen
     window.close()
+
+
+def test_app_icon_renders_all_sizes():
+    from fpvcut.ui.app_icon import SIZES, app_icon, render_icon
+
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    image = render_icon(64)
+    assert image.pixelColor(32, 32).alpha() == 255  # Motiv sichtbar, nicht leer
+    assert image.pixelColor(0, 0).alpha() == 0  # runde Ecken transparent
+    sizes = {s.width() for s in app_icon().availableSizes()}
+    assert sizes == set(SIZES)

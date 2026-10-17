@@ -229,6 +229,10 @@ def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp
     window.player.seek_absolute(20.0)  # Schieberegler des Players, hinter das Ende
     assert [c[0] for c in calls[-2:]] == [11.0, pytest.approx(14.9)]
     assert "first_pts=528000" in lavfis[0]
+    shortcuts = {a.shortcut().toString(): a for a in window.actions()}
+    shortcuts["Ctrl+Left"].trigger()
+    shortcuts["Ctrl+Right"].trigger()
+    assert [c[0] for c in calls[-2:]] == [0.0, pytest.approx(14.9)]
     window.player.stop()
     assert window.player.seek_handler is None
     window.close()

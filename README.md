@@ -58,6 +58,7 @@ Meilenstein 5 (Timeline):
 - Bearbeiten: Clip ziehen = Reihenfolge ändern, Kante ziehen = trimmen, S = am roten Abspielkopf
   teilen, Entf = ausgewählten Clip (oder die Musik) entfernen, Strg+Z / Strg+Y = rückgängig/wiederholen.
   Mausrad = zoomen (um die Mausposition), Shift+Mausrad = seitlich scrollen.
+  Strg+←/→ = an den Anfang bzw. ans Ende der Timeline springen.
   Zwischen zwei Clips trimmt die Kante den ausgewählten (gelben) Clip. Über den Favoriten hinaus
   verlängerte Teile sind hell schraffiert
 - Musik: "♪ Musik …" wählt eine Audiodatei. Regler für Originalton und Musik. "Ausblenden" macht

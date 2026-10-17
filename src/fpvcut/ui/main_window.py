@@ -191,6 +191,8 @@ class MainWindow(QMainWindow):
         self._add_action(play_menu, "1 s zurück", "Shift+Left", lambda: self.player.seek_relative(-1))
         self._add_action(play_menu, "5 s vor", "L", lambda: self.player.seek_relative(5))
         self._add_action(play_menu, "5 s zurück", "J", lambda: self.player.seek_relative(-5))
+        self._add_action(play_menu, "Zum Anfang der Timeline", "Ctrl+Left", lambda: self.jump_in_timeline(False))
+        self._add_action(play_menu, "Zum Ende der Timeline", "Ctrl+Right", lambda: self.jump_in_timeline(True))
 
         play_menu.addSeparator()
         self._add_action(play_menu, "Vollbild", "F11", self.toggle_fullscreen)
@@ -495,6 +497,14 @@ class MainWindow(QMainWindow):
             self._seek_timeline(t)
         else:
             self.play_timeline(t, paused=True)  # Klick in die Timeline zeigt das Bild an dieser Stelle
+
+    def jump_in_timeline(self, to_end: bool) -> None:
+        """Strg+Pfeil: Abspielkopf an Anfang oder Ende der Timeline (zeigt dort das Bild)."""
+        end = self.timeline_panel.timeline.duration
+        if end <= 0:
+            return
+        # Kurz vor dem Ende, damit noch ein Bild zu sehen ist.
+        self._on_timeline_seek(max(end - 0.1, 0.0) if to_end else 0.0)
 
     def _on_nothing_loaded(self) -> None:
         """Play/Leertaste ohne geöffnetes Video: dann die Timeline abspielen."""

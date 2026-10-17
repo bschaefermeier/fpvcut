@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b2a4a"/>
+      <stop offset="1" stop-color="#0b1020"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#ff7a1a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="prop" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0.55" stop-color="#5fd4ff" stop-opacity="0.10"/>
+      <stop offset="0.92" stop-color="#5fd4ff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#5fd4ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffa040"/>
+      <stop offset="1" stop-color="#e8550f"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
+  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#glow)"/>
+  <g transform="translate(128 134)">
+    <!-- X-Rahmen -->
+    <g stroke="#2a3550" stroke-width="22" stroke-linecap="round">
+      <line x1="-62" y1="-62" x2="62" y2="62"/>
+      <line x1="62" y1="-62" x2="-62" y2="62"/>
+    </g>
+    <g stroke="#3d4b6e" stroke-width="12" stroke-linecap="round">
+      <line x1="-62" y1="-62" x2="62" y2="62"/>
+      <line x1="62" y1="-62" x2="-62" y2="62"/>
+    </g>
+    <!-- Propeller (in Bewegung) -->
+    <g>
+      <circle cx="-62" cy="-62" r="40" fill="url(#prop)"/>
+      <circle cx="62" cy="-62" r="40" fill="url(#prop)"/>
+      <circle cx="-62" cy="62" r="40" fill="url(#prop)"/>
+      <circle cx="62" cy="62" r="40" fill="url(#prop)"/>
+    </g>
+    <g fill="none" stroke="#9be6ff" stroke-width="5" stroke-linecap="round" opacity="0.9">
+      <path d="M -94.9 -74.0 A 35 35 0 0 1 -58.9 -96.9"/>
+      <path d="M 74.0 -94.9 A 35 35 0 0 1 96.9 -58.9"/>
+      <path d="M -74.0 94.9 A 35 35 0 0 1 -96.9 58.9"/>
+      <path d="M 94.9 74.0 A 35 35 0 0 1 58.9 96.9"/>
+    </g>
+    <!-- Motoren -->
+    <g fill="#c9d3e6" stroke="#0b1020" stroke-width="3">
+      <circle cx="-62" cy="-62" r="11"/>
+      <circle cx="62" cy="-62" r="11"/>
+      <circle cx="-62" cy="62" r="11"/>
+      <circle cx="62" cy="62" r="11"/>
+    </g>
+    <!-- Body mit Kamera (vorne = oben) -->
+    <rect x="-24" y="-38" width="48" height="76" rx="14" fill="url(#body)" stroke="#0b1020" stroke-width="4"/>
+    <circle cx="0" cy="-20" r="13" fill="#0b1020"/>
+    <circle cx="0" cy="-20" r="7.5" fill="#2e7dff"/>
+    <circle cx="-2.5" cy="-22.5" r="2.6" fill="#ffffff" opacity="0.9"/>
+    <!-- Play-Symbol als Hinweis auf Video -->
+    <path d="M -7 4 L 11 14 L -7 24 Z" fill="#ffffff"/>
+  </g>
+</svg>
