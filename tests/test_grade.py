@@ -127,6 +127,18 @@ def test_grade_panel_edits_selected_clip_with_undo(monkeypatch, tmp_path):
     window.timeline_panel.view.select(1)
     panel.refresh()
     assert panel.sliders["temperature"].value() == 5000
+    # Doppelklick auf Regler oder Wert setzt nur diesen Wert zurück.
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
+    slider = panel.sliders["temperature"]
+    QTest.mouseDClick(slider, Qt.MouseButton.LeftButton, pos=slider.rect().center())
+    assert slider.value() == 6500
+    assert Grade.from_dict(window.timeline_panel.timeline.clips[1].grade).temperature == 6500
+    panel.sliders["contrast"].setValue(1200)
+    QTest.mouseDClick(panel._labels["contrast"], Qt.MouseButton.LeftButton)
+    assert panel.sliders["contrast"].value() == 1000
+    assert window.timeline_panel.timeline.clips[1].grade["lut"] == "/luts/dlog.cube"  # Rest bleibt
     panel.reset()
     assert window.timeline_panel.timeline.clips[1].grade is None
     assert panel.sliders["saturation"].value() == 1000

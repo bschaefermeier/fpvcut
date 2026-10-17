@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
@@ -38,6 +38,7 @@ class GradePanel(QWidget):
         self.timeline_panel = timeline_panel
         self._updating = False
         self._dragging = False
+        self._reset_targets: dict[QObject, str] = {}  # Regler/Wert → Name, für Doppelklick
 
         self._hint = QLabel(self)
         self._hint.setWordWrap(True)
@@ -51,13 +52,18 @@ class GradePanel(QWidget):
             slider.setRange(round(low * steps), round(high * steps))
             slider.setValue(round(neutral * steps))
             slider.setPageStep(max((slider.maximum() - slider.minimum()) // 20, 1))
-            slider.setToolTip("Doppelklick auf den Wert: zurück auf neutral")
+            slider.setToolTip("Doppelklick: zurück auf neutral")
             slider.sliderPressed.connect(self._on_press)
             slider.sliderReleased.connect(self._on_release)
             slider.valueChanged.connect(self._on_value)
             value = QLabel(self)
             value.setMinimumWidth(56)
-            value.mouseDoubleClickEvent = lambda _e, n=name: self.reset_value(n)
+            value.setToolTip("Doppelklick: zurück auf neutral")
+            # Doppelklick auf Regler oder Wert setzt zurück (Ereignisfilter, da Qt-Methoden
+            # in PySide nicht per Zuweisung überschrieben werden können).
+            slider.installEventFilter(self)
+            value.installEventFilter(self)
+            self._reset_targets[slider] = self._reset_targets[value] = name
             row = QHBoxLayout()
             row.addWidget(slider, 1)
             row.addWidget(value)
@@ -100,6 +106,13 @@ class GradePanel(QWidget):
         timeline_panel.view.selection_changed.connect(self.refresh)
         timeline_panel.changed.connect(self.refresh)  # z. B. nach Rückgängig
         self.refresh()
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802  (Qt-Name)
+        if event.type() == QEvent.Type.MouseButtonDblClick and watched in self._reset_targets:
+            self._dragging = False
+            self.reset_value(self._reset_targets[watched])
+            return True
+        return super().eventFilter(watched, event)
 
     # --- Anzeige ---------------------------------------------------------
 
