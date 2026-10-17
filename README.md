@@ -49,6 +49,23 @@ Meilenstein 4 (Favoriten-Browser):
 - Doppelklick öffnet das Video und spielt den Favoriten direkt in Schleife ab; Rechtsklick =
   bearbeiten/löschen, Entf = löschen
 
+Meilenstein 5 (Timeline):
+
+- Timeline unter dem Player mit Videospur und Musikspur
+- Clips hinzufügen: Favoriten aus dem Favoriten-Reiter in die Timeline ziehen (auch mehrere mit
+  Strg/Shift), oder auswählen und E drücken. E nimmt auch einen mit I/O markierten Ausschnitt direkt
+  aus dem Player, ohne ihn als Favorit zu speichern. Rechtsklick auf einen Favoriten geht ebenfalls
+- Bearbeiten: Clip ziehen = Reihenfolge ändern, Kante ziehen = trimmen, S = am roten Abspielkopf
+  teilen, Entf = ausgewählten Clip (oder die Musik) entfernen, Strg+Z / Strg+Y = rückgängig/wiederholen
+- Musik: "♪ Musik …" wählt eine Audiodatei. Regler für Originalton und Musik, Ausblenden am Ende
+- Vorschau: "▶ Timeline abspielen" oder P spielt die Timeline direkt aus den Quelldateien ab
+  (mpv-EDL, kein Rendern). Doppelklick auf einen Clip spielt ab dort, Klick ins Lineal springt.
+  Änderungen während der Vorschau werden sofort übernommen. Ein Video aus der Bibliothek öffnen
+  verlässt die Vorschau
+- Die Timeline wird automatisch gespeichert (`%APPDATA%\FPVCut\timeline.json`) und beim Start wieder
+  geladen. Timeline → Speichern unter/Öffnen für weitere Projekte. Clips hängen am Fingerprint und
+  finden umbenannte Videos wieder
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):
@@ -78,7 +95,8 @@ Aufbau:
 
 ```
 src/fpvcut/
-  core/   ohne UI, testbar: ffmpeg-Erkennung, ffprobe, Fingerprints, Ordnernamen, Datenbank, Scanner
-  ui/     PySide6-Oberfläche (Hauptfenster, Bibliothek, Player)
+  core/      ohne UI, testbar: ffmpeg-Erkennung, ffprobe, Fingerprints, Ordnernamen, Datenbank, Scanner
+  timeline/  Timeline-Modell, Projektdatei, EDL für die Vorschau
+  ui/        PySide6-Oberfläche (Hauptfenster, Bibliothek, Favoriten, Player, Timeline)
 tests/
 ```

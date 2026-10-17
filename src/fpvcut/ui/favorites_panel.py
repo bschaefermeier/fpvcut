@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QPoint, Qt, Signal
+import json
+
+from PySide6.QtCore import QMimeData, QPoint, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -26,14 +29,29 @@ from fpvcut.core.library import Clip, LibraryEntry
 from fpvcut.ui.flow_layout import FlowLayout
 from fpvcut.ui.info_panel import clip_range_text
 from fpvcut.ui.library_panel import format_duration
+from fpvcut.ui.timeline_view import MIME_CLIPS
 
 ITEM_ROLE = Qt.ItemDataRole.UserRole
+
+
+class _FavoritesTree(QTreeWidget):
+    """Ausgewählte Favoriten lassen sich in die Timeline ziehen."""
+
+    def mimeTypes(self) -> list[str]:  # noqa: N802  (Qt-Name)
+        return [MIME_CLIPS]
+
+    def mimeData(self, items) -> QMimeData:  # noqa: N802
+        ids = [item.data(0, ITEM_ROLE)[0].id for item in items if not item.data(0, ITEM_ROLE)[1].missing]
+        data = QMimeData()
+        data.setData(MIME_CLIPS, json.dumps(ids).encode())
+        return data
 
 
 class FavoritesPanel(QWidget):
     clip_activated = Signal(object, object)  # Clip, LibraryEntry
     clip_edit_requested = Signal(object)  # Clip
     clip_delete_requested = Signal(object)  # Clip
+    add_to_timeline_requested = Signal(list)  # Favoriten-IDs
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -68,7 +86,10 @@ class FavoritesPanel(QWidget):
 
         self._summary = QLabel(self)
 
-        self._tree = QTreeWidget(self)
+        self._tree = _FavoritesTree(self)
+        self._tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._tree.setDragEnabled(True)
+        self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self._tree.setHeaderLabels(["Favorit", "Länge", "Tags"])
         self._tree.setRootIsDecorated(False)
         self._tree.setUniformRowHeights(True)
@@ -186,6 +207,16 @@ class FavoritesPanel(QWidget):
 
     # --- Interaktion -----------------------------------------------------
 
+    def selected_clip_ids(self) -> list[int]:
+        """Ausgewählte Favoriten in Anzeigereihenfolge, ohne fehlende Dateien."""
+        result = []
+        for i in range(self._tree.topLevelItemCount()):
+            item = self._tree.topLevelItem(i)
+            clip, entry = item.data(0, ITEM_ROLE)
+            if item.isSelected() and not entry.missing:
+                result.append(clip.id)
+        return result
+
     def _on_activated(self, item: QTreeWidgetItem, _column: int) -> None:
         clip, entry = item.data(0, ITEM_ROLE)
         if not entry.missing:
@@ -204,6 +235,14 @@ class FavoritesPanel(QWidget):
         menu = QMenu(self)
         play = menu.addAction("Abspielen (Schleife)", lambda: self.clip_activated.emit(clip, entry))
         play.setEnabled(not entry.missing)
+        if not item.isSelected():
+            self._tree.setCurrentItem(item)
+        ids = self.selected_clip_ids()
+        add = menu.addAction(
+            "Zur Timeline hinzufügen (E)" if len(ids) < 2 else f"{len(ids)} Favoriten zur Timeline hinzufügen (E)",
+            lambda: self.add_to_timeline_requested.emit(ids),
+        )
+        add.setEnabled(bool(ids))
         menu.addAction("Tags und Notiz bearbeiten …", lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
         menu.addAction("Favorit löschen", lambda: self.clip_delete_requested.emit(clip))

@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QRunnable, QStandardPaths, Qt, QThreadPool, Signal
+from PySide6.QtCore import QObject, QRunnable, QStandardPaths, Qt, QThreadPool, QTimer, Signal
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter, QTabWidget
 
@@ -16,13 +16,18 @@ from fpvcut.core.library import Clip, Library, LibraryEntry
 from fpvcut.core.marks import resolve_range
 from fpvcut.core.probe import probe
 from fpvcut.core.scanner import ScanResult, scan_library
+from fpvcut.timeline.edl import build_edl, build_lavfi
+from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
 from fpvcut.ui.favorite_dialog import FavoriteDialog
 from fpvcut.ui.favorites_panel import FavoritesPanel
 from fpvcut.ui.info_panel import InfoPanel, clip_range_text
 from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
+from fpvcut.ui.timeline_panel import TimelinePanel
 
 VIDEO_FILTER = "Videos (*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI);;Alle Dateien (*)"
+MUSIC_FILTER = "Musik (*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.opus);;Alle Dateien (*)"
+TIMELINE_FILTER = "FPVCut-Timeline (*.fpvcut.json *.json)"
 
 
 class _CheckSignals(QObject):
@@ -96,9 +101,12 @@ class MainWindow(QMainWindow):
         self.library = Library(self.db_path)
         self._scanning = False
         self.current_entry: LibraryEntry | None = None
+        self.timeline_mode = False  # Player zeigt gerade die Timeline-Vorschau
+        self.timeline_path = self.db_path.with_name("timeline.json")
 
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
+        self.player.position_changed.connect(self._on_player_position)
         self.library_panel = LibraryPanel(self)
         self.library_panel.video_activated.connect(self.open_entry)
         self.library_panel.review_toggled.connect(self._on_review_toggled)
@@ -106,6 +114,7 @@ class MainWindow(QMainWindow):
         self.favorites_panel.clip_activated.connect(self.play_favorite)
         self.favorites_panel.clip_edit_requested.connect(self.edit_clip)
         self.favorites_panel.clip_delete_requested.connect(self.delete_clip)
+        self.favorites_panel.add_to_timeline_requested.connect(self.add_favorites_to_timeline)
         self.side_tabs = QTabWidget(self)
         self.side_tabs.addTab(self.library_panel, "Bibliothek")
         self.side_tabs.addTab(self.favorites_panel, "Favoriten")
@@ -113,6 +122,18 @@ class MainWindow(QMainWindow):
         self.info_panel.clip_activated.connect(self.play_clip)
         self.info_panel.clip_edit_requested.connect(self.edit_clip)
         self.info_panel.clip_delete_requested.connect(self.delete_clip)
+        self.info_panel.add_to_timeline_requested.connect(self.add_favorites_to_timeline)
+        self.timeline_panel = TimelinePanel(self)
+        self.timeline_panel.preview_requested.connect(self.play_timeline)
+        self.timeline_panel.seek_requested.connect(self._on_timeline_seek)
+        self.timeline_panel.clips_dropped.connect(self.add_favorites_to_timeline)
+        self.timeline_panel.music_requested.connect(self.add_music_dialog)
+        self.timeline_panel.changed.connect(self._on_timeline_changed)
+        # Vorschau erst neu laden, wenn sich nichts mehr tut (z. B. beim Ziehen eines Reglers).
+        self._preview_reload = QTimer(self)
+        self._preview_reload.setSingleShot(True)
+        self._preview_reload.setInterval(350)
+        self._preview_reload.timeout.connect(self._reload_preview)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self._splitter.addWidget(self.side_tabs)
@@ -120,7 +141,12 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self.info_panel)
         self._splitter.setStretchFactor(1, 1)
         self._splitter.setSizes([380, 760, 300])
-        self.setCentralWidget(self._splitter)
+        self._vsplitter = QSplitter(Qt.Orientation.Vertical, self)
+        self._vsplitter.addWidget(self._splitter)
+        self._vsplitter.addWidget(self.timeline_panel)
+        self._vsplitter.setStretchFactor(0, 1)
+        self._vsplitter.setCollapsible(0, False)
+        self.setCentralWidget(self._vsplitter)
 
         self._ffmpeg_status = QLabel("ffmpeg: wird geprüft …")
         self.statusBar().addPermanentWidget(self._ffmpeg_status)
@@ -128,6 +154,7 @@ class MainWindow(QMainWindow):
         self._build_menu()
         self._start_encoder_check()
         self.reload_library()
+        self._load_autosaved_timeline()
         self.rescan_library()
 
     def _build_menu(self) -> None:
@@ -158,6 +185,22 @@ class MainWindow(QMainWindow):
         self._add_action(fav_menu, "Ausschnitt als Favorit speichern …", "F", self.save_favorite)
         self._add_action(fav_menu, "Ganzes Video als Favorit speichern …", "Shift+F", self.save_whole_video)
 
+        tl_menu = self.menuBar().addMenu("&Timeline")
+        self._add_action(tl_menu, "Zur Timeline hinzufügen", "E", self.add_selection_to_timeline)
+        self._add_action(tl_menu, "Timeline abspielen", "P", lambda: self.play_timeline(None))
+        self._add_action(tl_menu, "Clip am Abspielkopf teilen", "S", self.split_timeline)
+        self._add_action(tl_menu, "Ausgewählten Clip entfernen", None, self.timeline_panel.delete_selected)
+        tl_menu.addSeparator()
+        self._add_action(tl_menu, "Rückgängig", "Ctrl+Z", self.timeline_panel.undo)
+        self._add_action(tl_menu, "Wiederholen", "Ctrl+Y", self.timeline_panel.redo)
+        tl_menu.addSeparator()
+        self._add_action(tl_menu, "Musik hinzufügen …", None, self.add_music_dialog)
+        self._add_action(tl_menu, "Musik entfernen", None, lambda: self.timeline_panel.set_music(None))
+        tl_menu.addSeparator()
+        self._add_action(tl_menu, "Neue Timeline", None, self.new_timeline)
+        self._add_action(tl_menu, "Timeline öffnen …", None, self.open_timeline_dialog)
+        self._add_action(tl_menu, "Timeline speichern unter …", None, self.save_timeline_dialog)
+
         help_menu = self.menuBar().addMenu("&Hilfe")
         self._add_action(help_menu, "&Systemcheck …", None, self.show_system_check)
 
@@ -181,6 +224,7 @@ class MainWindow(QMainWindow):
     ) -> None:
         if entry is None:
             entry = self._entry_for_file(path)
+        self.timeline_mode = False
         self.player.open(path, start, end)
         self.current_entry = entry
         self._refresh_clips()
@@ -309,6 +353,156 @@ class MainWindow(QMainWindow):
             self._refresh_clips()
             self.reload_library()
 
+    # --- Timeline --------------------------------------------------------
+
+    def _timeline_clip(self, clip: Clip, entry: LibraryEntry) -> TimelineClip | None:
+        end = clip.out_s if clip.out_s is not None else entry.duration
+        if end is None or end <= clip.in_s:
+            return None
+        return TimelineClip(
+            entry.fingerprint, clip.in_s, end, entry.duration, entry.path.name,
+            path=None if entry.missing else entry.path,
+        )
+
+    def add_favorites_to_timeline(self, clip_ids: list[int], index: int | None = None) -> None:
+        by_id = {clip.id: (clip, entry) for clip, entry in self.library.all_clips()}
+        clips = [self._timeline_clip(*by_id[i]) for i in clip_ids if i in by_id]
+        added = [c for c in clips if c is not None]
+        self.timeline_panel.add_clips(added, index)
+        if added:
+            self.statusBar().showMessage(f"{len(added)} Clip(s) zur Timeline hinzugefügt")
+        elif clip_ids:
+            self.statusBar().showMessage("Länge des Videos unbekannt, Clip nicht hinzugefügt.")
+
+    def add_selection_to_timeline(self) -> None:
+        """E: markierten Ausschnitt im Player, sonst die gewählten Favoriten in die Timeline."""
+        if self.current_entry is not None and self.player.has_marks():
+            in_ms, out_ms = resolve_range(self.player.in_point, self.player.out_point, self.player.position())
+            clip = Clip(0, self.current_entry.media_id, in_ms, out_ms, "", 0.0)
+            if (item := self._timeline_clip(clip, self.current_entry)) is not None:
+                self.timeline_panel.add_clips([item])
+                self.player.clear_marks()
+                self.statusBar().showMessage("Ausschnitt zur Timeline hinzugefügt")
+            return
+        if self.side_tabs.currentWidget() is self.favorites_panel and (ids := self.favorites_panel.selected_clip_ids()):
+            self.add_favorites_to_timeline(ids)
+        elif (clip := self.info_panel.current_clip()) is not None:
+            self.add_favorites_to_timeline([clip.id])
+        else:
+            self.statusBar().showMessage("Erst Favoriten auswählen oder im Player mit I/O einen Ausschnitt markieren.")
+
+    def resolve_timeline(self, timeline: Timeline) -> Timeline:
+        """Pfade der Clips über den Fingerprint in der Bibliothek suchen."""
+        for clip in timeline.clips:
+            media_id = self.library.media_id_for(clip.fingerprint)
+            entry = self.library.entry_for_media(media_id) if media_id else None
+            clip.path = entry.path if entry is not None and not entry.missing else None
+            if entry is not None:
+                clip.label = entry.path.name
+        return timeline
+
+    def _load_autosaved_timeline(self) -> None:
+        if self.timeline_path.exists():
+            try:
+                self.timeline_panel.set_timeline(self.resolve_timeline(Timeline.load(self.timeline_path)))
+            except (OSError, ValueError, TypeError) as exc:
+                self.statusBar().showMessage(f"Gespeicherte Timeline konnte nicht geladen werden: {exc}")
+
+    def _save_timeline(self) -> None:
+        try:
+            self.timeline_panel.timeline.save(self.timeline_path)
+        except OSError as exc:
+            self.statusBar().showMessage(f"Timeline konnte nicht gespeichert werden: {exc}")
+
+    def _on_timeline_changed(self) -> None:
+        self._save_timeline()
+        if self.timeline_mode:
+            self._preview_reload.start()
+
+    def play_timeline(self, start: float | None = None, paused: bool = False) -> None:
+        timeline = self.timeline_panel.timeline
+        if not timeline.clips:
+            self.statusBar().showMessage("Die Timeline ist leer.")
+            return
+        if missing := timeline.missing_clips():
+            names = ", ".join(sorted({c.label for c in missing}))
+            self.statusBar().showMessage(f"Vorschau nicht möglich, Dateien fehlen: {names}")
+            return
+        if start is None:
+            start = self.timeline_panel.view.playhead
+        if start >= timeline.duration - 0.05:
+            start = 0.0
+        self.timeline_mode = True
+        self.current_entry = None
+        self._refresh_clips()
+        self.player.open_timeline(build_edl(timeline), build_lavfi(timeline), start, paused)
+        self.timeline_panel.set_playhead(start)
+        self.statusBar().showMessage("Timeline-Vorschau")
+
+    def _reload_preview(self) -> None:
+        if self.timeline_mode:
+            if self.timeline_panel.timeline.clips:
+                self.play_timeline(self.timeline_panel.view.playhead, self.player.paused)
+            else:
+                self.timeline_mode = False
+                self.player.stop()
+
+    def _on_player_position(self, t: float) -> None:
+        if self.timeline_mode:
+            self.timeline_panel.set_playhead(t)
+
+    def _on_timeline_seek(self, t: float) -> None:
+        if self.timeline_mode:
+            self.player.seek_absolute(t)
+
+    def split_timeline(self) -> None:
+        if not self.timeline_panel.split_at_playhead():
+            self.statusBar().showMessage("Zum Teilen den roten Abspielkopf mitten in einen Clip setzen.")
+
+    def add_music_dialog(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Musik wählen", "", MUSIC_FILTER)
+        if not path:
+            return
+        duration = None
+        try:
+            info = probe(find_tool("ffprobe"), Path(path))
+            duration = info.duration if info else None
+        except (FFmpegNotFound, OSError, ValueError):
+            pass
+        self.timeline_panel.set_music(MusicTrack(path, duration))
+
+    def new_timeline(self) -> None:
+        if self.timeline_panel.timeline.clips:
+            answer = QMessageBox.question(self, "Neue Timeline", "Aktuelle Timeline verwerfen?")
+            if answer != QMessageBox.StandardButton.Yes:
+                return
+        self._replace_timeline(Timeline())
+
+    def _replace_timeline(self, timeline: Timeline) -> None:
+        self.timeline_panel.remember()
+        self.timeline_panel.set_timeline(timeline, keep_history=True)
+        self.timeline_panel.set_playhead(0)
+        self._on_timeline_changed()
+
+    def open_timeline_dialog(self) -> None:
+        path, _ = QFileDialog.getOpenFileName(self, "Timeline öffnen", "", TIMELINE_FILTER)
+        if not path:
+            return
+        try:
+            timeline = self.resolve_timeline(Timeline.load(path))
+        except (OSError, ValueError, TypeError) as exc:
+            QMessageBox.warning(self, "Timeline öffnen", f"Datei konnte nicht gelesen werden:\n{exc}")
+            return
+        self._replace_timeline(timeline)
+
+    def save_timeline_dialog(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Timeline speichern", "timeline.fpvcut.json", TIMELINE_FILTER)
+        if path:
+            try:
+                self.timeline_panel.timeline.save(path)
+            except OSError as exc:
+                QMessageBox.warning(self, "Timeline speichern", str(exc))
+
     def _on_escape(self) -> None:
         if self.isFullScreen():
             self.exit_fullscreen()
@@ -326,6 +520,7 @@ class MainWindow(QMainWindow):
         self.statusBar().hide()
         self.side_tabs.hide()
         self.info_panel.hide()
+        self.timeline_panel.hide()
         self.showFullScreen()
 
     def exit_fullscreen(self) -> None:
@@ -335,6 +530,7 @@ class MainWindow(QMainWindow):
         self.statusBar().show()
         self.side_tabs.show()
         self.info_panel.show()
+        self.timeline_panel.show()
         if getattr(self, "_was_maximized", False):
             self.showMaximized()
         else:
@@ -376,6 +572,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Systemcheck", text)
 
     def closeEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
+        self._save_timeline()
         self.player.shutdown()
         QThreadPool.globalInstance().waitForDone(5000)
         self.library.close()

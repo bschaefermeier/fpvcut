@@ -35,6 +35,7 @@ class InfoPanel(QTabWidget):
     clip_activated = Signal(object)  # Clip
     clip_edit_requested = Signal(object)  # Clip
     clip_delete_requested = Signal(object)  # Clip
+    add_to_timeline_requested = Signal(list)  # Favoriten-IDs
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -111,6 +112,9 @@ class InfoPanel(QTabWidget):
             value_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             self._meta_form.addRow(f"{label}:", value_label)
 
+    def current_clip(self) -> Clip | None:
+        return self._current_clip()
+
     def _current_clip(self) -> Clip | None:
         item = self._clips.currentItem()
         return item.data(CLIP_ROLE) if item else None
@@ -126,6 +130,7 @@ class InfoPanel(QTabWidget):
         clip = item.data(CLIP_ROLE)
         menu = QMenu(self)
         menu.addAction("Abspielen (Schleife)", lambda: self.clip_activated.emit(clip))
+        menu.addAction("Zur Timeline hinzufügen (E)", lambda: self.add_to_timeline_requested.emit([clip.id]))
         menu.addAction("Tags und Notiz bearbeiten …", lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
         menu.addAction("Favorit löschen", lambda: self.clip_delete_requested.emit(clip))

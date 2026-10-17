@@ -241,6 +241,27 @@ class PlayerWidget(QWidget):
             self._player.loadfile(str(path), **options)
         self._player.pause = False
 
+    def open_timeline(self, edl: str, lavfi: str, start: float = 0.0, paused: bool = False) -> None:
+        """Timeline als EDL abspielen; ``lavfi`` mischt Originalton und Musik."""
+        self.clear_marks()
+        self.set_clips([])
+        if self._player is None:
+            return
+        # Als Datei-Option gilt der Filter nur für die Timeline und verschwindet beim nächsten Video.
+        # %Länge% schützt Kommas und Semikolons im Filtergraphen.
+        self._player.loadfile(
+            edl, start=f"{max(start, 0.0):.3f}", lavfi_complex=f"%{len(lavfi.encode())}%{lavfi}"
+        )
+        self._player.pause = paused
+
+    def stop(self) -> None:
+        if self._player is not None:
+            self._player.command("stop")
+
+    @property
+    def paused(self) -> bool:
+        return True if self._player is None else bool(self._player.pause)
+
     def seek_absolute(self, seconds: float) -> None:
         if self._player is not None:
             self._player.seek(seconds, reference="absolute", precision="exact")
