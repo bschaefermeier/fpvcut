@@ -124,7 +124,22 @@ von Ordnern auf Wunsch). Der Ordner bleibt beim Neuinstallieren von FPVCut oder 
 - **Neuanfang:** Startet FPVCut mit einer leeren Bibliothek und findet eine Sicherung, bietet es die
   Wiederherstellung an. Weil alles am Fingerprint hängt, funktioniert das auch vor dem ersten Scan.
 
-## Einrichtung unter Windows
+## Installation (Windows)
+
+Unter [Releases](https://github.com/bschaefermeier/fpvcut/releases) das neueste
+`FPVCut-…-windows.zip` herunterladen, irgendwohin entpacken (z. B. nach
+`Dokumente\FPVCut`) und `FPVCut.exe` starten. libmpv und ffmpeg sind dabei, sonst muss nichts
+installiert werden. Beim ersten Start warnt Windows SmartScreen evtl., weil die .exe nicht signiert
+ist: "Weitere Informationen" → "Trotzdem ausführen".
+
+Die Daten liegen wie bei der Entwicklerversion in `%APPDATA%\FPVCut`, beide Varianten teilen sie
+sich. Ein Update ist: alten Programmordner löschen, neues ZIP entpacken.
+
+Mitgeliefert werden ffmpeg von [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) und
+libmpv von [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), beide
+unter GPL.
+
+## Einrichtung zum Entwickeln (Windows)
 
 1. **uv** installieren (Paketmanager für Python):
    `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
@@ -153,6 +168,22 @@ Der Ordner `vendor/` ist in `.gitignore`, die DLLs landen also nicht im Reposito
 ```powershell
 uv run pytest
 ```
+
+**Neue Version veröffentlichen:** Version in `src/fpvcut/__init__.py` und `pyproject.toml` erhöhen,
+Abschnitt oben in `CHANGELOG.md` ergänzen, mergen und einen Tag setzen (`v1.0.0-rc2`, `v1.0.0`).
+Der Workflow `.github/workflows/windows-build.yml` baut dann auf GitHub die `FPVCut.exe`, prüft sie
+mit `FPVCut.exe --selbsttest bericht.txt` und hängt das ZIP an das Release (Tags mit Bindestrich
+werden als Vorabversion markiert). Unter "Actions" lässt er sich auch ohne Tag starten, das ZIP liegt
+dann als Artefakt am Lauf.
+
+Lokal bauen (libmpv und ffmpeg müssen in `vendor/` liegen):
+
+```powershell
+uv run --with pyinstaller pyinstaller --noconfirm packaging/fpvcut.spec   # Ergebnis: dist\FPVCut\
+```
+
+Das Icon `src/fpvcut/resources/fpvcut.ico` entsteht aus dem SVG mit
+`uv run python packaging/make_icon.py`.
 
 Aufbau:
 

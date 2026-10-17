@@ -22,12 +22,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from fpvcut.core.paths import vendor_dir
 from fpvcut.ui.clip_bar import ClipBar
 
 
 def _prepare_libmpv_search_path() -> None:
     """Macht ``libmpv-2.dll`` aus ``vendor/mpv`` oder ``FPVCUT_MPV_DIR`` auffindbar."""
-    dirs = [os.environ.get("FPVCUT_MPV_DIR"), Path(__file__).resolve().parents[3] / "vendor" / "mpv"]
+    dirs = [os.environ.get("FPVCUT_MPV_DIR"), vendor_dir("mpv")]
     for d in dirs:
         if d and Path(d).is_dir():
             os.environ["PATH"] = f"{d}{os.pathsep}{os.environ.get('PATH', '')}"

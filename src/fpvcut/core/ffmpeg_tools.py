@@ -9,6 +9,8 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from fpvcut.core.paths import vendor_dir
+
 # Encoder, die für den Export interessant sind, in Reihenfolge der Bevorzugung.
 VIDEO_ENCODERS = {
     "h264": ["h264_nvenc", "libx264"],
@@ -28,10 +30,10 @@ class FFmpegNotFound(RuntimeError):
 
 
 def find_tool(name: str) -> Path:
-    """Sucht ffmpeg/ffprobe: Umgebungsvariable, ``vendor/ffmpeg`` neben dem Projekt, dann PATH."""
+    """Sucht ffmpeg/ffprobe: Umgebungsvariable, ``vendor/ffmpeg`` (Projekt oder .exe), dann PATH."""
     env = os.environ.get(f"FPVCUT_{name.upper()}")
     candidates = [Path(env)] if env else []
-    vendor = Path(__file__).resolve().parents[3] / "vendor" / "ffmpeg"
+    vendor = vendor_dir("ffmpeg")
     candidates += [vendor / f"{name}.exe", vendor / "bin" / f"{name}.exe", vendor / name]
     for candidate in candidates:
         if candidate.is_file():

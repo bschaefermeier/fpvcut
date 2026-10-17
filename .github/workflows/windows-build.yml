@@ -1,0 +1,73 @@
+# Baut FPVCut.exe (mit libmpv und ffmpeg) und hängt das ZIP an das GitHub-Release.
+# Läuft bei jedem Versions-Tag (v1.0.0-rc1, v1.0.0, …) und auf Knopfdruck unter "Actions".
+name: Windows-Build
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: libmpv holen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download -R shinchiro/mpv-winbuild-cmake --pattern "mpv-dev-x86_64-2*.7z" -D dl/mpv
+          7z e dl/mpv/*.7z -ovendor/mpv libmpv-2.dll -r -y
+
+      - name: ffmpeg holen (neueste stabile Version)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download latest -R BtbN/FFmpeg-Builds --pattern "ffmpeg-n*-latest-win64-gpl-[0-9]*.zip" -D dl/ffmpeg
+          zip=$(ls dl/ffmpeg/*.zip | sort -V | tail -1)
+          echo "ffmpeg: $zip"
+          7z e "$zip" -ovendor/ffmpeg ffmpeg.exe ffprobe.exe -r -y
+
+      - name: Bauen
+        run: uv run --with pyinstaller pyinstaller --noconfirm packaging/fpvcut.spec
+
+      - name: Selbsttest der .exe
+        shell: pwsh
+        run: |
+          $p = Start-Process dist/FPVCut/FPVCut.exe -ArgumentList "--selbsttest", "$PWD/selbsttest.txt" -Wait -PassThru
+          Get-Content selbsttest.txt
+          exit $p.ExitCode
+
+      - name: ZIP packen
+        id: zip
+        shell: pwsh
+        run: |
+          $name = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME } else { "test-$($env:GITHUB_SHA.Substring(0,7))" }
+          $zip = "FPVCut-$name-windows.zip"
+          Compress-Archive -Path dist/FPVCut -DestinationPath $zip
+          "file=$zip" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FPVCut-windows
+          path: ${{ steps.zip.outputs.file }}
+
+      - name: Release-Notizen aus dem CHANGELOG
+        if: github.ref_type == 'tag'
+        run: awk '/^## /{n++} n==1' CHANGELOG.md > release-notes.md
+
+      - uses: softprops/action-gh-release@v2
+        if: github.ref_type == 'tag'
+        with:
+          files: ${{ steps.zip.outputs.file }}
+          body_path: release-notes.md
+          prerelease: ${{ contains(github.ref_name, '-') }}

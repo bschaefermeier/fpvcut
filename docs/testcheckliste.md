@@ -1,0 +1,43 @@
+# Testcheckliste für Release-Kandidaten
+
+Mit der heruntergeladenen `FPVCut.exe` durchgehen, nicht mit `uv run`. Was nicht klappt, als Issue
+oder im Projekt-Chat melden; nach den Korrekturen gibt es den nächsten Kandidaten (`-rc2`, …).
+Tipp: vorher Datei → "Favoriten exportieren …", dann ist nichts verloren.
+
+## Start
+
+- [ ] ZIP entpacken, `FPVCut\FPVCut.exe` startet ohne Fehlermeldung (evtl. SmartScreen:
+      "Weitere Informationen" → "Trotzdem ausführen")
+- [ ] Fenstertitel zeigt "FPVCut 1.0.0rc1", Taskleiste und Titelleiste zeigen das FPVCut-Icon
+- [ ] Bibliothek, Favoriten und Timeline aus der bisherigen `uv run`-Version sind da
+- [ ] Hilfe → Systemcheck: ffmpeg aus dem Programmordner gefunden, NVENC-Encoder als funktionierend
+
+## Sichten
+
+- [ ] Video öffnen, Leertaste, ←/→, Shift+←/→, J/L, Klick, Doppelklick, F11/Esc, Alt+F4
+- [ ] F5 scannt neu, neue Videos sind markiert, "Nur neue" filtert
+- [ ] I/O setzen, F speichert Favorit mit Tags, gelber Balken erscheint
+- [ ] Favoriten-Reiter: Tag-Filter, Suche, Doppelklick spielt in Schleife
+
+## Timeline
+
+- [ ] Favoriten und ganze Videos hineinziehen, E fügt hinzu
+- [ ] Verschieben, Trimmen, S teilt, Entf löscht, Strg+Z/Strg+Y, Mausrad-Zoom, Strg+←/→
+- [ ] Musik wählen, Lautstärken, Ausblenden; Vorschau mit P, Ton bleibt nach Sprüngen synchron
+- [ ] App schließen und neu starten: Timeline ist wieder da
+
+## Farbe
+
+- [ ] Clip auswählen, Reiter Farbe: Regler wirken sofort in der Vorschau
+- [ ] Doppelklick auf Regler oder Wert setzt zurück, LUT laden, "Auf alle Clips übertragen"
+
+## Rendern
+
+- [ ] Strg+R, Profil Web: Datei entsteht, läuft im Windows-Player, Farbe und Musik wie in der Vorschau
+- [ ] Profil Original mit NVENC, Abbrechen löscht die halbfertige Datei
+
+## Ordner und Sicherung
+
+- [ ] Datei → "Ordner ins Schema umbenennen …": Vorschau stimmt, Umbenennen und Rückgängig klappen,
+      Favoriten bleiben
+- [ ] Favoriten exportieren und wieder importieren: nichts doppelt
