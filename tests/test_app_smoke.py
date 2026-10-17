@@ -187,6 +187,8 @@ def test_save_favorite_from_marks(monkeypatch, tmp_path):
     assert (clip.in_ms, clip.out_ms, clip.tags) == (2000, 5500, ["Flip"])
     assert window.player.in_point is None  # Auswahl nach dem Speichern aufgehoben
     assert window.info_panel._clips.count() == 1
-    assert "★1" in window.library_panel._tree.topLevelItem(0).child(0).text(0)
+    video_item = window.library_panel._tree.topLevelItem(0).child(0)
+    assert video_item.text(0) == "a.mp4"  # Name ohne Stern, der Stern ist das Icon links davon
+    assert "1 Favoriten" in video_item.data(0, QtCore.Qt.ItemDataRole.AccessibleTextRole)
     window.play_clip(clip)  # ohne mpv: darf nicht abstürzen
     window.close()

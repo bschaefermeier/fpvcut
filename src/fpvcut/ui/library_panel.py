@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from PySide6.QtCore import QPoint, Qt, QUrl, Signal
-from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont
+from functools import cache
+
+from PySide6.QtCore import QPoint, QSize, Qt, QUrl, Signal
+from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -24,6 +26,24 @@ from fpvcut.core.library import LibraryEntry
 from fpvcut.ui.player import format_time
 
 NEW_COLOR = QColor("#3daee9")
+STAR_COLOR = QColor("#ffc400")  # wie die Favoriten-Balken unter der Zeitleiste
+STAR_ICON_SIZE = QSize(26, 16)
+
+
+@cache
+def star_icon(count: int) -> QIcon:
+    """Gelbes "★n" als Icon links vom Namen; ohne Favoriten ein leeres Icon, damit die Namen fluchten."""
+    pixmap = QPixmap(STAR_ICON_SIZE)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    if count:
+        painter = QPainter(pixmap)
+        font = QFont()
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(STAR_COLOR)
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, f"★{count}")
+        painter.end()
+    return QIcon(pixmap)
 ENTRY_ROLE = Qt.ItemDataRole.UserRole
 
 
@@ -77,7 +97,11 @@ class LibraryPanel(QWidget):
         self._tree.setHeaderLabels(["Video", "Dauer", "Format"])
         self._tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self._tree.header().setStretchLastSection(False)
+        # Dauer und Format nur so breit wie nötig, damit der Name möglichst viel Platz bekommt.
+        for column in (1, 2):
+            self._tree.header().setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
         self._tree.setUniformRowHeights(True)
+        self._tree.setIconSize(STAR_ICON_SIZE)
         # Strg/Shift+Klick wählt mehrere Videos; ein Flugtag steht für alle seine Videos.
         self._tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._tree.itemActivated.connect(self._on_item_activated)
@@ -144,8 +168,11 @@ class LibraryPanel(QWidget):
         self._update_placeholder()
 
     def _make_item(self, entry: LibraryEntry, bold: QFont) -> QTreeWidgetItem:
-        name = entry.path.name + (f"  ★{entry.clip_count}" if entry.clip_count else "")
+        name = entry.path.name
         item = QTreeWidgetItem([name, format_duration(entry.duration), format_video(entry)])
+        item.setIcon(0, star_icon(entry.clip_count))
+        if entry.clip_count:
+            item.setData(0, Qt.ItemDataRole.AccessibleTextRole, f"{name}, {entry.clip_count} Favoriten")
         item.setData(0, ENTRY_ROLE, entry)
         item.setToolTip(0, entry_tooltip(entry))
         if entry.missing:
