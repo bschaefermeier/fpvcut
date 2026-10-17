@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtCore import (
@@ -21,6 +22,7 @@ from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter, QTabWidget
 
 from fpvcut import __version__
+from fpvcut.core import backup
 from fpvcut.core.ffmpeg_tools import EncoderReport, FFmpegNotFound, check_encoders, find_tool
 from fpvcut.core.fingerprint import fingerprint
 from fpvcut.core.library import Clip, Library, LibraryEntry
@@ -117,6 +119,7 @@ class MainWindow(QMainWindow):
         self.current_entry: LibraryEntry | None = None
         self.timeline_mode = False  # Player zeigt gerade die Timeline-Vorschau
         self.timeline_path = self.db_path.with_name("timeline.json")
+        self.backup_dir = self.db_path.with_name("sicherungen")
 
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
@@ -173,6 +176,8 @@ class MainWindow(QMainWindow):
         self._start_encoder_check()
         self.reload_library()
         self._load_autosaved_timeline()
+        self._backup_favorites()
+        QTimer.singleShot(0, self._offer_restore)
         self.rescan_library()
 
     def _build_menu(self) -> None:
@@ -182,6 +187,9 @@ class MainWindow(QMainWindow):
         self._add_action(file_menu, "Bibliotheksordner &hinzufügen …", "Ctrl+Shift+O", self.add_root_dialog)
         self._add_action(file_menu, "Bibliothek neu &scannen", "F5", self.rescan_library)
         self._add_action(file_menu, "Ordner ins Schema &umbenennen …", None, self.rename_dialog)
+        file_menu.addSeparator()
+        self._add_action(file_menu, "Favoriten &exportieren …", None, self.export_favorites_dialog)
+        self._add_action(file_menu, "Favoriten &importieren …", None, self.import_favorites_dialog)
         file_menu.addSeparator()
         quit_action = self._add_action(file_menu, "&Beenden", "Ctrl+Q", self.close)
         # Alt+F4 erledigt sonst Windows, kommt aber nicht an, wenn der eingebettete Player den Fokus hat.
@@ -267,6 +275,63 @@ class MainWindow(QMainWindow):
     def reload_library(self) -> None:
         self.library_panel.set_entries(self.library.entries())
         self.favorites_panel.set_data(self.library.all_clips(), self.library.tag_counts())
+
+    # --- Sicherung ---------------------------------------------------------
+
+    def _backup_favorites(self) -> None:
+        """Tagessicherung der Favoriten neben der Datenbank (beim Start und beim Beenden)."""
+        try:
+            backup.daily_backup(self.library, self.backup_dir)
+        except OSError as exc:
+            self.statusBar().showMessage(f"Favoriten-Sicherung fehlgeschlagen: {exc}")
+
+    def _offer_restore(self) -> None:
+        """Leere Bibliothek, aber eine Sicherung da (z. B. nach Neuinstallation): Wiederherstellen anbieten."""
+        if self.library.conn.execute("SELECT 1 FROM clip LIMIT 1").fetchone():
+            return
+        latest = backup.latest_backup(self.backup_dir)
+        if latest is None:
+            return
+        answer = QMessageBox.question(
+            self, "Favoriten wiederherstellen",
+            f"Die Bibliothek enthält keine Favoriten, es gibt aber eine Sicherung ({latest.name}).\n\n"
+            "Favoriten, Tags und Gesichtet-Status daraus übernehmen?")
+        if answer == QMessageBox.StandardButton.Yes:
+            self.import_favorites(latest)
+
+    def import_favorites(self, path: Path) -> backup.ImportResult | None:
+        try:
+            result = backup.import_from(self.library, path)
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            QMessageBox.warning(self, "Import fehlgeschlagen", f"{path.name}: {exc}")
+            return None
+        self.reload_library()
+        if self.current_entry is not None:
+            self._refresh_clips()
+        text = f"{result.clips_added} Favoriten übernommen"
+        if result.clips_skipped:
+            text += f", {result.clips_skipped} waren schon da"
+        if result.media_added:
+            text += f"; {result.media_added} Videos erscheinen nach dem nächsten Scan"
+        self.statusBar().showMessage(text)
+        return result
+
+    def export_favorites_dialog(self) -> None:
+        default = str(Path.home() / f"fpvcut_favoriten_{datetime.now():%Y-%m-%d}.json")
+        path, _ = QFileDialog.getSaveFileName(self, "Favoriten exportieren", default, "FPVCut-Sicherung (*.json)")
+        if path:
+            try:
+                count = backup.export_to(self.library, Path(path))
+            except OSError as exc:
+                QMessageBox.warning(self, "Export fehlgeschlagen", str(exc))
+                return
+            self.statusBar().showMessage(f"{count} Favoriten exportiert nach {path}")
+
+    def import_favorites_dialog(self) -> None:
+        start = str(self.backup_dir if self.backup_dir.is_dir() else Path.home())
+        path, _ = QFileDialog.getOpenFileName(self, "Favoriten importieren", start, "FPVCut-Sicherung (*.json)")
+        if path:
+            self.import_favorites(Path(path))
 
     def rename_dialog(self) -> RenameDialog | None:
         if self._scanning:
@@ -714,6 +779,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
         self._save_timeline()
+        self._backup_favorites()
         self.player.shutdown()
         QThreadPool.globalInstance().waitForDone(5000)
         self.library.close()

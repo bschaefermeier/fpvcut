@@ -226,3 +226,37 @@ def test_alt_f4_closes_window(monkeypatch, tmp_path):
     quit_action.trigger()
     app.processEvents()
     assert not window.isVisible()
+
+
+def test_fresh_library_offers_restore_from_daily_backup(monkeypatch, tmp_path):
+    from fpvcut.core.library import Library
+    from fpvcut.core.scanner import scan_library
+    from fpvcut.ui import player
+    from fpvcut.ui.main_window import MainWindow
+    from tests.test_scanner import fake_probe, write
+
+    monkeypatch.setattr(player, "load_mpv", lambda: (None, "test"))
+    monkeypatch.setattr(MainWindow, "rescan_library", lambda self: None)
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    write(tmp_path / "FPV" / "2026-08-28_Wiese" / "a.mp4", b"aaa")
+    old = Library(tmp_path / "alt" / "library.sqlite")
+    old.add_root(tmp_path / "FPV")
+    scan_library(old, fake_probe)
+    old.add_clip(old.entries()[0].media_id, 0, 2000, ["Flip"])
+    old.close()
+    window = MainWindow(db_path=tmp_path / "alt" / "library.sqlite")  # Start legt die Tagessicherung an
+    window.close()
+    assert list((tmp_path / "alt" / "sicherungen").glob("favoriten_*.json"))
+
+    # Neue, leere Datenbank im selben Ordner (z. B. nach Neuinstallation).
+    (tmp_path / "alt" / "library.sqlite").unlink()
+    for extra in (tmp_path / "alt").glob("library.sqlite-*"):
+        extra.unlink()
+    asked = []
+    monkeypatch.setattr(QtWidgets.QMessageBox, "question",
+                        lambda *a, **k: asked.append(a) or QtWidgets.QMessageBox.StandardButton.Yes)
+    window = MainWindow(db_path=tmp_path / "alt" / "library.sqlite")
+    app.processEvents()
+    assert len(asked) == 1
+    assert [c.tags for c in window.library.clips_for(None)] == [["Flip"]]
+    window.close()

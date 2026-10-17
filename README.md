@@ -99,6 +99,20 @@ Meilenstein 7 (Umbenennungs-Helfer):
   Neu-Scan), Favoriten und Timeline bleiben erhalten. "Rückgängig" nimmt die Umbenennung zurück,
   ein Protokoll alt → neu liegt im App-Datenordner unter `umbenannt\`
 
+## Wo liegen meine Daten?
+
+Bibliothek, Favoriten, Tags und Gesichtet-Status stehen in `%APPDATA%\FPVCut\library.sqlite`, die
+Timeline in `timeline.json` daneben. Die Videos selbst werden nie verändert (außer beim Umbenennen
+von Ordnern auf Wunsch). Der Ordner bleibt beim Neuinstallieren von FPVCut oder der `.venv` erhalten.
+
+- **Automatische Sicherung:** Beim Start und beim Beenden schreibt FPVCut die Favoriten, Tags und den
+  Gesichtet-Status nach `%APPDATA%\FPVCut\sicherungen\favoriten_JJJJ-MM-TT.json` (die letzten 30 Tage).
+- **Von Hand:** Datei → "Favoriten exportieren …" speichert dasselbe an einen beliebigen Ort, z. B.
+  auf die Videoplatte oder ein NAS. "Favoriten importieren …" liest eine Sicherung wieder ein; schon
+  vorhandene Favoriten werden nicht verdoppelt.
+- **Neuanfang:** Startet FPVCut mit einer leeren Bibliothek und findet eine Sicherung, bietet es die
+  Wiederherstellung an. Weil alles am Fingerprint hängt, funktioniert das auch vor dem ersten Scan.
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):
