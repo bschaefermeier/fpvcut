@@ -5,13 +5,16 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication
 
 from fpvcut.ui.main_window import MainWindow
 
 
 def main() -> None:
+    # Der eingebettete mpv-Player braucht ein natives Fenster. Ohne dieses Attribut macht Qt auch
+    # die Nachbar-Widgets (z. B. die Bibliothek) nativ, was u. a. Kontextmenüs stört.
+    QApplication.setAttribute(Qt.ApplicationAttribute.AA_DontCreateNativeWidgetSiblings)
     app = QApplication(sys.argv)
     app.setApplicationName("FPVCut")
     window = MainWindow()
