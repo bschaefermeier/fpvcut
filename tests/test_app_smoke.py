@@ -137,3 +137,56 @@ def test_mark_whole_flight_day_reviewed(monkeypatch, tmp_path):
     assert not any(e.is_new for e in window.library.entries())
     assert panel._tree.topLevelItem(0).text(2) == ""
     window.close()
+
+
+def test_parse_tags():
+    from fpvcut.ui.favorite_dialog import parse_tags
+
+    assert parse_tags("Crash, flip ,, Gap, crash") == ["Crash", "flip", "Gap"]
+
+
+def test_favorite_dialog_quick_tags():
+    from fpvcut.ui.favorite_dialog import FavoriteDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    dialog = FavoriteDialog("00:01 – 00:03", ["Crash", "Flip"], tags=["crash"])
+    assert dialog._buttons["crash"].isChecked()
+    dialog._buttons["flip"].click()
+    assert dialog.tags == ["crash", "Flip"]
+    dialog._buttons["crash"].click()
+    assert dialog.tags == ["Flip"]
+
+
+def test_save_favorite_from_marks(monkeypatch, tmp_path):
+    from PySide6.QtCore import QThreadPool
+
+    from fpvcut.core.library import Library
+    from fpvcut.ui import favorite_dialog
+
+    day = tmp_path / "FPV" / "2026_08_28_Wiese"
+    day.mkdir(parents=True)
+    (day / "a.mp4").write_bytes(b"a")
+    lib = Library(tmp_path / "lib.sqlite")
+    lib.add_root(tmp_path / "FPV")
+    lib.close()
+
+    app, window = _window(monkeypatch, tmp_path)
+    QThreadPool.globalInstance().waitForDone(10000)
+    app.processEvents()
+    window.open_entry(window.library.entries()[0])
+
+    # In-Punkt bei 2 s, Speichern bei 5,5 s (ohne Out-Punkt): Ausschnitt 2–5,5 s.
+    positions = iter([2.0, 5.5])
+    monkeypatch.setattr(window.player, "position", lambda: next(positions))
+    window.player.set_in()
+    monkeypatch.setattr(favorite_dialog.FavoriteDialog, "exec", lambda self: favorite_dialog.QDialog.DialogCode.Accepted)
+    monkeypatch.setattr(favorite_dialog.FavoriteDialog, "tags", property(lambda self: ["Flip"]))
+    window.save_favorite()
+
+    [clip] = window.library.clips_for(window.current_entry.media_id)
+    assert (clip.in_ms, clip.out_ms, clip.tags) == (2000, 5500, ["Flip"])
+    assert window.player.in_point is None  # Auswahl nach dem Speichern aufgehoben
+    assert window.info_panel._clips.count() == 1
+    assert "★1" in window.library_panel._tree.topLevelItem(0).child(0).text(0)
+    window.play_clip(clip)  # ohne mpv: darf nicht abstürzen
+    window.close()

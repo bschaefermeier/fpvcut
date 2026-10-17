@@ -11,14 +11,17 @@ from pathlib import Path
 from PySide6.QtCore import QEvent, QObject, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QApplication,
-    QHBoxLayout,
+    QGridLayout,
     QLabel,
     QPushButton,
     QSlider,
     QStackedLayout,
+    QStyle,
     QVBoxLayout,
     QWidget,
 )
+
+from fpvcut.ui.clip_bar import ClipBar
 
 
 def _prepare_libmpv_search_path() -> None:
@@ -54,6 +57,7 @@ class PlayerWidget(QWidget):
     position_changed = Signal(float)
     duration_changed = Signal(float)
     double_clicked = Signal()
+    marks_changed = Signal()
     _mpv_click = Signal()
     _mpv_double = Signal()
     _mpv_time = Signal(object)
@@ -98,10 +102,20 @@ class PlayerWidget(QWidget):
         self._slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._time_label = QLabel(f"{format_time(None)} / {format_time(None)}", self)
 
-        controls = QHBoxLayout()
-        controls.addWidget(self._play_button)
-        controls.addWidget(self._slider, 1)
-        controls.addWidget(self._time_label)
+        self.in_point: float | None = None
+        self.out_point: float | None = None
+        self._clip_bar = ClipBar(self)
+        self._clip_bar.seek_requested.connect(self.seek_absolute)
+        self._clip_bar.set_inset(self.style().pixelMetric(QStyle.PixelMetric.PM_SliderLength) // 2)
+
+        controls = QGridLayout()
+        controls.setHorizontalSpacing(6)
+        controls.setVerticalSpacing(0)
+        controls.addWidget(self._play_button, 0, 0, 2, 1)
+        controls.addWidget(self._slider, 0, 1)
+        controls.addWidget(self._clip_bar, 1, 1)
+        controls.addWidget(self._time_label, 0, 2, 2, 1)
+        controls.setColumnStretch(1, 1)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -209,10 +223,68 @@ class PlayerWidget(QWidget):
     # --- Steuerung -------------------------------------------------------
 
     def open(self, path: str | Path) -> None:
+        self.clear_marks()
+        self.set_clips([])
         if self._player is None:
             return
         self._player.play(str(path))
         self._player.pause = False
+
+    def seek_absolute(self, seconds: float) -> None:
+        if self._player is not None:
+            self._player.seek(seconds, reference="absolute", precision="exact")
+
+    # --- In/Out-Punkte und Favoriten -------------------------------------
+
+    def set_in(self) -> None:
+        pos = self.position()
+        if pos is None:
+            return
+        self.in_point = pos
+        if self.out_point is not None and self.out_point <= pos:
+            self.out_point = None
+        self._marks_updated()
+
+    def set_out(self) -> None:
+        pos = self.position()
+        if pos is None:
+            return
+        self.out_point = pos
+        if self.in_point is not None and self.in_point >= pos:
+            self.in_point = None
+        self._marks_updated()
+
+    def clear_marks(self) -> None:
+        self.in_point = self.out_point = None
+        self._set_loop(None, None)
+        self._marks_updated()
+
+    def has_marks(self) -> bool:
+        return self.in_point is not None or self.out_point is not None
+
+    def _marks_updated(self) -> None:
+        self._clip_bar.set_marks(self.in_point, self.out_point)
+        self.marks_changed.emit()
+
+    def set_clips(self, clips: list[tuple[float, float | None]]) -> None:
+        """Gespeicherte Favoriten des aktuellen Videos in der Leiste anzeigen."""
+        self._clip_bar.set_clips(clips)
+
+    def play_range(self, start: float, end: float | None) -> None:
+        """Ausschnitt in Schleife abspielen, bis die Auswahl aufgehoben wird (Esc)."""
+        if self._player is None:
+            return
+        self.in_point, self.out_point = start, end
+        self._marks_updated()
+        self._set_loop(start, end)
+        self.seek_absolute(start)
+        self._player.pause = False
+
+    def _set_loop(self, start: float | None, end: float | None) -> None:
+        if self._player is None:
+            return
+        self._player["ab-loop-a"] = "no" if start is None or end is None else start
+        self._player["ab-loop-b"] = "no" if start is None or end is None else end
 
     def toggle_pause(self) -> None:
         if self._player is not None:
@@ -246,6 +318,7 @@ class PlayerWidget(QWidget):
 
     def _on_duration(self, value: float | None) -> None:
         self._duration = value or 0.0
+        self._clip_bar.set_duration(self._duration)
         self.duration_changed.emit(self._duration)
 
     def _on_slider_released(self) -> None:

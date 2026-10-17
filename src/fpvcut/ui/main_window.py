@@ -11,9 +11,13 @@ from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSp
 
 from fpvcut import __version__
 from fpvcut.core.ffmpeg_tools import EncoderReport, FFmpegNotFound, check_encoders, find_tool
-from fpvcut.core.library import Library, LibraryEntry
+from fpvcut.core.fingerprint import fingerprint
+from fpvcut.core.library import Clip, Library, LibraryEntry
+from fpvcut.core.marks import resolve_range
 from fpvcut.core.probe import probe
 from fpvcut.core.scanner import ScanResult, scan_library
+from fpvcut.ui.favorite_dialog import FavoriteDialog
+from fpvcut.ui.info_panel import InfoPanel, clip_range_text
 from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
 
@@ -90,18 +94,24 @@ class MainWindow(QMainWindow):
         self.db_path = db_path or default_db_path()
         self.library = Library(self.db_path)
         self._scanning = False
+        self.current_entry: LibraryEntry | None = None
 
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
         self.library_panel = LibraryPanel(self)
         self.library_panel.video_activated.connect(self.open_entry)
         self.library_panel.review_toggled.connect(self._on_review_toggled)
+        self.info_panel = InfoPanel(self)
+        self.info_panel.clip_activated.connect(self.play_clip)
+        self.info_panel.clip_edit_requested.connect(self.edit_clip)
+        self.info_panel.clip_delete_requested.connect(self.delete_clip)
 
         self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self._splitter.addWidget(self.library_panel)
         self._splitter.addWidget(self.player)
+        self._splitter.addWidget(self.info_panel)
         self._splitter.setStretchFactor(1, 1)
-        self._splitter.setSizes([420, 980])
+        self._splitter.setSizes([380, 760, 300])
         self.setCentralWidget(self._splitter)
 
         self._ffmpeg_status = QLabel("ffmpeg: wird geprüft …")
@@ -132,7 +142,13 @@ class MainWindow(QMainWindow):
 
         play_menu.addSeparator()
         self._add_action(play_menu, "Vollbild", "F11", self.toggle_fullscreen)
-        self._add_action(play_menu, "Vollbild beenden", "Esc", self.exit_fullscreen)
+        self._add_action(play_menu, "Vollbild beenden / Auswahl aufheben", "Esc", self._on_escape)
+
+        fav_menu = self.menuBar().addMenu("F&avoriten")
+        self._add_action(fav_menu, "In-Punkt setzen", "I", self.player.set_in)
+        self._add_action(fav_menu, "Out-Punkt setzen", "O", self.player.set_out)
+        self._add_action(fav_menu, "Ausschnitt als Favorit speichern …", "F", self.save_favorite)
+        self._add_action(fav_menu, "Ganzes Video als Favorit speichern …", "Shift+F", self.save_whole_video)
 
         help_menu = self.menuBar().addMenu("&Hilfe")
         self._add_action(help_menu, "&Systemcheck …", None, self.show_system_check)
@@ -152,9 +168,21 @@ class MainWindow(QMainWindow):
         if path:
             self.open_video(Path(path))
 
-    def open_video(self, path: Path) -> None:
+    def open_video(self, path: Path, entry: LibraryEntry | None = None) -> None:
+        if entry is None:
+            entry = self._entry_for_file(path)
         self.player.open(path)
+        self.current_entry = entry
+        self._refresh_clips()
         self.statusBar().showMessage(str(path))
+
+    def _entry_for_file(self, path: Path) -> LibraryEntry | None:
+        """Über Datei → Öffnen gewählte Videos per Fingerprint in der Bibliothek suchen."""
+        try:
+            media_id = self.library.media_id_for(fingerprint(path))
+        except OSError:
+            return None
+        return self.library.entry_for_media(media_id) if media_id else None
 
     # --- Bibliothek ------------------------------------------------------
 
@@ -197,7 +225,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def open_entry(self, entry: LibraryEntry) -> None:
-        self.open_video(entry.path)
+        self.open_video(entry.path, entry)
         if entry.is_new:
             self.library.set_reviewed([entry.media_id])
             self.reload_library()
@@ -205,6 +233,68 @@ class MainWindow(QMainWindow):
     def _on_review_toggled(self, media_ids: list[int], reviewed: bool) -> None:
         self.library.set_reviewed(media_ids, reviewed)
         self.reload_library()
+
+    # --- Favoriten -------------------------------------------------------
+
+    def _refresh_clips(self) -> None:
+        clips = self.library.clips_for(self.current_entry.media_id) if self.current_entry else []
+        self.info_panel.set_entry(self.current_entry, clips)
+        self.player.set_clips([(c.in_s, c.out_s) for c in clips])
+
+    def save_favorite(self) -> None:
+        if self.current_entry is None:
+            self.statusBar().showMessage("Favoriten gehen nur für Videos aus der Bibliothek.")
+            return
+        in_ms, out_ms = resolve_range(self.player.in_point, self.player.out_point, self.player.position())
+        self._save_clip(in_ms, out_ms)
+
+    def save_whole_video(self) -> None:
+        if self.current_entry is None:
+            self.statusBar().showMessage("Favoriten gehen nur für Videos aus der Bibliothek.")
+            return
+        self._save_clip(0, None)
+
+    def _save_clip(self, in_ms: int, out_ms: int | None) -> None:
+        dialog = FavoriteDialog(
+            clip_range_text(in_ms / 1000, None if out_ms is None else out_ms / 1000),
+            self.library.all_tags(),
+            parent=self,
+        )
+        if dialog.exec() != FavoriteDialog.DialogCode.Accepted:
+            return
+        self.library.add_clip(self.current_entry.media_id, in_ms, out_ms, dialog.tags, dialog.note)
+        self.player.clear_marks()
+        self._refresh_clips()
+        self.reload_library()
+        tags = ", ".join(dialog.tags) or "ohne Tags"
+        self.statusBar().showMessage(f"Favorit gespeichert ({tags})")
+
+    def play_clip(self, clip: Clip) -> None:
+        self.player.play_range(clip.in_s, clip.out_s)
+
+    def edit_clip(self, clip: Clip) -> None:
+        dialog = FavoriteDialog(
+            clip_range_text(clip.in_s, clip.out_s), self.library.all_tags(), clip.tags, clip.note,
+            title="Favorit bearbeiten", parent=self,
+        )
+        if dialog.exec() == FavoriteDialog.DialogCode.Accepted:
+            self.library.update_clip(clip.id, dialog.tags, dialog.note)
+            self._refresh_clips()
+
+    def delete_clip(self, clip: Clip) -> None:
+        answer = QMessageBox.question(
+            self, "Favorit löschen", f"Favorit {clip_range_text(clip.in_s, clip.out_s)} wirklich löschen?"
+        )
+        if answer == QMessageBox.StandardButton.Yes:
+            self.library.delete_clip(clip.id)
+            self._refresh_clips()
+            self.reload_library()
+
+    def _on_escape(self) -> None:
+        if self.isFullScreen():
+            self.exit_fullscreen()
+        else:
+            self.player.clear_marks()
 
     # --- Vollbild --------------------------------------------------------
 
@@ -216,6 +306,7 @@ class MainWindow(QMainWindow):
         self.menuBar().hide()
         self.statusBar().hide()
         self.library_panel.hide()
+        self.info_panel.hide()
         self.showFullScreen()
 
     def exit_fullscreen(self) -> None:
@@ -224,6 +315,7 @@ class MainWindow(QMainWindow):
         self.menuBar().show()
         self.statusBar().show()
         self.library_panel.show()
+        self.info_panel.show()
         if getattr(self, "_was_maximized", False):
             self.showMaximized()
         else:

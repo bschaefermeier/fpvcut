@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from fpvcut.core.folder_names import FlightDay, flight_day_for
@@ -52,6 +52,28 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX media_path_media ON media_path(media_id);
     """,
+    # Favoriten (Ausschnitte) und Tags. out_ms NULL = bis zum Ende des Videos.
+    """
+    CREATE TABLE clip (
+        id INTEGER PRIMARY KEY,
+        media_id INTEGER NOT NULL REFERENCES media_file(id) ON DELETE CASCADE,
+        in_ms INTEGER NOT NULL,
+        out_ms INTEGER,
+        rating INTEGER,
+        note TEXT NOT NULL DEFAULT '',
+        created_at REAL NOT NULL
+    );
+    CREATE INDEX clip_media ON clip(media_id);
+    CREATE TABLE tag (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE COLLATE NOCASE
+    );
+    CREATE TABLE clip_tag (
+        clip_id INTEGER NOT NULL REFERENCES clip(id) ON DELETE CASCADE,
+        tag_id INTEGER NOT NULL REFERENCES tag(id) ON DELETE CASCADE,
+        PRIMARY KEY (clip_id, tag_id)
+    );
+    """,
 ]
 
 
@@ -59,6 +81,31 @@ MIGRATIONS: list[str] = [
 class RootFolder:
     id: int
     path: Path
+
+
+@dataclass
+class Clip:
+    """Ein Favorit: Ausschnitt eines Videos (oder das ganze Video) mit Tags."""
+
+    id: int
+    media_id: int
+    in_ms: int
+    out_ms: int | None
+    note: str
+    created_at: float
+    tags: list[str] = field(default_factory=list)
+
+    @property
+    def is_whole_video(self) -> bool:
+        return self.in_ms == 0 and self.out_ms is None
+
+    @property
+    def in_s(self) -> float:
+        return self.in_ms / 1000
+
+    @property
+    def out_s(self) -> float | None:
+        return None if self.out_ms is None else self.out_ms / 1000
 
 
 @dataclass
@@ -79,6 +126,8 @@ class LibraryEntry:
     acodec: str | None
     first_seen: float
     reviewed_at: float | None
+    fingerprint: str = ""
+    clip_count: int = 0
 
     @property
     def path(self) -> Path:
@@ -204,7 +253,8 @@ class Library:
     def entries(self) -> list[LibraryEntry]:
         """Alle Videos mit einem Fundort; vorhandene Fundorte haben Vorrang vor fehlenden."""
         rows = self.conn.execute(
-            """SELECT m.*, p.rel_path, p.missing, r.path AS root_path
+            """SELECT m.*, p.rel_path, p.missing, r.path AS root_path,
+                      (SELECT COUNT(*) FROM clip c WHERE c.media_id = m.id) AS clip_count
                FROM media_file m
                JOIN media_path p ON p.id = (
                    SELECT id FROM media_path WHERE media_id = m.id ORDER BY missing, last_seen DESC LIMIT 1)
@@ -217,6 +267,71 @@ class Library:
                 missing=bool(r["missing"]), size=r["size"], duration=r["duration"], width=r["width"],
                 height=r["height"], fps=r["fps"], vcodec=r["vcodec"], bit_depth=r["bit_depth"],
                 acodec=r["acodec"], first_seen=r["first_seen"], reviewed_at=r["reviewed_at"],
+                fingerprint=r["fingerprint"], clip_count=r["clip_count"],
             )
             for r in rows
         ]
+
+    def entry_for_media(self, media_id: int) -> LibraryEntry | None:
+        return next((e for e in self.entries() if e.media_id == media_id), None)
+
+    # --- Favoriten und Tags ---------------------------------------------
+
+    def add_clip(
+        self, media_id: int, in_ms: int, out_ms: int | None, tags: list[str] = (), note: str = ""
+    ) -> int:
+        with self.conn:
+            cur = self.conn.execute(
+                "INSERT INTO clip (media_id, in_ms, out_ms, note, created_at) VALUES (?, ?, ?, ?, ?)",
+                (media_id, in_ms, out_ms, note, time.time()),
+            )
+            self._set_tags(cur.lastrowid, tags)
+        return cur.lastrowid
+
+    def update_clip(self, clip_id: int, tags: list[str], note: str) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE clip SET note = ? WHERE id = ?", (note, clip_id))
+            self._set_tags(clip_id, tags)
+
+    def delete_clip(self, clip_id: int) -> None:
+        with self.conn:
+            self.conn.execute("DELETE FROM clip WHERE id = ?", (clip_id,))
+            self.conn.execute("DELETE FROM tag WHERE id NOT IN (SELECT tag_id FROM clip_tag)")
+
+    def clips_for(self, media_id: int) -> list[Clip]:
+        rows = self.conn.execute(
+            """SELECT c.*, GROUP_CONCAT(t.name, char(31)) AS tag_names
+               FROM clip c
+               LEFT JOIN clip_tag ct ON ct.clip_id = c.id
+               LEFT JOIN tag t ON t.id = ct.tag_id
+               WHERE c.media_id = ?
+               GROUP BY c.id
+               ORDER BY c.in_ms, c.id""",
+            (media_id,),
+        )
+        return [
+            Clip(
+                id=r["id"], media_id=r["media_id"], in_ms=r["in_ms"], out_ms=r["out_ms"], note=r["note"],
+                created_at=r["created_at"],
+                tags=sorted(r["tag_names"].split(chr(31)), key=str.lower) if r["tag_names"] else [],
+            )
+            for r in rows
+        ]
+
+    def all_tags(self) -> list[str]:
+        """Alle Tags, die meistbenutzten zuerst."""
+        rows = self.conn.execute(
+            """SELECT t.name FROM tag t LEFT JOIN clip_tag ct ON ct.tag_id = t.id
+               GROUP BY t.id ORDER BY COUNT(ct.clip_id) DESC, t.name COLLATE NOCASE"""
+        )
+        return [r["name"] for r in rows]
+
+    def _set_tags(self, clip_id: int, tags: list[str]) -> None:
+        names = {t.strip().lower(): t.strip() for t in tags if t.strip()}.values()
+        self.conn.execute("DELETE FROM clip_tag WHERE clip_id = ?", (clip_id,))
+        for name in names:
+            # Vorhandene Schreibweise beibehalten ("Crash" bleibt "Crash", auch wenn "crash" getippt wird).
+            self.conn.execute("INSERT OR IGNORE INTO tag (name) VALUES (?)", (name,))
+            tag_id = self.conn.execute("SELECT id FROM tag WHERE name = ?", (name,)).fetchone()["id"]
+            self.conn.execute("INSERT OR IGNORE INTO clip_tag (clip_id, tag_id) VALUES (?, ?)", (clip_id, tag_id))
+        self.conn.execute("DELETE FROM tag WHERE id NOT IN (SELECT tag_id FROM clip_tag)")

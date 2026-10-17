@@ -144,7 +144,7 @@ class LibraryPanel(QWidget):
         self._update_placeholder()
 
     def _make_item(self, entry: LibraryEntry, bold: QFont) -> QTreeWidgetItem:
-        name = entry.path.name
+        name = entry.path.name + (f"  ★{entry.clip_count}" if entry.clip_count else "")
         item = QTreeWidgetItem([name, format_duration(entry.duration), format_video(entry)])
         item.setData(0, ENTRY_ROLE, entry)
         item.setToolTip(0, entry_tooltip(entry))

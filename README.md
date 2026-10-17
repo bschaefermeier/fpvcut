@@ -29,6 +29,17 @@ Meilenstein 2 (Bibliothek):
   Dateien werden als "fehlt" angezeigt, nicht vergessen
 - Datenbank: `%APPDATA%\FPVCut\library.sqlite`
 
+Meilenstein 3 (Sichten, Favoriten, Tags):
+
+- I = In-Punkt, O = Out-Punkt, F = Ausschnitt als Favorit speichern, Shift+F = ganzes Video,
+  Esc = Auswahl aufheben. Ohne Out-Punkt reicht der Ausschnitt bis zur aktuellen Position
+- Beim Speichern Tags vergeben (mit Komma getrennt oder per Klick auf bekannte Tags) plus optionale Notiz
+- Gelbe Balken unter der Zeitleiste zeigen gespeicherte Favoriten, blau die aktuelle Auswahl
+- Seitenleiste rechts: Favoriten des Videos (Doppelklick = in Schleife abspielen, Rechtsklick =
+  bearbeiten/löschen, Entf = löschen) und Metadaten (Auflösung, fps, Codec, Bitrate, Flugtag …)
+- Videos mit Favoriten tragen in der Bibliothek ein ★ mit der Anzahl
+- Favoriten hängen am Fingerprint und überleben Umbenennen und Verschieben
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):
