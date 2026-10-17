@@ -1,11 +1,19 @@
 # Baut FPVCut.exe (mit libmpv und ffmpeg) und hängt das ZIP an das GitHub-Release.
-# Läuft bei jedem Versions-Tag (v1.0.0-rc1, v1.0.0, …) und auf Knopfdruck unter "Actions".
+# Läuft bei jedem Versions-Tag (v1.0.0-rc1, v1.0.0, …), auf Knopfdruck unter "Actions" und bei
+# Pull Requests, die am Build etwas ändern (dann nur als Probe, ohne Release).
 name: Windows-Build
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "packaging/**"
+      - ".github/workflows/windows-build.yml"
+      - "src/fpvcut/core/paths.py"
+      - "src/fpvcut/app.py"
+      - "pyproject.toml"
 
 permissions:
   contents: write
