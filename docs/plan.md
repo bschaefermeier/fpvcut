@@ -41,11 +41,11 @@ Streamlit ist super für Dashboards, passt aber schlecht zu einem Schnittprogram
 
 Hybrid-Idee für später: Die App kann Favoriten auch als EDL/XML für DaVinci Resolve exportieren, falls du mal aufwendiger schneiden willst.
 
-## 3. Ordnerschema `YYYY_MM_DD_Flugspot`
+## 3. Ordnerschema `YYYY-MM-DD_Flugspot`
 
 - **Ja, das sortiert korrekt chronologisch**, solange Jahr vierstellig und Monat/Tag immer zweistellig (mit führender Null) sind. Explorer sortiert dann alphabetisch = zeitlich.
 - Mehrere Flüge am selben Tag sortieren danach alphabetisch nach Spot-Namen. Wer die Reihenfolge innerhalb des Tages braucht, hängt z. B. `_1`, `_2` an.
-- `2026-08-28_Flugspot` (ISO-Format mit Bindestrich) funktioniert genauso und ist der internationale Standard; Unterstrich ist aber völlig in Ordnung.
+- Entschieden: Datum im ISO-Format mit Bindestrich (`2026-08-28_Flugspot`), Spot mit Unterstrich abgetrennt. Die alte Variante `2026_08_28_Flugspot` wird weiterhin erkannt.
 - Die App erkennt alle drei Varianten (`DD_MM_YY_Spot`, `Spot_DD_MM_YY`, `YYYY_MM_DD_Spot`) per Regex und leitet daraus Flugdatum und Spot ab.
 - **Umbenennungs-Helfer** (eigener Meilenstein): Die App schlägt für alle Ordner den neuen Namen vor, zeigt eine Vorschau (alt → neu), markiert unklare Fälle (z. B. ungültiges Datum) und benennt erst nach Bestätigung um. Dank Fingerprints (Abschnitt 4) gehen dabei keine Favoriten verloren.
 
@@ -184,3 +184,4 @@ Nach Meilenstein 3 ist die App bereits zum Sichten und Markieren nutzbar. Das is
 - **Material:** meist 1280×720 mit 50 fps, später auch andere Formate. Profile übernehmen deshalb standardmäßig die Quell-Auflösung/FPS; gemischte Quellen werden beim Rendern auf das Zielformat skaliert. Bei 720p ist ein Proxy-Workflow unnötig.
 - **UI:** PySide6-Desktop-App.
 - **Repository:** auf GitHub, privat.
+- **Ordnerschema:** `JJJJ-MM-TT_Spot`, z. B. `2026-10-17_Flugspot`.

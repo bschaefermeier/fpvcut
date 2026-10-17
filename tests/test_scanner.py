@@ -39,7 +39,7 @@ def test_new_files_are_found_and_marked_new(lib, tmp_path):
     assert result.new == 1
     entry = by_name(lib)["28_08_26_Wiese/a.mp4"]
     assert entry.is_new and entry.width == 1280
-    assert entry.flight_day.canonical_name == "2026_08_28_Wiese"
+    assert entry.flight_day.canonical_name == "2026-08-28_Wiese"
 
 
 def test_unchanged_files_are_not_rehashed(lib, tmp_path, monkeypatch):

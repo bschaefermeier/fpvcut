@@ -42,7 +42,7 @@ class RenameDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Ordner ins Schema JJJJ_MM_TT_Spot umbenennen")
+        self.setWindowTitle("Ordner ins Schema JJJJ-MM-TT_Spot umbenennen")
         self.resize(900, 560)
         self.library = library
         self.log_dir = log_dir

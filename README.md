@@ -20,7 +20,7 @@ Meilenstein 2 (Bibliothek):
 
 - Datei → Bibliotheksordner hinzufügen (z. B. `E:\FPV_Videos`); beim Start und mit F5 wird neu gescannt
 - Videos gruppiert nach Flugtag, neueste oben. Das Datum kommt aus dem Ordnernamen
-  (`2026_08_28_Spot`, `28_08_26_Spot` oder `Spot_28_08_26`)
+  (`2026-08-28_Spot`, `2026_08_28_Spot`, `28_08_26_Spot` oder `Spot_28_08_26`)
 - Neue, noch nicht gesichtete Videos sind blau mit ● markiert; "Nur neue" blendet den Rest aus.
   Ein Video gilt als gesichtet, sobald es geöffnet wird. Per Rechtsklick lassen sich auch mehrere
   Videos (Strg/Shift+Klick) oder ganze Flugtage auf einmal markieren
@@ -88,7 +88,8 @@ Meilenstein 6 (Rendern):
 Meilenstein 7 (Umbenennungs-Helfer):
 
 - Datei → "Ordner ins Schema umbenennen …" schlägt für alle Flugtag-Ordner den Namen
-  `JJJJ_MM_TT_Spot` vor (aus `28_08_26_Spot`, `Spot_28_08_26`, `28.08.26 Spot` usw.)
+  `JJJJ-MM-TT_Spot` vor, z. B. `2026-10-17_Flugspot` (aus `28_08_26_Spot`, `Spot_28_08_26`,
+  `2026_08_28_Spot`, `28.08.26 Spot` usw.)
 - Vorschau alt → neu; neue Namen lassen sich per Doppelklick ändern. Eindeutige Fälle sind
   vorausgewählt. **Prüfen** (gelb): Datum in der Zukunft, sehr alt oder auch anders herum lesbar
   (z. B. `12_08_15`). **Konflikt** (rot): Zielname gibt es schon oder mehrere Ordner bekämen ihn.

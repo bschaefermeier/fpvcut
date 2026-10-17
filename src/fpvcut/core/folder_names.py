@@ -2,7 +2,7 @@
 
 Unterstützte Schreibweisen (Trenner ``_``, ``-``, ``.`` oder Leerzeichen):
 
-- ``2026_08_28_Flugspot``  (Jahr zuerst, empfohlen)
+- ``2026-08-28_Flugspot``  (Jahr zuerst, empfohlen; auch ``2026_08_28_Flugspot``)
 - ``28_08_26_Flugspot``    (Tag, Monat, zweistelliges Jahr)
 - ``Flugspot_28_08_26``    (Spot zuerst)
 """
@@ -34,10 +34,10 @@ class FlightDay:
 
     @property
     def canonical_name(self) -> str | None:
-        """Name im empfohlenen Schema ``YYYY_MM_DD_Spot`` (für den späteren Umbenennungs-Helfer)."""
+        """Name im empfohlenen Schema ``YYYY-MM-DD_Spot`` (für den Umbenennungs-Helfer)."""
         if self.date is None:
             return None
-        return f"{self.date:%Y_%m_%d}_{self.spot}" if self.spot else f"{self.date:%Y_%m_%d}"
+        return f"{self.date:%Y-%m-%d}_{self.spot}" if self.spot else f"{self.date:%Y-%m-%d}"
 
 
 def _make_date(year: str, month: str, day: str) -> date | None:

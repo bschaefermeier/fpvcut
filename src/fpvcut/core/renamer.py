@@ -1,4 +1,4 @@
-"""Umbenennungs-Helfer: Flugtag-Ordner ins Schema ``YYYY_MM_DD_Spot`` bringen.
+"""Umbenennungs-Helfer: Flugtag-Ordner ins Schema ``YYYY-MM-DD_Spot`` bringen.
 
 Ablauf: ``plan_renames`` schlägt für jeden Ordner einen Namen vor, ``refresh_status`` prüft
 die (evtl. von Hand geänderten) Namen auf Konflikte, ``apply_renames`` benennt um und
@@ -21,7 +21,7 @@ from fpvcut.core.scanner import VIDEO_EXTENSIONS
 # Ab hier gelten Daten als plausibel für FPV-Aufnahmen.
 EARLIEST_YEAR = 2010
 _INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
-_SCHEMA = re.compile(r"^\d{4}_\d{2}_\d{2}(?:_.+)?$")
+_SCHEMA = re.compile(r"^\d{4}-\d{2}-\d{2}(?:_.+)?$")
 
 OK, SAME, CHECK, CONFLICT, NO_DATE = "ok", "same", "check", "conflict", "nodate"
 
@@ -86,7 +86,7 @@ def _has_videos(names: list[str]) -> bool:
 def plan_renames(roots: list[tuple[int, Path]], today: date | None = None) -> list[RenameItem]:
     """Vorschläge für alle Ordner mit erkennbarem Datum und alle Video-Ordner ohne Datum.
 
-    Unterordner eines Flugtags (z. B. ``2026_08_28_Wiese/raw``) bleiben unberührt.
+    Unterordner eines Flugtags (z. B. ``2026-08-28_Wiese/raw``) bleiben unberührt.
     """
     today = today or date.today()
     items: list[RenameItem] = []
@@ -142,7 +142,7 @@ def refresh_status(items: list[RenameItem]) -> None:
             elif targets.get((item.root_id, item.parent_rel, name.casefold()), 0) > 1:
                 item.status, item.note = CONFLICT, "mehrere Ordner bekämen diesen Namen, z. B. _2 anhängen"
             elif not _SCHEMA.match(name):
-                item.status, item.note = CHECK, "entspricht nicht dem Schema JJJJ_MM_TT_Spot"
+                item.status, item.note = CHECK, "entspricht nicht dem Schema JJJJ-MM-TT_Spot"
             elif item.warning:
                 item.status, item.note = CHECK, item.warning
             else:

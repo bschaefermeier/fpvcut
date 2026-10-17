@@ -35,23 +35,23 @@ def test_rename_dialog_renames_and_window_follows(monkeypatch, tmp_path):
     table = dialog.table
     assert table.rowCount() == 3
     rows = {table.item(r, 1).text(): r for r in range(table.rowCount())}
-    assert table.item(rows["28_08_26_Wiese"], 2).text() == "2026_08_28_Wiese"
+    assert table.item(rows["28_08_26_Wiese"], 2).text() == "2026-08-28_Wiese"
     assert table.item(rows["28_08_26_Wiese"], 0).checkState() == Qt.CheckState.Checked
     assert table.item(rows["12_08_15_Feld"], 0).checkState() == Qt.CheckState.Unchecked
     assert "Prüfen" in table.item(rows["12_08_15_Feld"], 3).text()
-    dialog.set_new_name("Sonstiges", "2026_05_01_Sonstiges")  # Name von Hand
+    dialog.set_new_name("Sonstiges", "2026-05-01_Sonstiges")  # Name von Hand
     assert dialog._apply.text() == "2 Ordner umbenennen"
 
     result = dialog.apply(confirm=False)
     assert len(result.done) == 2 and not result.errors
-    assert (root / "2026_08_28_Wiese" / "a.mp4").exists()
-    assert (root / "2026_05_01_Sonstiges" / "c.mp4").exists()
+    assert (root / "2026-08-28_Wiese" / "a.mp4").exists()
+    assert (root / "2026-05-01_Sonstiges" / "c.mp4").exists()
     log = next((tmp_path / "umbenannt").glob("*.json"))
     assert len(json.loads(log.read_text(encoding="utf-8"))) == 2
     dialog.accept()
     QtWidgets.QApplication.processEvents()
     # Bibliothek und Timeline zeigen die neuen Pfade.
-    assert window.timeline_panel.timeline.clips[0].path == root / "2026_08_28_Wiese" / "a.mp4"
+    assert window.timeline_panel.timeline.clips[0].path == root / "2026-08-28_Wiese" / "a.mp4"
 
     dialog = window.rename_dialog()
     assert dialog.table.rowCount() == 1  # nur noch der zweideutige Fall
