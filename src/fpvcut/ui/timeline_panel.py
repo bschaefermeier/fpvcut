@@ -42,6 +42,8 @@ class TimelinePanel(QWidget):
         self.view.media_dropped.connect(self.media_dropped)
         self.view.edit_started.connect(self.remember)
         self.view.edited.connect(self._on_edited)
+        self.view.wheel_zoom.connect(self.zoom)
+        self.view.wheel_scroll.connect(self._scroll_by)
         self.view.clip_double_clicked.connect(
             lambda i: self.preview_requested.emit(self.timeline.starts()[i])
         )
@@ -148,9 +150,23 @@ class TimelinePanel(QWidget):
         self.view.set_playhead(t)
         self._scroll.ensureVisible(self.view.playhead_x(), 0, 60, 0)
 
-    def zoom(self, factor: float) -> None:
+    def zoom(self, factor: float, anchor_x: float | None = None) -> None:
+        """Zoomen; die Zeit unter ``anchor_x`` (sonst unter dem Abspielkopf) bleibt an ihrer Stelle."""
+        bar = self._scroll.horizontalScrollBar()
+        if anchor_x is None:
+            anchor_x = float(self.view.playhead_x())
+            if not bar.value() <= anchor_x <= bar.value() + self._scroll.viewport().width():
+                anchor_x = bar.value() + self._scroll.viewport().width() / 2
+        on_screen = anchor_x - bar.value()
+        t = self.view._t(anchor_x)
         self.view.set_zoom(self.view.pps * factor)
-        self._scroll.ensureVisible(self.view.playhead_x(), 0, self._scroll.viewport().width() // 2, 0)
+        # Größe sofort übernehmen, damit der Scrollbalken den neuen Bereich schon kennt.
+        self.view.resize(max(self.view.minimumWidth(), self._scroll.viewport().width()), self.view.height())
+        bar.setValue(int(self.view._x(t) - on_screen))
+
+    def _scroll_by(self, pixels: int) -> None:
+        bar = self._scroll.horizontalScrollBar()
+        bar.setValue(bar.value() + pixels)
 
     # --- Bearbeiten ------------------------------------------------------
 

@@ -5,8 +5,19 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QRunnable, QStandardPaths, Qt, QThreadPool, QTimer, Signal
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtCore import (
+    QAbstractAnimation,
+    QObject,
+    QPropertyAnimation,
+    QRunnable,
+    QSequentialAnimationGroup,
+    QStandardPaths,
+    Qt,
+    QThreadPool,
+    QTimer,
+    Signal,
+)
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter, QTabWidget
 
 from fpvcut import __version__
@@ -570,30 +581,60 @@ class MainWindow(QMainWindow):
 
     # --- Vollbild --------------------------------------------------------
 
+    FADE_MS = 110  # kurzes Aus- und Einblenden beim Wechsel, wie bei anderen Playern
+
     def toggle_fullscreen(self) -> None:
         if self.isFullScreen():
             self.exit_fullscreen()
-            return
-        self._was_maximized = self.isMaximized()
-        self.menuBar().hide()
-        self.statusBar().hide()
-        self.side_tabs.hide()
-        self.info_panel.hide()
-        self.timeline_panel.hide()
-        self.showFullScreen()
+        else:
+            self._fade_switch(self._enter_fullscreen)
 
     def exit_fullscreen(self) -> None:
-        if not self.isFullScreen():
+        if self.isFullScreen():
+            self._fade_switch(self._leave_fullscreen)
+
+    def _set_chrome_visible(self, visible: bool) -> None:
+        for widget in (self.menuBar(), self.statusBar(), self.side_tabs, self.info_panel, self.timeline_panel):
+            widget.setVisible(visible)
+
+    def _enter_fullscreen(self) -> None:
+        self._state_before_fullscreen = self.windowState() & ~Qt.WindowState.WindowFullScreen
+        self._set_chrome_visible(False)
+        self.setWindowState(self._state_before_fullscreen | Qt.WindowState.WindowFullScreen)
+
+    def _leave_fullscreen(self) -> None:
+        self._set_chrome_visible(True)
+        # Direkt in den vorherigen Zustand (z. B. maximiert) statt erst über "normal".
+        self.setWindowState(getattr(self, "_state_before_fullscreen", Qt.WindowState.WindowNoState))
+
+    def _fade_finished(self) -> None:
+        self._fade = None
+        self.setWindowOpacity(1.0)
+
+    def _fade_switch(self, switch) -> None:
+        """Fenster ausblenden, umschalten, wieder einblenden. Verdeckt das Zwischenbild beim Wechsel."""
+        if self.FADE_MS <= 0 or QGuiApplication.platformName() in ("offscreen", "minimal"):
+            switch()
             return
-        self.menuBar().show()
-        self.statusBar().show()
-        self.side_tabs.show()
-        self.info_panel.show()
-        self.timeline_panel.show()
-        if getattr(self, "_was_maximized", False):
-            self.showMaximized()
-        else:
-            self.showNormal()
+        if getattr(self, "_fade", None) is not None:
+            return  # Wechsel läuft noch
+        fade_out = QPropertyAnimation(self, b"windowOpacity", self)
+        fade_out.setDuration(self.FADE_MS)
+        fade_out.setStartValue(self.windowOpacity())
+        fade_out.setEndValue(0.0)
+        fade_in = QPropertyAnimation(self, b"windowOpacity", self)
+        fade_in.setDuration(self.FADE_MS + 60)
+        fade_in.setStartValue(0.0)
+        fade_in.setEndValue(1.0)
+        group = QSequentialAnimationGroup(self)
+        group.addAnimation(fade_out)
+        group.addPause(40)
+        group.addAnimation(fade_in)
+        # Umschalten in der Pause zwischen Aus- und Einblenden, solange das Fenster unsichtbar ist.
+        group.currentAnimationChanged.connect(lambda anim: switch() if anim not in (fade_out, fade_in) else None)
+        group.finished.connect(self._fade_finished)
+        self._fade = group
+        group.start(QAbstractAnimation.DeletionPolicy.DeleteWhenStopped)
 
     # --- Systemcheck -----------------------------------------------------
 

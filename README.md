@@ -57,9 +57,11 @@ Meilenstein 5 (Timeline):
   aus dem Player, ohne ihn als Favorit zu speichern. Rechtsklick auf einen Favoriten geht ebenfalls
 - Bearbeiten: Clip ziehen = Reihenfolge ändern, Kante ziehen = trimmen, S = am roten Abspielkopf
   teilen, Entf = ausgewählten Clip (oder die Musik) entfernen, Strg+Z / Strg+Y = rückgängig/wiederholen.
+  Mausrad = zoomen (um die Mausposition), Shift+Mausrad = seitlich scrollen.
   Zwischen zwei Clips trimmt die Kante den ausgewählten (gelben) Clip. Über den Favoriten hinaus
   verlängerte Teile sind hell schraffiert
-- Musik: "♪ Musik …" wählt eine Audiodatei. Regler für Originalton und Musik, Ausblenden am Ende
+- Musik: "♪ Musik …" wählt eine Audiodatei. Regler für Originalton und Musik. "Ausblenden" macht
+  die Musik in den letzten Sekunden der Timeline langsam leiser bis zur Stille (0 s = hartes Ende)
 - Vorschau: "▶ Timeline abspielen" oder P spielt die Timeline direkt aus den Quelldateien ab
   (mpv-EDL, kein Rendern). Ist kein Video geöffnet, startet auch Leertaste/Play die Timeline.
   Doppelklick auf einen Clip spielt ab dort, ein Klick in die Timeline zeigt das Bild an dieser Stelle.

@@ -29,6 +29,8 @@ class TimelineView(QWidget):
     edit_started = Signal()  # vor einer Änderung (für Rückgängig)
     edited = Signal()  # nach einer Änderung
     clip_double_clicked = Signal(int)
+    wheel_zoom = Signal(float, float)  # Faktor, Mausposition x
+    wheel_scroll = Signal(int)  # Pixel nach rechts
 
     RULER = 20
     VIDEO_H = 54
@@ -314,6 +316,17 @@ class TimelineView(QWidget):
     def _scrub(self, x: float) -> None:
         self.set_playhead(min(self._t(x), self.timeline.duration))
         self.seek_requested.emit(self.playhead)
+
+    def wheelEvent(self, event) -> None:  # noqa: N802
+        """Mausrad zoomt um die Mausposition; Shift+Mausrad oder seitliches Wischen scrollt."""
+        delta = event.angleDelta()
+        if delta.x() and not delta.y():
+            self.wheel_scroll.emit(-delta.x())
+        elif event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            self.wheel_scroll.emit(-(delta.y() or delta.x()))
+        elif delta.y():
+            self.wheel_zoom.emit(1.25 ** (delta.y() / 120), event.position().x())
+        event.accept()
 
     def keyPressEvent(self, event) -> None:  # noqa: N802
         if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):

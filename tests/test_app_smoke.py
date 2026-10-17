@@ -104,9 +104,17 @@ def test_click_on_video_toggles_pause_once(monkeypatch, tmp_path):
     p._mpv_click.emit()
     assert len(toggles) == 1
 
-    # Doppelklick: zweiter Klick wird zum Doppelklick, Pause bleibt wie vorher, Vollbild-Signal kommt.
-    QTest.mouseDClick(p._video, QtCore.Qt.MouseButton.LeftButton)
-    p._mpv_double.emit()
+    # Doppelklick: Vollbild-Signal erst beim Loslassen des zweiten Klicks, Pause bleibt wie vorher.
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QMouseEvent
+
+    left = QtCore.Qt.MouseButton.LeftButton
+    pos = QPointF(10, 10)
+    dbl = QMouseEvent(QtCore.QEvent.Type.MouseButtonDblClick, pos, pos, left, left, QtCore.Qt.KeyboardModifier.NoModifier)
+    QtWidgets.QApplication.sendEvent(p._video, dbl)
+    assert doubles == []
+    QTest.mouseRelease(p._video, left, pos=pos.toPoint())
+    p._mpv_double.emit()  # dasselbe von mpv gemeldet: zählt nicht doppelt
     assert len(doubles) == 1
     assert len(toggles) % 2 == 0
     window.close()

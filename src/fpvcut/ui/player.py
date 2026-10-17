@@ -82,6 +82,7 @@ class PlayerWidget(QWidget):
         # Unter Windows deaktiviert mpv sein eingebettetes Fenster, Klicks landen dann hier bei Qt.
         self._video.installEventFilter(self)
         self._last_press = 0.0
+        self._double_pending = False
         self._last_double = 0.0
 
         self._message = QLabel(self)
@@ -186,13 +187,16 @@ class PlayerWidget(QWidget):
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802  (Qt-Name)
         kind = event.type()
-        if watched is self._video and kind in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick):
-            if event.button() == Qt.MouseButton.LeftButton:
-                if kind == QEvent.Type.MouseButtonPress:
-                    self._on_video_press()
-                else:
-                    self._on_video_double_click()
-                return True
+        mouse = (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick, QEvent.Type.MouseButtonRelease)
+        if watched is self._video and kind in mouse and event.button() == Qt.MouseButton.LeftButton:
+            if kind == QEvent.Type.MouseButtonPress:
+                self._on_video_press()
+            elif kind == QEvent.Type.MouseButtonDblClick:
+                self._double_pending = True  # Vollbild erst beim Loslassen, wie bei anderen Playern
+            elif self._double_pending:
+                self._double_pending = False
+                self._on_video_double_click()
+            return True
         return super().eventFilter(watched, event)
 
     def _on_video_press(self) -> None:

@@ -242,3 +242,32 @@ def test_render_dialog_opens_with_source_format(monkeypatch, tmp_path):
     assert (seen["source"].width, seen["source"].height, seen["source"].fps) == (1280, 720, 50.0)
     assert seen["profile"] == "web"
     window.close()
+
+
+def test_wheel_zooms_around_mouse_and_shift_scrolls():
+    from PySide6.QtCore import QPoint
+    from PySide6.QtGui import QWheelEvent
+
+    panel = panel_with_clips()
+    view = panel.view
+    bar = panel._scroll.horizontalScrollBar()
+    panel.zoom(5)  # breiter als das Fenster, damit gescrollt werden kann
+    app().processEvents()
+    bar.setValue(300)
+    x = view._x(10.0)  # Mitte von Clip c
+    on_screen = x - bar.value()
+
+    def wheel(dy, modifiers=Qt.KeyboardModifier.NoModifier):
+        pos = QPointF(x, 40)
+        event = QWheelEvent(pos, view.mapToGlobal(pos), QPoint(), QPoint(0, dy), Qt.MouseButton.NoButton,
+                            modifiers, Qt.ScrollPhase.NoScrollPhase, False)
+        view.wheelEvent(event)
+
+    before = view.pps
+    wheel(240)  # zwei Rasten hinein
+    assert view.pps == pytest.approx(before * 1.25 ** 2)
+    # Die Zeit unter der Maus bleibt an derselben Bildschirmstelle.
+    assert view._x(10.0) - bar.value() == pytest.approx(on_screen, abs=2)
+    value = bar.value()
+    wheel(-120, Qt.KeyboardModifier.ShiftModifier)
+    assert bar.value() > value and view.pps == pytest.approx(before * 1.25 ** 2)
