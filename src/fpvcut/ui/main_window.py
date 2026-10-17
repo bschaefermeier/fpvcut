@@ -1,15 +1,20 @@
-"""Hauptfenster: Player, Tastenkürzel und Systemcheck."""
+"""Hauptfenster: Bibliothek, Player, Tastenkürzel und Systemcheck."""
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
+from PySide6.QtCore import QObject, QRunnable, QStandardPaths, Qt, QThreadPool, Signal
 from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter
 
 from fpvcut import __version__
-from fpvcut.core.ffmpeg_tools import EncoderReport, FFmpegNotFound, check_encoders
+from fpvcut.core.ffmpeg_tools import EncoderReport, FFmpegNotFound, check_encoders, find_tool
+from fpvcut.core.library import Library, LibraryEntry
+from fpvcut.core.probe import probe
+from fpvcut.core.scanner import ScanResult, scan_library
+from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
 
 VIDEO_FILTER = "Videos (*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI);;Alle Dateien (*)"
@@ -36,26 +41,83 @@ class _EncoderCheck(QRunnable):
             self.signals.failed.emit(f"ffmpeg-Check fehlgeschlagen: {exc}")
 
 
+def default_db_path() -> Path:
+    """``%APPDATA%\\FPVCut\\library.sqlite`` unter Windows; ``FPVCUT_DB`` überschreibt das."""
+    if env := os.environ.get("FPVCUT_DB"):
+        return Path(env)
+    base = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppDataLocation)
+    return Path(base) / "library.sqlite"
+
+
+class _ScanSignals(QObject):
+    progress = Signal(int, int, str)
+    finished = Signal(object)  # ScanResult
+
+
+class _LibraryScan(QRunnable):
+    """Scannt im Hintergrund mit eigener Datenbankverbindung."""
+
+    def __init__(self, db_path: Path) -> None:
+        super().__init__()
+        self.db_path = db_path
+        self.signals = _ScanSignals()
+
+    def run(self) -> None:
+        try:
+            ffprobe = find_tool("ffprobe")
+        except FFmpegNotFound:
+            ffprobe = None
+        library = Library(self.db_path)
+        try:
+            result = scan_library(
+                library,
+                (lambda path: probe(ffprobe, path)) if ffprobe else (lambda _path: None),
+                self.signals.progress.emit,
+            )
+        except Exception as exc:  # noqa: BLE001
+            result = ScanResult(errors=[f"Scan abgebrochen: {exc}"])
+        finally:
+            library.close()
+        self.signals.finished.emit(result)
+
+
 class MainWindow(QMainWindow):
-    def __init__(self) -> None:
+    def __init__(self, db_path: Path | None = None) -> None:
         super().__init__()
         self.setWindowTitle(f"FPVCut {__version__}")
-        self.resize(1280, 800)
+        self.resize(1400, 820)
         self.encoder_report: EncoderReport | None = None
+        self.db_path = db_path or default_db_path()
+        self.library = Library(self.db_path)
+        self._scanning = False
 
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
-        self.setCentralWidget(self.player)
+        self.library_panel = LibraryPanel(self)
+        self.library_panel.video_activated.connect(self.open_entry)
+        self.library_panel.review_toggled.connect(self._on_review_toggled)
+
+        self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
+        self._splitter.addWidget(self.library_panel)
+        self._splitter.addWidget(self.player)
+        self._splitter.setStretchFactor(1, 1)
+        self._splitter.setSizes([420, 980])
+        self.setCentralWidget(self._splitter)
 
         self._ffmpeg_status = QLabel("ffmpeg: wird geprüft …")
         self.statusBar().addPermanentWidget(self._ffmpeg_status)
 
         self._build_menu()
         self._start_encoder_check()
+        self.reload_library()
+        self.rescan_library()
 
     def _build_menu(self) -> None:
         file_menu = self.menuBar().addMenu("&Datei")
         self._add_action(file_menu, "Video &öffnen …", "Ctrl+O", self.open_video_dialog)
+        file_menu.addSeparator()
+        self._add_action(file_menu, "Bibliotheksordner &hinzufügen …", "Ctrl+Shift+O", self.add_root_dialog)
+        self._add_action(file_menu, "Bibliothek neu &scannen", "F5", self.rescan_library)
         file_menu.addSeparator()
         self._add_action(file_menu, "&Beenden", "Ctrl+Q", self.close)
 
@@ -94,6 +156,58 @@ class MainWindow(QMainWindow):
         self.player.open(path)
         self.statusBar().showMessage(str(path))
 
+    # --- Bibliothek ------------------------------------------------------
+
+    def reload_library(self) -> None:
+        self.library_panel.set_entries(self.library.entries())
+
+    def add_root_dialog(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, "Bibliotheksordner wählen")
+        if folder:
+            self.library.add_root(folder)
+            self.rescan_library()
+
+    def rescan_library(self) -> None:
+        if self._scanning:
+            return
+        if not self.library.roots():
+            self.statusBar().showMessage("Tipp: Datei → Bibliotheksordner hinzufügen (z. B. E:\\FPV_Videos)")
+            return
+        self._scanning = True
+        self.library_panel.set_placeholder_text("Bibliothek wird gescannt …")
+        task = _LibraryScan(self.db_path)
+        task.signals.progress.connect(
+            lambda i, n, name: self.statusBar().showMessage(f"Scanne {i}/{n}: {name}")
+        )
+        task.signals.finished.connect(self._on_scan_finished)
+        QThreadPool.globalInstance().start(task)
+
+    def _on_scan_finished(self, result: ScanResult) -> None:
+        self._scanning = False
+        self.library_panel.set_placeholder_text("Keine Videos gefunden.")
+        self.reload_library()
+        parts = [f"{result.new} neu"]
+        if result.rehashed:
+            parts.append(f"{result.rehashed} verschoben/kopiert")
+        if result.missing:
+            parts.append(f"{result.missing} fehlen")
+        message = "Scan fertig: " + ", ".join(parts)
+        if result.errors:
+            message += f" · {len(result.errors)} Problem(e): {result.errors[0]}"
+        self.statusBar().showMessage(message)
+
+    def open_entry(self, entry: LibraryEntry) -> None:
+        self.open_video(entry.path)
+        if entry.is_new:
+            self.library.set_reviewed(entry.media_id)
+            self.reload_library()
+
+    def _on_review_toggled(self, media_id: int, reviewed: bool) -> None:
+        self.library.set_reviewed(media_id, reviewed)
+        self.reload_library()
+
+    # --- Vollbild --------------------------------------------------------
+
     def toggle_fullscreen(self) -> None:
         if self.isFullScreen():
             self.exit_fullscreen()
@@ -101,6 +215,7 @@ class MainWindow(QMainWindow):
         self._was_maximized = self.isMaximized()
         self.menuBar().hide()
         self.statusBar().hide()
+        self.library_panel.hide()
         self.showFullScreen()
 
     def exit_fullscreen(self) -> None:
@@ -108,6 +223,7 @@ class MainWindow(QMainWindow):
             return
         self.menuBar().show()
         self.statusBar().show()
+        self.library_panel.show()
         if getattr(self, "_was_maximized", False):
             self.showMaximized()
         else:
@@ -150,4 +266,6 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
         self.player.shutdown()
+        QThreadPool.globalInstance().waitForDone(5000)
+        self.library.close()
         super().closeEvent(event)

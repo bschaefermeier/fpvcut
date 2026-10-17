@@ -16,6 +16,18 @@ Meilenstein 1 (Grundgerüst):
   Testencode, welche Encoder wirklich funktionieren (NVENC wird von ffmpeg auch ohne passende GPU
   gelistet, daher der Test)
 
+Meilenstein 2 (Bibliothek):
+
+- Datei → Bibliotheksordner hinzufügen (z. B. `E:\FPV_Videos`); beim Start und mit F5 wird neu gescannt
+- Videos gruppiert nach Flugtag, neueste oben. Das Datum kommt aus dem Ordnernamen
+  (`2026_08_28_Spot`, `28_08_26_Spot` oder `Spot_28_08_26`)
+- Neue, noch nicht gesichtete Videos sind blau mit ● markiert; "Nur neue" blendet den Rest aus.
+  Ein Video gilt als gesichtet, sobald es geöffnet wird (oder per Rechtsklick)
+- Jede Datei bekommt einen Fingerprint (Größe + je 4 MB von Anfang, Mitte und Ende). Umbenannte oder
+  verschobene Ordner werden dadurch wiedererkannt, der Sichtungsstatus bleibt erhalten. Gelöschte
+  Dateien werden als "fehlt" angezeigt, nicht vergessen
+- Datenbank: `%APPDATA%\FPVCut\library.sqlite`
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):
@@ -45,7 +57,7 @@ Aufbau:
 
 ```
 src/fpvcut/
-  core/   ohne UI, testbar (ffmpeg-Erkennung; später Bibliothek, Fingerprints, Datenbank)
-  ui/     PySide6-Oberfläche (Hauptfenster, Player)
+  core/   ohne UI, testbar: ffmpeg-Erkennung, ffprobe, Fingerprints, Ordnernamen, Datenbank, Scanner
+  ui/     PySide6-Oberfläche (Hauptfenster, Bibliothek, Player)
 tests/
 ```

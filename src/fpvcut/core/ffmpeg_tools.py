@@ -20,7 +20,7 @@ GPU_ENCODERS = {"h264_nvenc", "hevc_nvenc", "av1_nvenc"}
 _ENCODER_LINE = re.compile(r"^\s*([VAS])[.A-Z]{5}\s+(\S+)\s")
 
 # Unter Windows kein Konsolenfenster für jeden ffmpeg-Aufruf öffnen.
-_CREATE_FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+CREATE_FLAGS = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 
 class FFmpegNotFound(RuntimeError):
@@ -44,7 +44,7 @@ def find_tool(name: str) -> Path:
 
 def _run(args: list[str], timeout: float = 30) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
-        args, capture_output=True, text=True, timeout=timeout, creationflags=_CREATE_FLAGS
+        args, capture_output=True, text=True, timeout=timeout, creationflags=CREATE_FLAGS
     )
 
 
