@@ -70,6 +70,18 @@ Meilenstein 5 (Timeline):
   geladen. Timeline → Speichern unter/Öffnen für weitere Projekte. Clips hängen am Fingerprint und
   finden umbenannte Videos wieder
 
+Meilenstein 6 (Rendern):
+
+- "Rendern …" in der Timeline-Leiste oder Strg+R
+- Profile: **Original** (H.265, sehr hohe Qualität), **Web** (H.264, läuft überall, kleiner),
+  **Archiv** (H.265 10 Bit). Auflösung, Bildrate und Qualität lassen sich im Dialog anpassen;
+  "Wie Quelle" nimmt das Format, das in der Timeline am längsten vorkommt
+- Encodiert mit NVENC auf der GPU, wenn der Systemcheck es gefunden hat, sonst auf der CPU
+- Clips mit anderer Auflösung werden eingepasst (schwarze Ränder statt Verzerrung), andere
+  Bildraten angeglichen, Clips ohne Ton bekommen Stille, die Musik wird wie in der Vorschau gemischt
+- Fortschritt mit Restzeit, Abbrechen löscht die halbfertige Datei. Standardordner:
+  `Videos\FPVCut`, danach der zuletzt benutzte
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):
@@ -101,6 +113,7 @@ Aufbau:
 src/fpvcut/
   core/      ohne UI, testbar: ffmpeg-Erkennung, ffprobe, Fingerprints, Ordnernamen, Datenbank, Scanner
   timeline/  Timeline-Modell, Projektdatei, EDL für die Vorschau
+  render/    Render-Profile und ffmpeg-Befehl
   ui/        PySide6-Oberfläche (Hauptfenster, Bibliothek, Favoriten, Player, Timeline)
 tests/
 ```

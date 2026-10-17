@@ -222,3 +222,23 @@ def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp
     window._on_timeline_seek(7.0)  # Klick ins Lineal
     assert window.timeline_mode and calls[-1] == (7.0, True)
     window.close()
+
+
+def test_render_dialog_opens_with_source_format(monkeypatch, tmp_path):
+    from fpvcut.ui import main_window
+
+    window = _window(monkeypatch, tmp_path)
+    window.add_videos_to_timeline([e.media_id for e in window.library.entries()])
+    seen = {}
+
+    def fake_exec(dialog):
+        seen["source"] = dialog.source
+        seen["profile"] = dialog._profile.currentData()
+        return 0
+
+    monkeypatch.setattr(main_window.RenderDialog, "exec", fake_exec)
+    monkeypatch.setattr(main_window, "find_tool", lambda name: Path("/usr/bin/ffmpeg"))
+    window.render_dialog()
+    assert (seen["source"].width, seen["source"].height, seen["source"].fps) == (1280, 720, 50.0)
+    assert seen["profile"] == "web"
+    window.close()

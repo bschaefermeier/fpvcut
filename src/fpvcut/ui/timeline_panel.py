@@ -28,6 +28,7 @@ class TimelinePanel(QWidget):
     clips_dropped = Signal(list, int)  # Favoriten-IDs, Einfügeposition
     media_dropped = Signal(list, int)  # Video-IDs, Einfügeposition
     music_requested = Signal()
+    render_requested = Signal()
     changed = Signal()  # nach jeder Änderung (Speichern, Vorschau aktualisieren)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -74,7 +75,10 @@ class TimelinePanel(QWidget):
         zoom_in.setToolTip("Hineinzoomen")
         zoom_in.clicked.connect(lambda: self.zoom(1.5))
         self._summary = QLabel(self)
-        for widget in (self._play, music, zoom_in, zoom_out, self._fade):
+        self._render = QPushButton("Rendern …", self)
+        self._render.setToolTip("Timeline als Video-Datei rendern (Strg+R)")
+        self._render.clicked.connect(self.render_requested)
+        for widget in (self._play, music, zoom_in, zoom_out, self._fade, self._render):
             widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         bar = QHBoxLayout()
@@ -92,6 +96,8 @@ class TimelinePanel(QWidget):
         bar.addSpacing(12)
         bar.addWidget(zoom_out)
         bar.addWidget(zoom_in)
+        bar.addSpacing(12)
+        bar.addWidget(self._render)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
@@ -134,6 +140,7 @@ class TimelinePanel(QWidget):
         self._music.setEnabled(timeline.music is not None)
         self._fade.setEnabled(timeline.music is not None)
         self._play.setEnabled(bool(timeline.clips))
+        self._render.setEnabled(bool(timeline.clips))
         count = len(timeline.clips)
         self._summary.setText(f"{count} Clip{'' if count == 1 else 's'} · {format_duration(timeline.duration)}")
 

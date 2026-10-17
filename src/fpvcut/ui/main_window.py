@@ -16,6 +16,7 @@ from fpvcut.core.library import Clip, Library, LibraryEntry
 from fpvcut.core.marks import resolve_range
 from fpvcut.core.probe import probe
 from fpvcut.core.scanner import ScanResult, scan_library
+from fpvcut.render.command import SourceFormat, source_format
 from fpvcut.timeline.edl import build_edl, build_lavfi
 from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
 from fpvcut.ui.favorite_dialog import FavoriteDialog
@@ -23,6 +24,7 @@ from fpvcut.ui.favorites_panel import FavoritesPanel
 from fpvcut.ui.info_panel import InfoPanel, clip_range_text
 from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
+from fpvcut.ui.render_dialog import RenderDialog
 from fpvcut.ui.timeline_panel import TimelinePanel
 
 VIDEO_FILTER = "Videos (*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI);;Alle Dateien (*)"
@@ -131,6 +133,7 @@ class MainWindow(QMainWindow):
         self.timeline_panel.clips_dropped.connect(self.add_favorites_to_timeline)
         self.timeline_panel.media_dropped.connect(self.add_videos_to_timeline)
         self.timeline_panel.music_requested.connect(self.add_music_dialog)
+        self.timeline_panel.render_requested.connect(self.render_dialog)
         self.timeline_panel.changed.connect(self._on_timeline_changed)
         # Vorschau erst neu laden, wenn sich nichts mehr tut (z. B. beim Ziehen eines Reglers).
         self._preview_reload = QTimer(self)
@@ -192,6 +195,7 @@ class MainWindow(QMainWindow):
         self._add_action(tl_menu, "Zur Timeline hinzufügen", "E", self.add_selection_to_timeline)
         self._add_action(tl_menu, "Timeline abspielen", "P", lambda: self.play_timeline(None))
         self._add_action(tl_menu, "Clip am Abspielkopf teilen", "S", self.split_timeline)
+        self._add_action(tl_menu, "Rendern …", "Ctrl+R", self.render_dialog)
         self._add_action(tl_menu, "Ausgewählten Clip entfernen", None, self.timeline_panel.delete_selected)
         tl_menu.addSeparator()
         self._add_action(tl_menu, "Rückgängig", "Ctrl+Z", self.timeline_panel.undo)
@@ -483,6 +487,36 @@ class MainWindow(QMainWindow):
     def split_timeline(self) -> None:
         if not self.timeline_panel.split_at_playhead():
             self.statusBar().showMessage("Zum Teilen den roten Abspielkopf mitten in einen Clip setzen.")
+
+    def render_formats(self, timeline: Timeline) -> list[SourceFormat | None]:
+        formats = []
+        for clip in timeline.clips:
+            media_id = self.library.media_id_for(clip.fingerprint)
+            entry = self.library.entry_for_media(media_id) if media_id else None
+            ok = entry is not None and entry.width and entry.height and entry.fps
+            formats.append(SourceFormat(entry.width, entry.height, entry.fps) if ok else None)
+        return formats
+
+    def render_dialog(self) -> None:
+        timeline = self.timeline_panel.timeline
+        if not timeline.clips:
+            self.statusBar().showMessage("Die Timeline ist leer.")
+            return
+        if missing := timeline.missing_clips():
+            names = ", ".join(sorted({c.label for c in missing}))
+            QMessageBox.warning(self, "Rendern", f"Diese Dateien fehlen gerade: {names}")
+            return
+        try:
+            ffmpeg = self.encoder_report.ffmpeg if self.encoder_report else find_tool("ffmpeg")
+        except FFmpegNotFound as exc:
+            QMessageBox.warning(self, "Rendern", str(exc))
+            return
+        if not self.player.paused:
+            self.player.toggle_pause()  # Vorschau anhalten, solange gerendert wird
+        source = source_format(timeline, self.render_formats(timeline))
+        dialog = RenderDialog(timeline, source, ffmpeg, self.encoder_report, parent=self)
+        dialog.exec()
+        self._save_timeline()  # gewähltes Profil merken
 
     def add_music_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Musik wählen", "", MUSIC_FILTER)
