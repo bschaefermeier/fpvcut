@@ -85,6 +85,19 @@ Meilenstein 6 (Rendern):
 - Fortschritt mit Restzeit, Abbrechen löscht die halbfertige Datei. Standardordner:
   `Videos\FPVCut`, danach der zuletzt benutzte
 
+Meilenstein 7 (Umbenennungs-Helfer):
+
+- Datei → "Ordner ins Schema umbenennen …" schlägt für alle Flugtag-Ordner den Namen
+  `JJJJ_MM_TT_Spot` vor (aus `28_08_26_Spot`, `Spot_28_08_26`, `28.08.26 Spot` usw.)
+- Vorschau alt → neu; neue Namen lassen sich per Doppelklick ändern. Eindeutige Fälle sind
+  vorausgewählt. **Prüfen** (gelb): Datum in der Zukunft, sehr alt oder auch anders herum lesbar
+  (z. B. `12_08_15`). **Konflikt** (rot): Zielname gibt es schon oder mehrere Ordner bekämen ihn.
+  **Kein Datum**: Video-Ordner ohne erkennbares Datum, Name von Hand eintragen
+- Unterordner eines Flugtags (z. B. `…/raw`) bleiben, wie sie sind
+- Erst nach Bestätigung wird umbenannt; die Bibliothek übernimmt die neuen Pfade direkt (kein
+  Neu-Scan), Favoriten und Timeline bleiben erhalten. "Rückgängig" nimmt die Umbenennung zurück,
+  ein Protokoll alt → neu liegt im App-Datenordner unter `umbenannt\`
+
 ## Einrichtung unter Windows
 
 1. **uv** installieren (Paketmanager für Python):

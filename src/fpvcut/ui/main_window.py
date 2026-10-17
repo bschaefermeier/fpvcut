@@ -36,6 +36,7 @@ from fpvcut.ui.info_panel import InfoPanel, clip_range_text
 from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
 from fpvcut.ui.render_dialog import RenderDialog
+from fpvcut.ui.rename_dialog import RenameDialog
 from fpvcut.ui.timeline_panel import TimelinePanel
 
 VIDEO_FILTER = "Videos (*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI);;Alle Dateien (*)"
@@ -180,6 +181,7 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         self._add_action(file_menu, "Bibliotheksordner &hinzufügen …", "Ctrl+Shift+O", self.add_root_dialog)
         self._add_action(file_menu, "Bibliothek neu &scannen", "F5", self.rescan_library)
+        self._add_action(file_menu, "Ordner ins Schema &umbenennen …", None, self.rename_dialog)
         file_menu.addSeparator()
         quit_action = self._add_action(file_menu, "&Beenden", "Ctrl+Q", self.close)
         # Alt+F4 erledigt sonst Windows, kommt aber nicht an, wenn der eingebettete Player den Fokus hat.
@@ -265,6 +267,27 @@ class MainWindow(QMainWindow):
     def reload_library(self) -> None:
         self.library_panel.set_entries(self.library.entries())
         self.favorites_panel.set_data(self.library.all_clips(), self.library.tag_counts())
+
+    def rename_dialog(self) -> RenameDialog | None:
+        if self._scanning:
+            self.statusBar().showMessage("Bitte warten, bis der Scan fertig ist.")
+            return None
+        dialog = RenameDialog(self.library, self.db_path.parent / "umbenannt", self._close_media, self)
+        dialog.finished.connect(lambda _code: self._after_rename(dialog))
+        dialog.open()
+        return dialog
+
+    def _close_media(self) -> None:
+        """Vor dem Umbenennen: geöffnetes Video schließen, sonst sperrt Windows den Ordner."""
+        self.player.stop()
+        self.current_entry = None
+        self.timeline_mode = False
+        self._refresh_clips()
+
+    def _after_rename(self, dialog: RenameDialog) -> None:
+        if dialog.changed:
+            self.reload_library()
+            self.timeline_panel.set_timeline(self.resolve_timeline(self.timeline_panel.timeline))
 
     def add_root_dialog(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, "Bibliotheksordner wählen")
