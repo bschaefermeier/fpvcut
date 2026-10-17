@@ -18,6 +18,7 @@ MISSING_COLOR = QColor("#7a3b3b")
 MUSIC_COLOR = QColor("#3f8f5a")
 SELECT_COLOR = QColor("#ffc400")
 PLAYHEAD_COLOR = QColor("#e53935")
+GRADE_COLOR = QColor("#ff8a3d")  # Clip mit Farbkorrektur
 EXTENSION_COLOR = QColor(255, 255, 255, 45)  # über den Favoriten hinaus verlängert
 TICK_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600)
 
@@ -31,6 +32,7 @@ class TimelineView(QWidget):
     clip_double_clicked = Signal(int)
     wheel_zoom = Signal(float, float)  # Faktor, Mausposition x
     wheel_scroll = Signal(int)  # Pixel nach rechts
+    selection_changed = Signal()
 
     RULER = 20
     VIDEO_H = 54
@@ -43,7 +45,7 @@ class TimelineView(QWidget):
         super().__init__(parent)
         self.timeline = Timeline()
         self.pps = 20.0  # Pixel pro Sekunde
-        self.selected: int | str | None = None  # Clip-Index oder "music"
+        self._selected: int | str | None = None  # Clip-Index oder "music"
         self.playhead = 0.0
         self._drag: dict | None = None
         self._drop_index: int | None = None
@@ -54,6 +56,16 @@ class TimelineView(QWidget):
         self._update_size()
 
     # --- Zustand ---------------------------------------------------------
+
+    @property
+    def selected(self) -> int | str | None:
+        return self._selected
+
+    @selected.setter
+    def selected(self, value: int | str | None) -> None:
+        if value != self._selected:
+            self._selected = value
+            self.selection_changed.emit()
 
     def set_timeline(self, timeline: Timeline) -> None:
         self.timeline = timeline
@@ -138,6 +150,8 @@ class TimelineView(QWidget):
             color = MISSING_COLOR if clip.path is None else CLIP_COLORS[index % 2]
             self._paint_block(painter, rect, color, index == self.selected)
             self._paint_extensions(painter, rect, clip)
+            if clip.grade:
+                self._paint_grade_mark(painter, rect)
             name = clip.label + ("  (fehlt)" if clip.path is None else "")
             text_rect = rect.adjusted(5, 3, -4, -3)
             painter.setPen(Qt.GlobalColor.white)
@@ -171,6 +185,14 @@ class TimelineView(QWidget):
         painter.setPen(QPen(SELECT_COLOR, 2) if selected else QPen(color.darker(140), 1))
         painter.setBrush(color)
         painter.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4)
+
+    def _paint_grade_mark(self, painter: QPainter, rect: QRectF) -> None:
+        """Farbiger Streifen am unteren Rand: Clip hat eine Farbkorrektur."""
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(GRADE_COLOR)
+        painter.drawRect(QRectF(rect.left() + 3, rect.bottom() - 4, max(rect.width() - 6, 0), 2))
+        painter.restore()
 
     def _paint_extensions(self, painter: QPainter, rect: QRectF, clip) -> None:
         """Teile außerhalb des ursprünglichen Favoriten heller und schraffiert zeigen."""

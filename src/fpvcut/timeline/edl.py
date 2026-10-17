@@ -6,6 +6,7 @@ Die Videospur und die Musik werden als zwei Streams in eine EDL geschrieben; ein
 
 from __future__ import annotations
 
+from fpvcut.timeline.grade import grade_filters
 from fpvcut.timeline.model import Timeline
 
 SAMPLE_RATE = 48000
@@ -49,7 +50,11 @@ def build_lavfi(timeline: Timeline, start: float = 0.0) -> str:
     has_music = music is not None and length > 0
     # Beide Spuren an den Zeitstempeln ausrichten; mpv liefert nach dem Sprung etwas Vorlauf.
     align = f"aresample={SAMPLE_RATE}:async=1:first_pts={round(max(start, 0.0) * SAMPLE_RATE)}"
-    parts = ["[vid1]null[vo]"]
+    video = []
+    for clip, begin in zip(timeline.clips, timeline.starts()):
+        # Zeitstempel der EDL sind Timeline-Zeit: Korrektur nur im Zeitraum dieses Clips.
+        video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
+    parts = [f"[vid1]{','.join(video) or 'null'}[vo]"]
     labels = []
     if original_ahead:
         parts.append(f"[aid1]{align},volume={timeline.original_volume:.2f}[a1]")

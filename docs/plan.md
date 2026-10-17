@@ -118,7 +118,7 @@ Hinweis: Nach Schnitten kann ffmpeg nicht verlustfrei kopieren (Schnitte liegen 
 
 GPU: Beim Start prüft die App per `ffmpeg -encoders` und einem kurzen Testencode, welche Hardware-Encoder funktionieren, und bietet nur diese an. Decodieren ebenfalls per GPU (`-hwaccel cuda` / `d3d11va`), Fallback auf CPU (`libx264`/`libx265`).
 
-### Farbkorrektur (vorbereitet, später umgesetzt)
+### Farbkorrektur
 
 - Jeder Timeline-Clip hat von Anfang an ein Feld `grade` (zunächst leer): Helligkeit, Kontrast, Sättigung, Gamma, Temperatur, optional eine LUT-Datei (`.cube`, z. B. für D-Log/Flat-Profile).
 - Dieselben Parameter werden für die Vorschau als mpv-Filter und für den Render als ffmpeg-Filter (`eq`, `colortemperature`, `lut3d`) übersetzt. So sieht das Ergebnis aus wie die Vorschau.

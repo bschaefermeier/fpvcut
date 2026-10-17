@@ -217,6 +217,18 @@ class TimelinePanel(QWidget):
     def delete_selected(self) -> bool:
         return self.view.delete_selected()
 
+    def selected_clip(self) -> int | None:
+        return self.view.selected if isinstance(self.view.selected, int) else None
+
+    def set_grade(self, indices: list[int], grade: dict | None, remember: bool = True) -> None:
+        """Farbkorrektur setzen; beim Ziehen eines Reglers nur einmal für Rückgängig merken."""
+        if remember:
+            self.remember()
+        for index in indices:
+            self.timeline.clips[index].grade = dict(grade) if grade else None
+        self.view.update()
+        self.changed.emit()
+
     def undo(self) -> bool:
         return self._step(self._undo, self._redo)
 

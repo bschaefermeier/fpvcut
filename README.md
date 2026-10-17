@@ -99,6 +99,17 @@ Meilenstein 7 (Umbenennungs-Helfer):
   Neu-Scan), Favoriten und Timeline bleiben erhalten. "Rückgängig" nimmt die Umbenennung zurück,
   ein Protokoll alt → neu liegt im App-Datenordner unter `umbenannt\`
 
+Meilenstein 8 (Farbkorrektur):
+
+- Clip in der Timeline anklicken, rechts den Reiter **Farbe** öffnen: Helligkeit, Kontrast,
+  Sättigung, Gamma und Farbtemperatur per Regler, dazu optional eine 3D-LUT (`.cube`, z. B. um
+  D-Log- oder Flat-Aufnahmen in normale Farben umzuwandeln; die LUT wirkt vor den Reglern)
+- Die Vorschau springt in den Clip und zeigt das Ergebnis sofort; ein Doppelklick auf einen Wert
+  setzt ihn zurück. "Auf alle Clips übertragen" nimmt dieselbe Korrektur für die ganze Timeline
+- Korrigierte Clips haben einen orangen Strich am unteren Rand. Rückgängig (Strg+Z) gilt auch hier
+- Vorschau und Render nutzen dieselben ffmpeg-Filter (`lut3d`, `colortemperature`, `eq`), der
+  Export sieht also aus wie die Vorschau
+
 ## Wo liegen meine Daten?
 
 Bibliothek, Favoriten, Tags und Gesichtet-Status stehen in `%APPDATA%\FPVCut\library.sqlite`, die

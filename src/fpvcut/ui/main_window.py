@@ -34,6 +34,7 @@ from fpvcut.timeline.edl import build_edl, build_lavfi
 from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
 from fpvcut.ui.favorite_dialog import FavoriteDialog
 from fpvcut.ui.favorites_panel import FavoritesPanel
+from fpvcut.ui.grade_panel import GradePanel
 from fpvcut.ui.info_panel import InfoPanel, clip_range_text
 from fpvcut.ui.library_panel import LibraryPanel
 from fpvcut.ui.player import PlayerWidget
@@ -150,6 +151,11 @@ class MainWindow(QMainWindow):
         self.timeline_panel.music_requested.connect(self.add_music_dialog)
         self.timeline_panel.render_requested.connect(self.render_dialog)
         self.timeline_panel.changed.connect(self._on_timeline_changed)
+        self.grade_panel = GradePanel(self.timeline_panel, self)
+        self.grade_panel.grade_changed.connect(self._on_grade_changed)
+        self.right_tabs = QTabWidget(self)
+        self.right_tabs.addTab(self.info_panel, "Info")
+        self.right_tabs.addTab(self.grade_panel, "Farbe")
         # Vorschau erst neu laden, wenn sich nichts mehr tut (z. B. beim Ziehen eines Reglers).
         self._preview_reload = QTimer(self)
         self._preview_reload.setSingleShot(True)
@@ -159,7 +165,7 @@ class MainWindow(QMainWindow):
         self._splitter = QSplitter(Qt.Orientation.Horizontal, self)
         self._splitter.addWidget(self.side_tabs)
         self._splitter.addWidget(self.player)
-        self._splitter.addWidget(self.info_panel)
+        self._splitter.addWidget(self.right_tabs)
         self._splitter.setStretchFactor(1, 1)
         self._splitter.setSizes([380, 760, 300])
         self._vsplitter = QSplitter(Qt.Orientation.Vertical, self)
@@ -565,6 +571,21 @@ class MainWindow(QMainWindow):
         self.timeline_panel.set_playhead(start)
         self.statusBar().showMessage("Timeline-Vorschau")
 
+    def _on_grade_changed(self) -> None:
+        """Farbkorrektur geändert: Vorschau an einer Stelle im Clip zeigen, damit man das Ergebnis sieht."""
+        index = self.timeline_panel.selected_clip()
+        if index is None:
+            return
+        timeline = self.timeline_panel.timeline
+        begin = timeline.starts()[index]
+        end = begin + timeline.clips[index].duration
+        playhead = self.timeline_panel.view.playhead
+        if not begin <= playhead < end:
+            playhead = begin + min(0.5, timeline.clips[index].duration / 2)
+            self.timeline_panel.set_playhead(playhead)
+        if not self.timeline_mode:
+            self.play_timeline(playhead, paused=True)
+
     def _reload_preview(self) -> None:
         if self.timeline_mode:
             if self.timeline_panel.timeline.clips:
@@ -700,7 +721,7 @@ class MainWindow(QMainWindow):
             self._fade_switch(self._leave_fullscreen)
 
     def _set_chrome_visible(self, visible: bool) -> None:
-        for widget in (self.menuBar(), self.statusBar(), self.side_tabs, self.info_panel, self.timeline_panel):
+        for widget in (self.menuBar(), self.statusBar(), self.side_tabs, self.right_tabs, self.timeline_panel):
             widget.setVisible(visible)
 
     def _enter_fullscreen(self) -> None:

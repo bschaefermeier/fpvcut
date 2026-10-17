@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from fpvcut.core.ffmpeg_tools import GPU_ENCODERS
+from fpvcut.timeline.grade import grade_filters
 from fpvcut.timeline.model import Timeline
 
 SAMPLE_RATE = 48000
@@ -80,8 +81,10 @@ def build_filter(timeline: Timeline, settings: RenderSettings) -> str:
     parts, pairs = [], []
     for i, clip in enumerate(timeline.clips):
         d = f"{clip.duration:.3f}"
+        # Farbkorrektur vor dem Skalieren, damit schwarze Ränder schwarz bleiben.
+        grade = "".join(f"{f}," for f in grade_filters(clip.grade))
         parts.append(
-            f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=decrease,"
+            f"[{i}:v]{grade}scale={w}:{h}:force_original_aspect_ratio=decrease,"
             f"pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={settings.fps:g},format={pix_fmt},"
             f"trim=duration={d},setpts=PTS-STARTPTS[v{i}]"
         )

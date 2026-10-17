@@ -25,7 +25,7 @@ class TimelineClip:
     # Ursprünglicher Favoriten-Ausschnitt; was beim Trimmen darüber hinausgeht, wird anders eingefärbt.
     fav_in: float | None = None
     fav_out: float | None = None
-    grade: dict | None = None  # Farbkorrektur, kommt später
+    grade: dict | None = None  # Farbkorrektur, siehe timeline/grade.py
     path: Path | None = field(default=None, compare=False)  # zur Laufzeit aufgelöst
 
     @property
