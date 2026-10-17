@@ -23,7 +23,6 @@ Mitgeliefert werden ffmpeg von [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmp
 libmpv von [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), beide
 unter GPL.
 
-
 ## Funktionen
 
 ### Player und Systemcheck
