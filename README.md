@@ -21,7 +21,8 @@ sich. Ein Update ist: alten Programmordner löschen, neues ZIP entpacken.
 
 Mitgeliefert werden ffmpeg von [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) und
 libmpv von [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), beide
-unter GPL.
+unter GPL. Die Lizenztexte aller mitgelieferten Bestandteile und die genauen Build-Versionen liegen im
+Programmordner unter `lizenzen\` (Vorlage: `packaging/lizenzen/`).
 
 ## Funktionen
 

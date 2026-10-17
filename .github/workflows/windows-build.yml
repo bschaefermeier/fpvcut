@@ -35,6 +35,7 @@ jobs:
         run: |
           gh release download -R shinchiro/mpv-winbuild-cmake --pattern "mpv-dev-x86_64-2*.7z" -D dl/mpv
           7z e dl/mpv/*.7z -ovendor/mpv libmpv-2.dll -r -y
+          echo "libmpv: $(basename dl/mpv/*.7z) von https://github.com/shinchiro/mpv-winbuild-cmake/releases" >> dl/BUILD.txt
 
       - name: ffmpeg holen (neueste stabile Version)
         env:
@@ -44,9 +45,19 @@ jobs:
           zip=$(ls dl/ffmpeg/*.zip | sort -V | tail -1)
           echo "ffmpeg: $zip"
           7z e "$zip" -ovendor/ffmpeg ffmpeg.exe ffprobe.exe -r -y
+          7z e "$zip" -odl/ffmpeg-lizenz LICENSE.txt -r -y
+          echo "ffmpeg: $(basename "$zip") von https://github.com/BtbN/FFmpeg-Builds/releases" >> dl/BUILD.txt
 
       - name: Bauen
         run: uv run --with pyinstaller pyinstaller --noconfirm packaging/fpvcut.spec
+
+      - name: Lizenzen beilegen
+        run: |
+          cp -r packaging/lizenzen dist/FPVCut/lizenzen
+          cp dl/ffmpeg-lizenz/LICENSE.txt dist/FPVCut/lizenzen/ffmpeg-LICENSE.txt
+          if [ -f LICENSE ]; then cp LICENSE dist/FPVCut/lizenzen/FPVCut-LICENSE.txt; fi
+          { echo "FPVCut ${GITHUB_REF_NAME} (${GITHUB_SHA})"; cat dl/BUILD.txt; } > dist/FPVCut/lizenzen/BUILD.txt
+          cat dist/FPVCut/lizenzen/BUILD.txt
 
       - name: Selbsttest der .exe
         shell: pwsh
