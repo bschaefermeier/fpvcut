@@ -12,7 +12,7 @@ from PySide6.QtGui import QDropEvent  # noqa: E402
 from PySide6.QtTest import QTest  # noqa: E402
 
 from fpvcut.timeline.model import Timeline, TimelineClip  # noqa: E402
-from fpvcut.ui.timeline_view import MIME_CLIPS  # noqa: E402
+from fpvcut.ui.mime import MIME_CLIPS  # noqa: E402
 from tests.test_favorites_browser import make_lib  # noqa: E402
 
 
@@ -161,4 +161,61 @@ def test_play_timeline_reports_missing_files(monkeypatch, tmp_path):
     window.timeline_panel.set_timeline(Timeline(clips()))
     window.play_timeline(0)
     assert window.timeline_mode and window.current_entry is None
+    window.close()
+
+
+def test_edge_between_clips_belongs_to_selected_clip():
+    panel = panel_with_clips()
+    view = panel.view
+    boundary = QPointF(view.clip_rects()[0].right(), view.clip_rects()[0].center().y())
+    view.select(0)
+    assert view.hit(boundary)[1:] == (0, "end")
+    view.select(1)
+    assert view.hit(boundary)[1:] == (1, "start")
+
+
+def test_trim_beyond_favorite_is_painted(monkeypatch):
+    panel = panel_with_clips()
+    clip = panel.timeline.clips[0]
+    clip.fav_in, clip.fav_out = 1.0, 4.0  # Favorit war 1–4 s, Clip ist auf 0–5 s verlängert
+    painted = []
+    original = panel.view._paint_extensions
+
+    def spy(painter, rect, c):
+        painted.append(c.fingerprint)
+        original(painter, rect, c)
+
+    monkeypatch.setattr(panel.view, "_paint_extensions", spy)
+    panel.view.grab()
+    assert painted[0] == "a"
+
+
+def test_library_videos_go_to_timeline(monkeypatch, tmp_path):
+    from fpvcut.ui.mime import MIME_MEDIA
+
+    window = _window(monkeypatch, tmp_path)
+    tree = window.library_panel._tree
+    group = tree.topLevelItem(0)  # ein ganzer Flugtag
+    mime = tree.mimeData([group])
+    ids = json.loads(bytes(mime.data(MIME_MEDIA)).decode())
+    window.add_videos_to_timeline(ids)
+    [clip] = window.timeline_panel.timeline.clips
+    assert (clip.src_in, clip.src_out, clip.fav_in) == (0.0, 1.0, None)  # ganzes Video
+    group.child(0).setSelected(True)
+    window.side_tabs.setCurrentWidget(window.library_panel)
+    window.add_selection_to_timeline()  # Taste E in der Bibliothek
+    assert len(window.timeline_panel.timeline.clips) == 2
+    window.close()
+
+
+def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp_path):
+    window = _window(monkeypatch, tmp_path)
+    window.timeline_panel.set_timeline(Timeline(clips()))
+    calls = []
+    monkeypatch.setattr(window.player, "open_timeline", lambda edl, lavfi, start=0, paused=False: calls.append((start, paused)))
+    window.player.toggle_pause()  # Leertaste/Play, ohne dass ein Video geladen ist
+    assert window.timeline_mode and calls == [(0.0, False)]
+    window.timeline_mode = False
+    window._on_timeline_seek(7.0)  # Klick ins Lineal
+    assert window.timeline_mode and calls[-1] == (7.0, True)
     window.close()

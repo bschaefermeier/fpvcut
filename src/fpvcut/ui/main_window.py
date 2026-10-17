@@ -107,9 +107,11 @@ class MainWindow(QMainWindow):
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
         self.player.position_changed.connect(self._on_player_position)
+        self.player.nothing_loaded.connect(self._on_nothing_loaded)
         self.library_panel = LibraryPanel(self)
         self.library_panel.video_activated.connect(self.open_entry)
         self.library_panel.review_toggled.connect(self._on_review_toggled)
+        self.library_panel.add_to_timeline_requested.connect(self.add_videos_to_timeline)
         self.favorites_panel = FavoritesPanel(self)
         self.favorites_panel.clip_activated.connect(self.play_favorite)
         self.favorites_panel.clip_edit_requested.connect(self.edit_clip)
@@ -127,6 +129,7 @@ class MainWindow(QMainWindow):
         self.timeline_panel.preview_requested.connect(self.play_timeline)
         self.timeline_panel.seek_requested.connect(self._on_timeline_seek)
         self.timeline_panel.clips_dropped.connect(self.add_favorites_to_timeline)
+        self.timeline_panel.media_dropped.connect(self.add_videos_to_timeline)
         self.timeline_panel.music_requested.connect(self.add_music_dialog)
         self.timeline_panel.changed.connect(self._on_timeline_changed)
         # Vorschau erst neu laden, wenn sich nichts mehr tut (z. B. beim Ziehen eines Reglers).
@@ -355,27 +358,38 @@ class MainWindow(QMainWindow):
 
     # --- Timeline --------------------------------------------------------
 
-    def _timeline_clip(self, clip: Clip, entry: LibraryEntry) -> TimelineClip | None:
-        end = clip.out_s if clip.out_s is not None else entry.duration
-        if end is None or end <= clip.in_s:
+    def _timeline_clip(self, clip: Clip | None, entry: LibraryEntry) -> TimelineClip | None:
+        """Timeline-Clip aus einem Favoriten oder, ohne ``clip``, aus dem ganzen Video."""
+        start = clip.in_s if clip else 0.0
+        end = clip.out_s if clip and clip.out_s is not None else entry.duration
+        if end is None or end <= start:
             return None
         return TimelineClip(
-            entry.fingerprint, clip.in_s, end, entry.duration, entry.path.name,
+            entry.fingerprint, start, end, entry.duration, entry.path.name,
+            has_audio=bool(entry.acodec),
+            fav_in=start if clip else None, fav_out=end if clip else None,
             path=None if entry.missing else entry.path,
         )
+
+    def add_videos_to_timeline(self, media_ids: list[int], index: int | None = None) -> None:
+        entries = {e.media_id: e for e in self.library.entries()}
+        clips = [self._timeline_clip(None, entries[i]) for i in media_ids if i in entries]
+        self._add_to_timeline([c for c in clips if c is not None], index, bool(media_ids))
 
     def add_favorites_to_timeline(self, clip_ids: list[int], index: int | None = None) -> None:
         by_id = {clip.id: (clip, entry) for clip, entry in self.library.all_clips()}
         clips = [self._timeline_clip(*by_id[i]) for i in clip_ids if i in by_id]
-        added = [c for c in clips if c is not None]
-        self.timeline_panel.add_clips(added, index)
-        if added:
-            self.statusBar().showMessage(f"{len(added)} Clip(s) zur Timeline hinzugefügt")
-        elif clip_ids:
-            self.statusBar().showMessage("Länge des Videos unbekannt, Clip nicht hinzugefügt.")
+        self._add_to_timeline([c for c in clips if c is not None], index, bool(clip_ids))
+
+    def _add_to_timeline(self, clips: list[TimelineClip], index: int | None, requested: bool) -> None:
+        self.timeline_panel.add_clips(clips, index)
+        if clips:
+            self.statusBar().showMessage(f"{len(clips)} Clip(s) zur Timeline hinzugefügt")
+        elif requested:
+            self.statusBar().showMessage("Länge des Videos unbekannt, nichts hinzugefügt.")
 
     def add_selection_to_timeline(self) -> None:
-        """E: markierten Ausschnitt im Player, sonst die gewählten Favoriten in die Timeline."""
+        """E: markierten Ausschnitt im Player, sonst die Auswahl im linken Reiter in die Timeline."""
         if self.current_entry is not None and self.player.has_marks():
             in_ms, out_ms = resolve_range(self.player.in_point, self.player.out_point, self.player.position())
             clip = Clip(0, self.current_entry.media_id, in_ms, out_ms, "", 0.0)
@@ -384,12 +398,15 @@ class MainWindow(QMainWindow):
                 self.player.clear_marks()
                 self.statusBar().showMessage("Ausschnitt zur Timeline hinzugefügt")
             return
-        if self.side_tabs.currentWidget() is self.favorites_panel and (ids := self.favorites_panel.selected_clip_ids()):
+        tab = self.side_tabs.currentWidget()
+        if tab is self.favorites_panel and (ids := self.favorites_panel.selected_clip_ids()):
             self.add_favorites_to_timeline(ids)
+        elif tab is self.library_panel and (entries := self.library_panel.selected_entries()):
+            self.add_videos_to_timeline([e.media_id for e in entries if not e.missing])
         elif (clip := self.info_panel.current_clip()) is not None:
             self.add_favorites_to_timeline([clip.id])
         else:
-            self.statusBar().showMessage("Erst Favoriten auswählen oder im Player mit I/O einen Ausschnitt markieren.")
+            self.statusBar().showMessage("Erst Videos oder Favoriten auswählen oder im Player mit I/O markieren.")
 
     def resolve_timeline(self, timeline: Timeline) -> Timeline:
         """Pfade der Clips über den Fingerprint in der Bibliothek suchen."""
@@ -399,6 +416,7 @@ class MainWindow(QMainWindow):
             clip.path = entry.path if entry is not None and not entry.missing else None
             if entry is not None:
                 clip.label = entry.path.name
+                clip.has_audio = bool(entry.acodec)
         return timeline
 
     def _load_autosaved_timeline(self) -> None:
@@ -454,6 +472,13 @@ class MainWindow(QMainWindow):
     def _on_timeline_seek(self, t: float) -> None:
         if self.timeline_mode:
             self.player.seek_absolute(t)
+        else:
+            self.play_timeline(t, paused=True)  # Klick in die Timeline zeigt das Bild an dieser Stelle
+
+    def _on_nothing_loaded(self) -> None:
+        """Play/Leertaste ohne geöffnetes Video: dann die Timeline abspielen."""
+        if self.timeline_panel.timeline.clips:
+            self.play_timeline()
 
     def split_timeline(self) -> None:
         if not self.timeline_panel.split_at_playhead():

@@ -26,6 +26,7 @@ class TimelinePanel(QWidget):
     preview_requested = Signal(float)  # ab dieser Timeline-Zeit abspielen
     seek_requested = Signal(float)
     clips_dropped = Signal(list, int)  # Favoriten-IDs, Einfügeposition
+    media_dropped = Signal(list, int)  # Video-IDs, Einfügeposition
     music_requested = Signal()
     changed = Signal()  # nach jeder Änderung (Speichern, Vorschau aktualisieren)
 
@@ -37,6 +38,7 @@ class TimelinePanel(QWidget):
         self.view = TimelineView()
         self.view.seek_requested.connect(self.seek_requested)
         self.view.clips_dropped.connect(self.clips_dropped)
+        self.view.media_dropped.connect(self.media_dropped)
         self.view.edit_started.connect(self.remember)
         self.view.edited.connect(self._on_edited)
         self.view.clip_double_clicked.connect(

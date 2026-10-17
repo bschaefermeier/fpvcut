@@ -78,12 +78,17 @@ def test_music_length():
 def test_edl_and_filter():
     tl = Timeline([clip("a", 1, 3)])
     assert build_edl(tl) == "edl://!new_stream;%8%/v/a.mp4,1.000,2.000"
-    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]volume=1.00[ao]"
+    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]aresample=async=1:first_pts=0,volume=1.00[ao]"
     tl.music = MusicTrack("/m/x, y.mp3", duration=60, volume=0.5, fade_in=0.5, fade_out=1)
     assert build_edl(tl).endswith(";!new_stream;%11%/m/x, y.mp3,0.000,2.000")
     lavfi = build_lavfi(tl)
     assert "[aid2]volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[a2]" in lavfi
     assert lavfi.endswith("amix=inputs=2:normalize=0:duration=first[ao]")
+    # Kein Clip mit Ton: die Musik ist die erste Audiospur.
+    tl.clips[0].has_audio = False
+    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[ao]"
+    tl.music = None
+    assert build_lavfi(tl) == "[vid1]null[vo]"
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg fehlt")

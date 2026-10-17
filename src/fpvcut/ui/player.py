@@ -58,6 +58,7 @@ class PlayerWidget(QWidget):
     duration_changed = Signal(float)
     double_clicked = Signal()
     marks_changed = Signal()
+    nothing_loaded = Signal()  # Play gedrückt, aber nichts geladen
     _mpv_click = Signal()
     _mpv_double = Signal()
     _mpv_time = Signal(object)
@@ -71,6 +72,7 @@ class PlayerWidget(QWidget):
         self._duration = 0.0
         self._slider_dragging = False
         self._player = None
+        self._loaded = False
 
         self._video = QWidget(self)
         self._video.setAttribute(Qt.WidgetAttribute.WA_NativeWindow)
@@ -231,6 +233,7 @@ class PlayerWidget(QWidget):
             self._marks_updated()
         if self._player is None:
             return
+        self._loaded = True
         if start is None:
             self._player.play(str(path))
         else:
@@ -247,6 +250,7 @@ class PlayerWidget(QWidget):
         self.set_clips([])
         if self._player is None:
             return
+        self._loaded = True
         # Als Datei-Option gilt der Filter nur für die Timeline und verschwindet beim nächsten Video.
         # %Länge% schützt Kommas und Semikolons im Filtergraphen.
         self._player.loadfile(
@@ -255,6 +259,7 @@ class PlayerWidget(QWidget):
         self._player.pause = paused
 
     def stop(self) -> None:
+        self._loaded = False
         if self._player is not None:
             self._player.command("stop")
 
@@ -319,6 +324,9 @@ class PlayerWidget(QWidget):
         self._player["ab-loop-b"] = "no" if start is None or end is None else end
 
     def toggle_pause(self) -> None:
+        if not self._loaded:
+            self.nothing_loaded.emit()
+            return
         if self._player is not None:
             self._player.pause = not self._player.pause
 

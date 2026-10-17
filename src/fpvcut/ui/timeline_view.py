@@ -5,25 +5,27 @@ from __future__ import annotations
 import json
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from fpvcut.timeline.model import Timeline
 from fpvcut.ui.library_panel import format_duration
+from fpvcut.ui.mime import MIME_CLIPS, MIME_MEDIA
 
-MIME_CLIPS = "application/x-fpvcut-clips"  # JSON-Liste von Favoriten-IDs
 
 CLIP_COLORS = (QColor("#2f6fa8"), QColor("#3a82c4"))
 MISSING_COLOR = QColor("#7a3b3b")
 MUSIC_COLOR = QColor("#3f8f5a")
 SELECT_COLOR = QColor("#ffc400")
 PLAYHEAD_COLOR = QColor("#e53935")
+EXTENSION_COLOR = QColor(255, 255, 255, 45)  # über den Favoriten hinaus verlängert
 TICK_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600)
 
 
 class TimelineView(QWidget):
     seek_requested = Signal(float)
     clips_dropped = Signal(list, int)  # Favoriten-IDs, Einfügeposition
+    media_dropped = Signal(list, int)  # Video-IDs, Einfügeposition
     edit_started = Signal()  # vor einer Änderung (für Rückgängig)
     edited = Signal()  # nach einer Änderung
     clip_double_clicked = Signal(int)
@@ -133,6 +135,7 @@ class TimelineView(QWidget):
         for index, (rect, clip) in enumerate(zip(self.clip_rects(), self.timeline.clips)):
             color = MISSING_COLOR if clip.path is None else CLIP_COLORS[index % 2]
             self._paint_block(painter, rect, color, index == self.selected)
+            self._paint_extensions(painter, rect, clip)
             name = clip.label + ("  (fehlt)" if clip.path is None else "")
             text_rect = rect.adjusted(5, 3, -4, -3)
             painter.setPen(Qt.GlobalColor.white)
@@ -167,6 +170,28 @@ class TimelineView(QWidget):
         painter.setBrush(color)
         painter.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4)
 
+    def _paint_extensions(self, painter: QPainter, rect: QRectF, clip) -> None:
+        """Teile außerhalb des ursprünglichen Favoriten heller und schraffiert zeigen."""
+        if clip.fav_in is None or clip.fav_out is None:
+            return
+        spans = []
+        if clip.src_in < clip.fav_in:
+            spans.append((clip.src_in, min(clip.fav_in, clip.src_out)))
+        if clip.src_out > clip.fav_out:
+            spans.append((max(clip.fav_out, clip.src_in), clip.src_out))
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        for start, end in spans:
+            if end <= start:
+                continue
+            x0 = rect.left() + (start - clip.src_in) * self.pps
+            span = QRectF(x0, rect.top() + 1, (end - start) * self.pps, rect.height() - 2)
+            painter.setBrush(EXTENSION_COLOR)
+            painter.drawRect(span)
+            painter.setBrush(QBrush(QColor(255, 255, 255, 60), Qt.BrushStyle.BDiagPattern))
+            painter.drawRect(span)
+        painter.restore()
+
     def _paint_ruler(self, painter: QPainter) -> None:
         step = next((s for s in TICK_STEPS if s * self.pps >= 70), TICK_STEPS[-1])
         painter.setPen(self.palette().text().color())
@@ -183,14 +208,24 @@ class TimelineView(QWidget):
     def hit(self, pos: QPointF) -> tuple:
         """Was liegt unter der Maus? ("clip", i, "start"|"end"|"body"), ("music",), ("empty",)."""
         if self._video_rect().contains(pos):
+            hits = []
             for index, rect in enumerate(self.clip_rects()):
                 if rect.left() - 1 <= pos.x() <= rect.right() + 1:
                     edge = min(self.EDGE, rect.width() / 3)
                     if pos.x() <= rect.left() + edge:
-                        return ("clip", index, "start")
-                    if pos.x() >= rect.right() - edge:
-                        return ("clip", index, "end")
-                    return ("clip", index, "body")
+                        hits.append(("clip", index, "start"))
+                    elif pos.x() >= rect.right() - edge:
+                        hits.append(("clip", index, "end"))
+                    else:
+                        return ("clip", index, "body")
+            if hits:
+                # Zwischen zwei Clips gewinnt der ausgewählte, sonst der, in dem die Maus liegt.
+                for hit in hits:
+                    if hit[1] == self.selected:
+                        return hit
+                rects = self.clip_rects()
+                inside = [h for h in hits if rects[h[1]].left() <= pos.x() < rects[h[1]].right()]
+                return (inside or hits)[0]
         if (rect := self.music_rect()) is not None and rect.contains(pos):
             return ("music",)
         return ("empty",)
@@ -301,11 +336,15 @@ class TimelineView(QWidget):
     # --- Drag & Drop aus dem Favoriten-Browser ---------------------------
 
     def dragEnterEvent(self, event) -> None:  # noqa: N802
-        if event.mimeData().hasFormat(MIME_CLIPS):
+        if self._accepts(event.mimeData()):
             event.acceptProposedAction()
 
+    @staticmethod
+    def _accepts(mime) -> bool:
+        return mime.hasFormat(MIME_CLIPS) or mime.hasFormat(MIME_MEDIA)
+
     def dragMoveEvent(self, event) -> None:  # noqa: N802
-        if event.mimeData().hasFormat(MIME_CLIPS):
+        if self._accepts(event.mimeData()):
             self._drop_index = self.gap_at(event.position().x())
             self.update()
             event.acceptProposedAction()
@@ -318,9 +357,11 @@ class TimelineView(QWidget):
         index = self.gap_at(event.position().x())
         self._drop_index = None
         self.update()
+        mime = event.mimeData()
+        kind, signal = (MIME_CLIPS, self.clips_dropped) if mime.hasFormat(MIME_CLIPS) else (MIME_MEDIA, self.media_dropped)
         try:
-            ids = [int(i) for i in json.loads(bytes(event.mimeData().data(MIME_CLIPS)).decode())]
+            ids = [int(i) for i in json.loads(bytes(mime.data(kind)).decode())]
         except (ValueError, TypeError):
             return
         event.acceptProposedAction()
-        self.clips_dropped.emit(ids, index)
+        signal.emit(ids, index)

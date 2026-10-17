@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
-
 from functools import cache
 
-from PySide6.QtCore import QPoint, QSize, Qt, QUrl, Signal
+from PySide6.QtCore import QMimeData, QPoint, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 from fpvcut.core.folder_names import FlightDay
 from fpvcut.core.library import LibraryEntry
 from fpvcut.ui.player import format_time
+from fpvcut.ui.mime import MIME_MEDIA
 
 NEW_COLOR = QColor("#3daee9")
 STAR_COLOR = QColor("#ffc400")  # wie die Favoriten-Balken unter der Zeitleiste
@@ -77,9 +78,34 @@ def group_sort_key(day: FlightDay) -> tuple:
     return (0, -day.date.toordinal(), day.spot.lower()) if day.date else (1, 0, day.folder_name.lower())
 
 
+class _LibraryTree(QTreeWidget):
+    """Videos (oder ganze Flugtage) lassen sich in die Timeline ziehen."""
+
+    def mimeTypes(self) -> list[str]:  # noqa: N802  (Qt-Name)
+        return [MIME_MEDIA]
+
+    def mimeData(self, items) -> QMimeData:  # noqa: N802
+        data = QMimeData()
+        data.setData(MIME_MEDIA, json.dumps([e.media_id for e in entries_of(items) if not e.missing]).encode())
+        return data
+
+
+def entries_of(items) -> list[LibraryEntry]:
+    """Videos der Zeilen; eine Flugtag-Zeile steht für alle ihre Videos. Fehlende Dateien fallen weg."""
+    seen: dict[int, LibraryEntry] = {}
+    for item in items:
+        children = [item.child(i) for i in range(item.childCount())] or [item]
+        for child in children:
+            entry = child.data(0, ENTRY_ROLE)
+            if entry is not None:
+                seen.setdefault(entry.media_id, entry)
+    return list(seen.values())
+
+
 class LibraryPanel(QWidget):
     video_activated = Signal(object)  # LibraryEntry
     review_toggled = Signal(list, bool)  # media_ids, gesichtet
+    add_to_timeline_requested = Signal(list)  # media_ids
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -93,7 +119,9 @@ class LibraryPanel(QWidget):
         header.addStretch(1)
         header.addWidget(self._summary)
 
-        self._tree = QTreeWidget(self)
+        self._tree = _LibraryTree(self)
+        self._tree.setDragEnabled(True)
+        self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self._tree.setHeaderLabels(["Video", "Dauer", "Format"])
         self._tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self._tree.header().setStretchLastSection(False)
@@ -198,14 +226,7 @@ class LibraryPanel(QWidget):
 
     def selected_entries(self) -> list[LibraryEntry]:
         """Ausgewählte Videos; ein ausgewählter Flugtag zählt mit all seinen Videos."""
-        seen: dict[int, LibraryEntry] = {}
-        for item in self._tree.selectedItems():
-            children = [item.child(i) for i in range(item.childCount())] or [item]
-            for child in children:
-                entry = child.data(0, ENTRY_ROLE)
-                if entry is not None:
-                    seen.setdefault(entry.media_id, entry)
-        return list(seen.values())
+        return entries_of(self._tree.selectedItems())
 
     def _update_summary(self) -> None:
         new = sum(e.is_new for e in self._entries)
@@ -249,6 +270,12 @@ class LibraryPanel(QWidget):
         if seen:
             menu.addAction(f"{plural(seen)} als neu markieren", lambda: self.review_toggled.emit(seen, False))
         available = [e for e in entries if not e.missing]
+        if available:
+            ids = [e.media_id for e in available]
+            menu.addSeparator()
+            menu.addAction(
+                f"{plural(ids)} zur Timeline hinzufügen (E)", lambda: self.add_to_timeline_requested.emit(ids)
+            )
         if len({e.path.parent for e in available}) == 1:
             folder = available[0].path.parent
             menu.addSeparator()

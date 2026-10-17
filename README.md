@@ -52,14 +52,18 @@ Meilenstein 4 (Favoriten-Browser):
 Meilenstein 5 (Timeline):
 
 - Timeline unter dem Player mit Videospur und Musikspur
-- Clips hinzufügen: Favoriten aus dem Favoriten-Reiter in die Timeline ziehen (auch mehrere mit
-  Strg/Shift), oder auswählen und E drücken. E nimmt auch einen mit I/O markierten Ausschnitt direkt
+- Clips hinzufügen: Favoriten aus dem Favoriten-Reiter oder ganze Videos (auch ganze Flugtage) aus der
+  Bibliothek in die Timeline ziehen (mehrere mit Strg/Shift), oder auswählen und E drücken. E nimmt auch einen mit I/O markierten Ausschnitt direkt
   aus dem Player, ohne ihn als Favorit zu speichern. Rechtsklick auf einen Favoriten geht ebenfalls
 - Bearbeiten: Clip ziehen = Reihenfolge ändern, Kante ziehen = trimmen, S = am roten Abspielkopf
-  teilen, Entf = ausgewählten Clip (oder die Musik) entfernen, Strg+Z / Strg+Y = rückgängig/wiederholen
+  teilen, Entf = ausgewählten Clip (oder die Musik) entfernen, Strg+Z / Strg+Y = rückgängig/wiederholen.
+  Zwischen zwei Clips trimmt die Kante den ausgewählten (gelben) Clip. Über den Favoriten hinaus
+  verlängerte Teile sind hell schraffiert
 - Musik: "♪ Musik …" wählt eine Audiodatei. Regler für Originalton und Musik, Ausblenden am Ende
 - Vorschau: "▶ Timeline abspielen" oder P spielt die Timeline direkt aus den Quelldateien ab
-  (mpv-EDL, kein Rendern). Doppelklick auf einen Clip spielt ab dort, Klick ins Lineal springt.
+  (mpv-EDL, kein Rendern). Ist kein Video geöffnet, startet auch Leertaste/Play die Timeline.
+  Doppelklick auf einen Clip spielt ab dort, ein Klick in die Timeline zeigt das Bild an dieser Stelle.
+  Clips ohne Ton werden mit Stille aufgefüllt, damit der Ton synchron bleibt.
   Änderungen während der Vorschau werden sofort übernommen. Ein Video aus der Bibliothek öffnen
   verlässt die Vorschau
 - Die Timeline wird automatisch gespeichert (`%APPDATA%\FPVCut\timeline.json`) und beim Start wieder

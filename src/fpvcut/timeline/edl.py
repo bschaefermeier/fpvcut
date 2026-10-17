@@ -26,19 +26,32 @@ def build_edl(timeline: Timeline) -> str:
 
 
 def build_lavfi(timeline: Timeline) -> str:
-    """Filtergraph für mpvs ``lavfi-complex``: Originalton und Musik mischen."""
-    original = f"[aid1]volume={timeline.original_volume:.2f}"
+    """Filtergraph für mpvs ``lavfi-complex``: Originalton und Musik mischen.
+
+    Clips ohne Tonspur hinterlassen Lücken im Originalton. ``aresample=async=1`` füllt sie
+    anhand der Zeitstempel mit Stille, sonst rutscht der Ton der folgenden Clips nach vorn.
+    Hat kein Clip Ton, ist die Musik die erste (und einzige) Audiospur.
+    """
+    original = timeline.has_original_audio
     music = timeline.music
     length = timeline.music_length()
-    if music is None or length <= 0:
-        return f"[vid1]null[vo];{original}[ao]"
-    filters = [f"volume={music.volume:.2f}"]
-    if music.fade_in > 0:
-        filters.append(f"afade=t=in:st=0:d={min(music.fade_in, length):.2f}")
-    if music.fade_out > 0:
-        fade = min(music.fade_out, length)
-        filters.append(f"afade=t=out:st={length - fade:.3f}:d={fade:.2f}")
-    return (
-        f"[vid1]null[vo];{original}[a1];[aid2]{','.join(filters)}[a2];"
-        "[a1][a2]amix=inputs=2:normalize=0:duration=first[ao]"
-    )
+    has_music = music is not None and length > 0
+    parts = ["[vid1]null[vo]"]
+    labels = []
+    if original:
+        parts.append(f"[aid1]aresample=async=1:first_pts=0,volume={timeline.original_volume:.2f}[a1]")
+        labels.append("[a1]")
+    if has_music:
+        filters = [f"volume={music.volume:.2f}"]
+        if music.fade_in > 0:
+            filters.append(f"afade=t=in:st=0:d={min(music.fade_in, length):.2f}")
+        if music.fade_out > 0:
+            fade = min(music.fade_out, length)
+            filters.append(f"afade=t=out:st={length - fade:.3f}:d={fade:.2f}")
+        parts.append(f"[aid{2 if original else 1}]{','.join(filters)}[a2]")
+        labels.append("[a2]")
+    if len(labels) == 2:
+        parts.append("[a1][a2]amix=inputs=2:normalize=0:duration=first[ao]")
+    elif labels:
+        parts[-1] = parts[-1][: -len(labels[0])] + "[ao]"
+    return ";".join(parts)

@@ -29,7 +29,7 @@ from fpvcut.core.library import Clip, LibraryEntry
 from fpvcut.ui.flow_layout import FlowLayout
 from fpvcut.ui.info_panel import clip_range_text
 from fpvcut.ui.library_panel import format_duration
-from fpvcut.ui.timeline_view import MIME_CLIPS
+from fpvcut.ui.mime import MIME_CLIPS
 
 ITEM_ROLE = Qt.ItemDataRole.UserRole
 

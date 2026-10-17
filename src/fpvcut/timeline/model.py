@@ -21,6 +21,10 @@ class TimelineClip:
     src_out: float
     source_duration: float | None = None  # Länge der Quelldatei, Grenze fürs Trimmen
     label: str = ""  # Dateiname zur Anzeige, auch wenn die Datei gerade fehlt
+    has_audio: bool = True
+    # Ursprünglicher Favoriten-Ausschnitt; was beim Trimmen darüber hinausgeht, wird anders eingefärbt.
+    fav_in: float | None = None
+    fav_out: float | None = None
     grade: dict | None = None  # Farbkorrektur, kommt später
     path: Path | None = field(default=None, compare=False)  # zur Laufzeit aufgelöst
 
@@ -83,6 +87,10 @@ class Timeline:
             return 0.0
         available = self.duration if self.music.duration is None else self.music.duration - self.music.src_in
         return max(min(available, self.duration), 0.0)
+
+    @property
+    def has_original_audio(self) -> bool:
+        return any(c.has_audio for c in self.clips)
 
     def missing_clips(self) -> list[TimelineClip]:
         return [c for c in self.clips if c.path is None]
