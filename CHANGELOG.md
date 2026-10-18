@@ -18,6 +18,8 @@ durch, wird daraus die fertige Version.
   (Strg+Umschalt+S) im Menü Datei. Bei ungespeicherten Änderungen fragt FPVCut, ob gespeichert,
   verworfen oder abgebrochen werden soll. Der Fenstertitel zeigt den Projektnamen und ein `*` bei
   Änderungen
+- **Zuletzt geöffnet** im Menü Datei listet die letzten acht Projekte. Öffnen und Speichern starten
+  im zuletzt gewählten Ordner, beim ersten Mal im Bibliotheksordner
 
 ### Behoben
 

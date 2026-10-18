@@ -20,7 +20,7 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter, QTabWidget
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox, QSplitter, QTabWidget
 
 from fpvcut import __version__
 from fpvcut.core import backup
@@ -46,6 +46,7 @@ from fpvcut.ui.timeline_panel import TimelinePanel
 VIDEO_FILTER = "Videos (*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI);;Alle Dateien (*)"
 MUSIC_FILTER = "Musik (*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.opus);;Alle Dateien (*)"
 PROJECT_FILTER = "FPVCut-Projekt (*.fpvcut.json *.json)"
+RECENT_PROJECTS = 8
 
 
 class _CheckSignals(QObject):
@@ -121,7 +122,9 @@ class MainWindow(QMainWindow):
         self.current_entry: LibraryEntry | None = None
         self.timeline_mode = False  # Player zeigt gerade die Timeline-Vorschau
         self.timeline_path = self.db_path.with_name("timeline.json")  # automatische Sicherung
-        self.project_state_path = self.db_path.with_name("projekt.json")  # zuletzt gespeicherte Projektdatei
+        # Aktuelle Projektdatei, zuletzt geöffnete Projekte und zuletzt gewählter Ordner
+        self.project_state_path = self.db_path.with_name("projekt.json")
+        self._project_state: dict = {}
         self.project_path: Path | None = None
         self._saved_project: dict | None = None  # Stand der Projektdatei, um Änderungen zu erkennen
         self.backup_dir = self.db_path.with_name("sicherungen")
@@ -198,6 +201,8 @@ class MainWindow(QMainWindow):
         file_menu = self.menuBar().addMenu("&Datei")
         self._add_action(file_menu, "&Neues Projekt", "Ctrl+N", self.new_project)
         self._add_action(file_menu, "Projekt ö&ffnen …", None, self.open_project_dialog)
+        self._recent_menu = file_menu.addMenu("&Zuletzt geöffnet")
+        self._recent_menu.aboutToShow.connect(self._fill_recent_menu)
         self._add_action(file_menu, "Projekt &speichern", "Ctrl+S", self.save_project)
         self._add_action(file_menu, "Projekt speichern &unter …", "Ctrl+Shift+S", self.save_project_as)
         file_menu.addSeparator()
@@ -698,23 +703,63 @@ class MainWindow(QMainWindow):
     def _load_project_state(self) -> None:
         """Zuletzt gespeicherte Projektdatei merken; die Timeline selbst kommt aus der Autosicherung."""
         try:
-            path = Path(json.loads(self.project_state_path.read_text(encoding="utf-8"))["path"])
+            state = json.loads(self.project_state_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(state, dict):
+            return
+        self._project_state = state
+        if not state.get("path"):
+            return
+        path = Path(state["path"])
+        try:
             self._saved_project = self.resolve_timeline(Timeline.load(path)).to_dict()
         except (OSError, ValueError, TypeError, KeyError):
             return
         self.project_path = path
 
+    def _store_project_state(self, **changes) -> None:
+        self._project_state.update(changes)
+        try:
+            self.project_state_path.write_text(json.dumps(self._project_state, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+
     def _set_project(self, path: Path | None) -> None:
         self.project_path = path
         self._saved_project = self.timeline_panel.timeline.to_dict() if path else None
-        try:
-            if path:
-                self.project_state_path.write_text(json.dumps({"path": str(path)}), encoding="utf-8")
-            else:
-                self.project_state_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+        if path:
+            recent = [str(path)] + [p for p in self.recent_projects() if p != str(path)]
+            self._store_project_state(path=str(path), recent=recent[:RECENT_PROJECTS])
+        else:
+            self._store_project_state(path=None)
         self._update_title()
+
+    def recent_projects(self) -> list[str]:
+        return [str(p) for p in self._project_state.get("recent", [])]
+
+    def _fill_recent_menu(self) -> None:
+        self._recent_menu.clear()
+        recent = self.recent_projects()
+        for number, path in enumerate(recent, 1):
+            name = Path(path).name.removesuffix(".json").removesuffix(".fpvcut")
+            action = self._recent_menu.addAction(f"&{number}  {name}")
+            action.setToolTip(path)
+            action.setStatusTip(path)
+            action.triggered.connect(lambda _=False, p=path: self.open_recent_project(Path(p)))
+        if not recent:
+            self._recent_menu.addAction("Noch keine Projekte").setEnabled(False)
+            return
+        self._recent_menu.addSeparator()
+        self._recent_menu.addAction("Liste leeren", lambda: self._store_project_state(recent=[]))
+
+    def open_recent_project(self, path: Path) -> None:
+        if not path.exists():
+            QMessageBox.warning(self, "Projekt öffnen", f"Die Datei gibt es nicht mehr:\n{path}")
+            self._store_project_state(recent=[p for p in self.recent_projects() if p != str(path)])
+            return
+        if self._confirm_discard("Projekt öffnen"):
+            self.open_project(path)
 
     def project_modified(self) -> bool:
         """Ungespeicherte Änderungen: Abweichung von der Projektdatei, ohne Datei jede nicht leere Timeline."""
@@ -770,6 +815,7 @@ class MainWindow(QMainWindow):
             return
         path, _ = QFileDialog.getOpenFileName(self, "Projekt öffnen", self._project_dir(), PROJECT_FILTER)
         if path:
+            self._remember_project_dir(path)
             self.open_project(Path(path))
 
     def open_project(self, path: Path) -> bool:
@@ -789,9 +835,13 @@ class MainWindow(QMainWindow):
         return self._write_project(self.project_path)
 
     def save_project_as(self) -> bool:
-        suggestion = str(Path(self._project_dir()) / f"{self.project_name() if self.project_path else 'projekt'}.fpvcut.json")
+        name = self.project_name() if self.project_path else "projekt"
+        suggestion = str(Path(self._project_dir()) / f"{name}.fpvcut.json")
         path, _ = QFileDialog.getSaveFileName(self, "Projekt speichern", suggestion, PROJECT_FILTER)
-        return bool(path) and self._write_project(Path(path))
+        if not path:
+            return False
+        self._remember_project_dir(path)
+        return self._write_project(Path(path))
 
     def _write_project(self, path: Path) -> bool:
         try:
@@ -804,7 +854,15 @@ class MainWindow(QMainWindow):
         return True
 
     def _project_dir(self) -> str:
-        return str(self.project_path.parent) if self.project_path else ""
+        """Ordner für Öffnen/Speichern: der zuletzt gewählte, sonst der erste Bibliotheksordner."""
+        last = self._project_state.get("dir")
+        if last and Path(last).is_dir():
+            return last
+        roots = [r.path for r in self.library.roots() if r.path.is_dir()]
+        return str(roots[0]) if roots else ""
+
+    def _remember_project_dir(self, path: str) -> None:
+        self._store_project_state(dir=str(Path(path).parent))
 
     def _on_escape(self) -> None:
         if self.isFullScreen():

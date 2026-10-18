@@ -29,6 +29,8 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 - [ ] App schließen und neu starten: Timeline ist wieder da
 - [ ] Strg+S speichert das Projekt (beim ersten Mal mit Dateiauswahl), Titel zeigt Namen und `*`
       bei Änderungen; Strg+N fragt nur bei ungespeicherten Änderungen (Speichern/Verwerfen/Abbrechen)
+- [ ] Projekt öffnen startet im Bibliotheksordner, danach im zuletzt gewählten Ordner;
+      Datei → Zuletzt geöffnet listet die Projekte
 
 ## Farbe
 

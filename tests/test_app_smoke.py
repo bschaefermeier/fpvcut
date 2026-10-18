@@ -386,3 +386,54 @@ def test_single_click_opens_library_video(monkeypatch, tmp_path):
     tree.itemClicked.emit(tree.topLevelItem(0).child(0), 0)
     assert [e.path.name for e in opened] == ["a.mp4"]
     window.close()
+
+
+def test_project_dialog_folder_and_recent_projects(monkeypatch, tmp_path):
+    from fpvcut.core.library import Library
+    from fpvcut.timeline.model import Timeline, TimelineClip
+    from fpvcut.ui import main_window
+
+    library_root = tmp_path / "FPV"
+    library_root.mkdir()
+    lib = Library(tmp_path / "lib.sqlite")
+    lib.add_root(library_root)
+    lib.close()
+    monkeypatch.setattr(main_window.MainWindow, "rescan_library", lambda self: None)
+    app, window = _window(monkeypatch, tmp_path)
+
+    # Ohne frühere Wahl startet der Dialog im Bibliotheksordner, danach im zuletzt gewählten Ordner.
+    seen = []
+    elsewhere = tmp_path / "Projekte"
+    elsewhere.mkdir()
+    projects = []
+    for name in ("eins", "zwei"):
+        path = elsewhere / f"{name}.fpvcut.json"
+        Timeline(clips=[TimelineClip(fingerprint=name, src_in=0, src_out=1)]).save(path)
+        projects.append(path)
+
+    def fake_open(_parent, _title, folder, _filter):
+        seen.append(folder)
+        return str(projects[len(seen) - 1]), ""
+
+    monkeypatch.setattr(main_window.QFileDialog, "getOpenFileName", fake_open)
+    window.open_project_dialog()
+    window.open_project_dialog()
+    assert seen == [str(library_root.resolve()), str(elsewhere)]
+    assert window.recent_projects() == [str(projects[1]), str(projects[0])]
+
+    window._fill_recent_menu()
+    texts = [a.text() for a in window._recent_menu.actions() if not a.isSeparator()]
+    assert texts == ["&1  zwei", "&2  eins", "Liste leeren"]
+    window._recent_menu.actions()[1].trigger()
+    assert window.project_path == projects[0]
+    assert window.recent_projects()[0] == str(projects[0])
+    window.close()
+
+    # Ordner und Liste überstehen einen Neustart; eine verschwundene Datei fliegt aus der Liste.
+    app, window = _window(monkeypatch, tmp_path)
+    assert window._project_dir() == str(elsewhere)
+    projects[1].unlink()
+    monkeypatch.setattr(main_window.QMessageBox, "warning", lambda *a, **k: None)
+    window.open_recent_project(projects[1])
+    assert window.recent_projects() == [str(projects[0])]
+    window.close()
