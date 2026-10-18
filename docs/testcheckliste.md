@@ -8,7 +8,7 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 
 - [ ] ZIP entpacken, `FPVCut\FPVCut.exe` startet ohne Fehlermeldung (evtl. SmartScreen:
       "Weitere Informationen" → "Trotzdem ausführen")
-- [ ] Fenstertitel zeigt "FPVCut 1.0.0rc1", Taskleiste und Titelleiste zeigen das FPVCut-Icon
+- [ ] Fenstertitel zeigt "Unbenanntes Projekt – FPVCut 1.0.0rc2", Taskleiste und Titelleiste zeigen das FPVCut-Icon
 - [ ] Bibliothek, Ausschnitte und Timeline aus der bisherigen `uv run`-Version sind da
 - [ ] Hilfe → Systemcheck: ffmpeg aus dem Programmordner gefunden, NVENC-Encoder als funktionierend
 
