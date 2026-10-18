@@ -1,4 +1,4 @@
-"""Schmale Leiste unter der Zeitleiste: gespeicherte Favoriten und aktuelle In/Out-Auswahl."""
+"""Schmale Leiste unter der Zeitleiste: gespeicherte Ausschnitte und aktuelle In/Out-Auswahl."""
 
 from __future__ import annotations
 
@@ -6,7 +6,8 @@ from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPaintEvent
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
-CLIP_COLOR = QColor(255, 196, 0, 170)  # Favoriten
+CLIP_COLOR = QColor(255, 196, 0, 90)  # Ausschnitte
+FAVORITE_COLOR = QColor(255, 196, 0, 235)  # Favoriten
 MARK_COLOR = QColor(61, 174, 233)  # aktuelle Auswahl
 TRACK_COLOR = QColor(128, 128, 128, 60)
 
@@ -18,9 +19,9 @@ class ClipBar(QWidget):
         super().__init__(parent)
         self.setFixedHeight(10)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setToolTip("Gelb: gespeicherte Favoriten · Blau: aktuelle In/Out-Auswahl (Klick springt)")
+        self.setToolTip("Gelb: Ausschnitte, kräftig gelb = Favorit · Blau: aktuelle In/Out-Auswahl (Klick springt)")
         self._duration = 0.0
-        self._clips: list[tuple[float, float | None]] = []
+        self._clips: list[tuple[float, float | None, bool]] = []
         self._in: float | None = None
         self._out: float | None = None
         self._inset = 0
@@ -34,8 +35,9 @@ class ClipBar(QWidget):
         self._duration = duration
         self.update()
 
-    def set_clips(self, clips: list[tuple[float, float | None]]) -> None:
-        self._clips = clips
+    def set_clips(self, clips: list[tuple]) -> None:
+        """(Start, Ende) oder (Start, Ende, Favorit); Ende ``None`` = bis zum Schluss."""
+        self._clips = [(c[0], c[1], bool(c[2]) if len(c) > 2 else False) for c in clips]
         self.update()
 
     def set_marks(self, in_s: float | None, out_s: float | None) -> None:
@@ -52,9 +54,10 @@ class ClipBar(QWidget):
         painter.fillRect(QRectF(self._inset, 2, self.width() - 2 * self._inset, h - 4), TRACK_COLOR)
         if self._duration <= 0:
             return
-        for start, end in self._clips:
+        # Favoriten zuletzt, damit sie bei Überlappung oben liegen.
+        for start, end, favorite in sorted(self._clips, key=lambda c: c[2]):
             x1, x2 = self._x(start), self._x(self._duration if end is None else end)
-            painter.fillRect(QRectF(x1, 1, max(x2 - x1, 2), h - 2), CLIP_COLOR)
+            painter.fillRect(QRectF(x1, 1, max(x2 - x1, 2), h - 2), FAVORITE_COLOR if favorite else CLIP_COLOR)
         if self._in is not None and self._out is not None:
             x1, x2 = self._x(self._in), self._x(self._out)
             painter.fillRect(QRectF(x1, 0, max(x2 - x1, 2), h), MARK_COLOR)

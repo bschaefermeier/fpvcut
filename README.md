@@ -1,19 +1,20 @@
 # FPVCut
 
 FPVCut ist ein schlanker Videoeditor für FPV-Aufnahmen. Er bündelt die typischen Arbeitsschritte nach
-einem Flugtag in einer Anwendung: Aufnahmen sichten, die besten Szenen als Favoriten markieren, sie
-in einer Timeline mit Musik zusammenstellen und das Ergebnis mit GPU-Beschleunigung exportieren.
+einem Flugtag in einer Anwendung: Aufnahmen sichten, die besten Szenen als Ausschnitte speichern,
+sie in einer Timeline mit Musik zusammenstellen und das Ergebnis mit GPU-Beschleunigung exportieren.
 
-![FPVCut mit Favoriten-Browser, Vorschau, Farbkorrektur und Timeline](docs/bilder/fpvcut.png)
+![FPVCut mit Ausschnitte-Reiter, Vorschau, Farbkorrektur und Timeline](docs/bilder/fpvcut.png)
 
 ## Funktionen
 
 - **Bibliothek:** Videoordner werden automatisch nach Flugtagen gruppiert. Neue, noch nicht
   gesichtete Aufnahmen sind hervorgehoben. Umbenannte oder verschobene Dateien werden
   wiedererkannt.
-- **Sichten und Favoriten:** Frame-genaue Wiedergabe, Szenen per In- und Out-Punkt markieren und
-  mit Tags und Notizen als Favorit speichern.
-- **Favoriten-Browser:** Alle Favoriten über alle Flugtage hinweg, filterbar nach Tags und Freitext.
+- **Sichten und Ausschnitte:** Frame-genaue Wiedergabe, Szenen per In- und Out-Punkt markieren und
+  mit Tags und Notizen als Ausschnitt speichern. Die besten lassen sich als Favorit (★) markieren.
+- **Ausschnitte-Reiter:** Alle Ausschnitte über alle Flugtage hinweg, filterbar nach Tags,
+  Favoriten und Freitext.
 - **Timeline:** Clips per Drag & Drop anordnen, trimmen und teilen, eine Musikspur mit
   Lautstärkeregelung und Ausblenden hinzufügen. Die Vorschau läuft ohne vorheriges Rendern.
 - **Farbkorrektur:** Helligkeit, Kontrast, Sättigung, Gamma und Farbtemperatur pro Clip, dazu
@@ -38,8 +39,8 @@ Alle benötigten Komponenten (libmpv, ffmpeg) sind enthalten.
 > FPVCut starten. Alternativ kann FPVCut direkt aus dem Quellcode gestartet oder selbst gebaut werden,
 > siehe [Aus dem Quellcode starten](#aus-dem-quellcode-starten).
 
-Für ein Update wird der Programmordner durch die neue Version ersetzt. Bibliothek, Favoriten und
-Timeline bleiben dabei erhalten.
+Für ein Update wird der Programmordner durch die neue Version ersetzt. Bibliothek, Ausschnitte und
+Projekte bleiben dabei erhalten.
 
 ## Bedienung
 
@@ -47,10 +48,10 @@ Timeline bleiben dabei erhalten.
 
 1. Über **Datei → Bibliotheksordner hinzufügen** den Ordner mit den Aufnahmen wählen. FPVCut
    erkennt Flugtage am Datum im Ordnernamen, z. B. `2026-08-28_Wiese` oder `28_08_26_Wiese`.
-2. Ein Video per Doppelklick öffnen, Szenen mit **I** und **O** markieren und mit **F** als Favorit
+2. Ein Video per Klick öffnen, Szenen mit **I** und **O** markieren und mit **F** als Ausschnitt
    speichern.
-3. Favoriten aus dem Reiter **Favoriten** in die Timeline ziehen, optional Musik hinzufügen und mit
-   **Strg+R** exportieren.
+3. Ausschnitte aus dem Reiter **Ausschnitte** in die Timeline ziehen, optional Musik hinzufügen und
+   mit **Strg+R** exportieren. Mit **Strg+S** wird das Projekt gespeichert.
 
 ### Tastenkürzel
 
@@ -61,8 +62,8 @@ Timeline bleiben dabei erhalten.
 | Umschalt + ← / → | 1 Sekunde zurück / vor |
 | J / L | 5 Sekunden zurück / vor |
 | I / O | In- / Out-Punkt setzen |
-| F | Auswahl als Favorit speichern |
-| Umschalt + F | Ganzes Video als Favorit speichern |
+| F | Auswahl als Ausschnitt speichern |
+| Umschalt + F | Ganzes Video als Ausschnitt speichern |
 | Esc | Auswahl aufheben, Vollbild beenden |
 | F11 oder Doppelklick | Vollbild |
 | E | Auswahl zur Timeline hinzufügen |
@@ -72,17 +73,20 @@ Timeline bleiben dabei erhalten.
 | Strg + ← / → | Anfang / Ende der Timeline |
 | Strg + Z / Strg + Y | Rückgängig / Wiederholen |
 | Strg + R | Rendern |
+| Strg + N | Neues Projekt |
+| Strg + S | Projekt speichern |
 | F5 | Bibliothek neu einlesen |
 
 ## Daten und Sicherung
 
-FPVCut verändert die Videodateien nicht. Bibliothek, Favoriten, Tags und die Timeline werden unter
-`%APPDATA%\FPVCut` gespeichert.
+FPVCut verändert die Videodateien nicht. Bibliothek, Ausschnitte und Tags werden unter
+`%APPDATA%\FPVCut` gespeichert. Die Timeline wird dort laufend zwischengespeichert, auch wenn das
+Projekt noch nicht gespeichert wurde; Projektdateien (`.fpvcut.json`) liegen, wo man sie speichert.
 
-Favoriten, Tags und der Sichtungsstatus werden beim Start und Beenden automatisch gesichert; die
+Ausschnitte, Tags und der Sichtungsstatus werden beim Start und Beenden automatisch gesichert; die
 Sicherungen der letzten 30 Tage liegen unter `%APPDATA%\FPVCut\sicherungen`. Zusätzlich lassen sich
-die Favoriten über **Datei → Favoriten exportieren** an einem beliebigen Ort sichern und über
-**Favoriten importieren** wieder einlesen. Startet FPVCut mit einer leeren Bibliothek, bietet es an,
+die Ausschnitte über **Datei → Ausschnitte exportieren** an einem beliebigen Ort sichern und über
+**Ausschnitte importieren** wieder einlesen. Startet FPVCut mit einer leeren Bibliothek, bietet es an,
 die letzte Sicherung wiederherzustellen.
 
 ## Aus dem Quellcode starten

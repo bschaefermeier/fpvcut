@@ -255,7 +255,7 @@ def test_save_favorite_from_marks(monkeypatch, tmp_path):
     assert window.info_panel._clips.count() == 1
     video_item = window.library_panel._tree.topLevelItem(0).child(0)
     assert video_item.text(0) == "a.mp4"  # Name ohne Stern, der Stern ist das Icon links davon
-    assert "1 Favoriten" in video_item.data(0, QtCore.Qt.ItemDataRole.AccessibleTextRole)
+    assert "1 Ausschnitt" in video_item.data(0, QtCore.Qt.ItemDataRole.AccessibleTextRole)
     window.play_clip(clip)  # ohne mpv: darf nicht abstürzen
     window.close()
 
@@ -317,4 +317,72 @@ def test_fresh_library_offers_restore_from_daily_backup(monkeypatch, tmp_path):
     app.processEvents()
     assert len(asked) == 1
     assert [c.tags for c in window.library.clips_for(None)] == [["Flip"]]
+    window.close()
+
+
+def test_project_save_and_dirty_prompt(monkeypatch, tmp_path):
+    from fpvcut.timeline.model import TimelineClip
+    from fpvcut.ui import main_window
+
+    app, window = _window(monkeypatch, tmp_path)
+    assert not window.project_modified()
+    assert window.windowTitle().startswith("Unbenanntes Projekt –")
+
+    window.timeline_panel.add_clips([TimelineClip(fingerprint="a", src_in=0, src_out=2)])
+    assert window.project_modified()
+    assert window.windowTitle().startswith("Unbenanntes Projekt* –")
+
+    # Strg+S beim ersten Mal fragt nach dem Dateinamen, danach speichert es direkt.
+    target = tmp_path / "Wiese.fpvcut.json"
+    monkeypatch.setattr(main_window.QFileDialog, "getSaveFileName", lambda *a, **k: (str(target), ""))
+    assert window.save_project()
+    assert target.exists() and not window.project_modified()
+    assert window.windowTitle().startswith("Wiese –")
+
+    window.timeline_panel.add_clips([TimelineClip(fingerprint="b", src_in=0, src_out=1)])
+    assert window.windowTitle().startswith("Wiese* –")
+
+    # Abbrechen behält alles, Nicht speichern verwirft, ohne die Datei anzufassen.
+    buttons = main_window.QMessageBox.StandardButton
+    monkeypatch.setattr(window, "_ask", lambda box: buttons.Cancel)
+    window.new_project()
+    assert len(window.timeline_panel.timeline.clips) == 2
+    monkeypatch.setattr(window, "_ask", lambda box: buttons.Discard)
+    window.new_project()
+    assert not window.timeline_panel.timeline.clips and window.project_path is None
+    assert len(main_window.Timeline.load(target).clips) == 1
+
+    # Ohne Änderungen fragt Neu nicht nach.
+    monkeypatch.setattr(window, "_ask", lambda box: pytest.fail("unnötige Nachfrage"))
+    window.new_project()
+
+    # Die gespeicherte Projektdatei bleibt nach einem Neustart bekannt.
+    window.open_project(target)
+    window.close()
+    app, window = _window(monkeypatch, tmp_path)
+    assert window.project_path == target and not window.project_modified()
+    window.close()
+
+
+def test_single_click_opens_library_video(monkeypatch, tmp_path):
+    from PySide6.QtCore import QThreadPool
+
+    from fpvcut.core.library import Library
+
+    day = tmp_path / "FPV" / "2026_08_28_Wiese"
+    day.mkdir(parents=True)
+    (day / "a.mp4").write_bytes(b"a")
+    lib = Library(tmp_path / "lib.sqlite")
+    lib.add_root(tmp_path / "FPV")
+    lib.close()
+
+    app, window = _window(monkeypatch, tmp_path)
+    QThreadPool.globalInstance().waitForDone(10000)
+    app.processEvents()
+    opened = []
+    monkeypatch.setattr(window, "open_entry", lambda entry: opened.append(entry))
+    tree = window.library_panel._tree
+    tree.itemClicked.emit(tree.topLevelItem(0), 0)  # Flugtag-Zeile öffnet nichts
+    tree.itemClicked.emit(tree.topLevelItem(0).child(0), 0)
+    assert [e.path.name for e in opened] == ["a.mp4"]
     window.close()

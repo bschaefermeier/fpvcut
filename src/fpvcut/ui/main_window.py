@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -44,7 +45,7 @@ from fpvcut.ui.timeline_panel import TimelinePanel
 
 VIDEO_FILTER = "Videos (*.mp4 *.mov *.mkv *.avi *.MP4 *.MOV *.MKV *.AVI);;Alle Dateien (*)"
 MUSIC_FILTER = "Musik (*.mp3 *.m4a *.aac *.wav *.flac *.ogg *.opus);;Alle Dateien (*)"
-TIMELINE_FILTER = "FPVCut-Timeline (*.fpvcut.json *.json)"
+PROJECT_FILTER = "FPVCut-Projekt (*.fpvcut.json *.json)"
 
 
 class _CheckSignals(QObject):
@@ -119,7 +120,10 @@ class MainWindow(QMainWindow):
         self._scanning = False
         self.current_entry: LibraryEntry | None = None
         self.timeline_mode = False  # Player zeigt gerade die Timeline-Vorschau
-        self.timeline_path = self.db_path.with_name("timeline.json")
+        self.timeline_path = self.db_path.with_name("timeline.json")  # automatische Sicherung
+        self.project_state_path = self.db_path.with_name("projekt.json")  # zuletzt gespeicherte Projektdatei
+        self.project_path: Path | None = None
+        self._saved_project: dict | None = None  # Stand der Projektdatei, um Änderungen zu erkennen
         self.backup_dir = self.db_path.with_name("sicherungen")
 
         self.player = PlayerWidget(self)
@@ -127,7 +131,7 @@ class MainWindow(QMainWindow):
         self.player.position_changed.connect(self._on_player_position)
         self.player.nothing_loaded.connect(self._on_nothing_loaded)
         self.library_panel = LibraryPanel(self)
-        self.library_panel.video_activated.connect(self.open_entry)
+        self.library_panel.video_activated.connect(self._on_library_video)
         self.library_panel.review_toggled.connect(self._on_review_toggled)
         self.library_panel.add_to_timeline_requested.connect(self.add_videos_to_timeline)
         self.favorites_panel = FavoritesPanel(self)
@@ -135,14 +139,16 @@ class MainWindow(QMainWindow):
         self.favorites_panel.clip_edit_requested.connect(self.edit_clip)
         self.favorites_panel.clip_delete_requested.connect(self.delete_clip)
         self.favorites_panel.add_to_timeline_requested.connect(self.add_favorites_to_timeline)
+        self.favorites_panel.favorite_toggled.connect(self.set_favorite)
         self.side_tabs = QTabWidget(self)
         self.side_tabs.addTab(self.library_panel, "Bibliothek")
-        self.side_tabs.addTab(self.favorites_panel, "Favoriten")
+        self.side_tabs.addTab(self.favorites_panel, "Ausschnitte")
         self.info_panel = InfoPanel(self)
         self.info_panel.clip_activated.connect(self.play_clip)
         self.info_panel.clip_edit_requested.connect(self.edit_clip)
         self.info_panel.clip_delete_requested.connect(self.delete_clip)
         self.info_panel.add_to_timeline_requested.connect(self.add_favorites_to_timeline)
+        self.info_panel.favorite_toggled.connect(self.set_favorite)
         self.timeline_panel = TimelinePanel(self)
         self.timeline_panel.preview_requested.connect(self.play_timeline)
         self.timeline_panel.seek_requested.connect(self._on_timeline_seek)
@@ -182,20 +188,27 @@ class MainWindow(QMainWindow):
         self._start_encoder_check()
         self.reload_library()
         self._load_autosaved_timeline()
+        self._load_project_state()
+        self._update_title()
         self._backup_favorites()
         QTimer.singleShot(0, self._offer_restore)
         self.rescan_library()
 
     def _build_menu(self) -> None:
         file_menu = self.menuBar().addMenu("&Datei")
+        self._add_action(file_menu, "&Neues Projekt", "Ctrl+N", self.new_project)
+        self._add_action(file_menu, "Projekt ö&ffnen …", None, self.open_project_dialog)
+        self._add_action(file_menu, "Projekt &speichern", "Ctrl+S", self.save_project)
+        self._add_action(file_menu, "Projekt speichern &unter …", "Ctrl+Shift+S", self.save_project_as)
+        file_menu.addSeparator()
         self._add_action(file_menu, "Video &öffnen …", "Ctrl+O", self.open_video_dialog)
         file_menu.addSeparator()
         self._add_action(file_menu, "Bibliotheksordner &hinzufügen …", "Ctrl+Shift+O", self.add_root_dialog)
         self._add_action(file_menu, "Bibliothek neu &scannen", "F5", self.rescan_library)
         self._add_action(file_menu, "Ordner ins Schema &umbenennen …", None, self.rename_dialog)
         file_menu.addSeparator()
-        self._add_action(file_menu, "Favoriten &exportieren …", None, self.export_favorites_dialog)
-        self._add_action(file_menu, "Favoriten &importieren …", None, self.import_favorites_dialog)
+        self._add_action(file_menu, "Ausschnitte &exportieren …", None, self.export_favorites_dialog)
+        self._add_action(file_menu, "Ausschnitte &importieren …", None, self.import_favorites_dialog)
         file_menu.addSeparator()
         quit_action = self._add_action(file_menu, "&Beenden", "Ctrl+Q", self.close)
         # Alt+F4 erledigt sonst Windows, kommt aber nicht an, wenn der eingebettete Player den Fokus hat.
@@ -216,11 +229,11 @@ class MainWindow(QMainWindow):
         self._add_action(play_menu, "Vollbild", "F11", self.toggle_fullscreen)
         self._add_action(play_menu, "Vollbild beenden / Auswahl aufheben", "Esc", self._on_escape)
 
-        fav_menu = self.menuBar().addMenu("F&avoriten")
+        fav_menu = self.menuBar().addMenu("&Ausschnitte")
         self._add_action(fav_menu, "In-Punkt setzen", "I", self.player.set_in)
         self._add_action(fav_menu, "Out-Punkt setzen", "O", self.player.set_out)
-        self._add_action(fav_menu, "Ausschnitt als Favorit speichern …", "F", self.save_favorite)
-        self._add_action(fav_menu, "Ganzes Video als Favorit speichern …", "Shift+F", self.save_whole_video)
+        self._add_action(fav_menu, "Ausschnitt speichern …", "F", self.save_favorite)
+        self._add_action(fav_menu, "Ganzes Video als Ausschnitt speichern …", "Shift+F", self.save_whole_video)
 
         tl_menu = self.menuBar().addMenu("&Timeline")
         self._add_action(tl_menu, "Zur Timeline hinzufügen", "E", self.add_selection_to_timeline)
@@ -234,10 +247,6 @@ class MainWindow(QMainWindow):
         tl_menu.addSeparator()
         self._add_action(tl_menu, "Musik hinzufügen …", None, self.add_music_dialog)
         self._add_action(tl_menu, "Musik entfernen", None, lambda: self.timeline_panel.set_music(None))
-        tl_menu.addSeparator()
-        self._add_action(tl_menu, "Neue Timeline", None, self.new_timeline)
-        self._add_action(tl_menu, "Timeline öffnen …", None, self.open_timeline_dialog)
-        self._add_action(tl_menu, "Timeline speichern unter …", None, self.save_timeline_dialog)
 
         help_menu = self.menuBar().addMenu("&Hilfe")
         self._add_action(help_menu, "&Systemcheck …", None, self.show_system_check)
@@ -289,7 +298,7 @@ class MainWindow(QMainWindow):
         try:
             backup.daily_backup(self.library, self.backup_dir)
         except OSError as exc:
-            self.statusBar().showMessage(f"Favoriten-Sicherung fehlgeschlagen: {exc}")
+            self.statusBar().showMessage(f"Sicherung der Ausschnitte fehlgeschlagen: {exc}")
 
     def _offer_restore(self) -> None:
         """Leere Bibliothek, aber eine Sicherung da (z. B. nach Neuinstallation): Wiederherstellen anbieten."""
@@ -299,9 +308,9 @@ class MainWindow(QMainWindow):
         if latest is None:
             return
         answer = QMessageBox.question(
-            self, "Favoriten wiederherstellen",
-            f"Die Bibliothek enthält keine Favoriten, es gibt aber eine Sicherung ({latest.name}).\n\n"
-            "Favoriten, Tags und Gesichtet-Status daraus übernehmen?")
+            self, "Ausschnitte wiederherstellen",
+            f"Die Bibliothek enthält keine Ausschnitte, es gibt aber eine Sicherung ({latest.name}).\n\n"
+            "Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?")
         if answer == QMessageBox.StandardButton.Yes:
             self.import_favorites(latest)
 
@@ -314,7 +323,7 @@ class MainWindow(QMainWindow):
         self.reload_library()
         if self.current_entry is not None:
             self._refresh_clips()
-        text = f"{result.clips_added} Favoriten übernommen"
+        text = f"{result.clips_added} Ausschnitte übernommen"
         if result.clips_skipped:
             text += f", {result.clips_skipped} waren schon da"
         if result.media_added:
@@ -324,18 +333,18 @@ class MainWindow(QMainWindow):
 
     def export_favorites_dialog(self) -> None:
         default = str(Path.home() / f"fpvcut_favoriten_{datetime.now():%Y-%m-%d}.json")
-        path, _ = QFileDialog.getSaveFileName(self, "Favoriten exportieren", default, "FPVCut-Sicherung (*.json)")
+        path, _ = QFileDialog.getSaveFileName(self, "Ausschnitte exportieren", default, "FPVCut-Sicherung (*.json)")
         if path:
             try:
                 count = backup.export_to(self.library, Path(path))
             except OSError as exc:
                 QMessageBox.warning(self, "Export fehlgeschlagen", str(exc))
                 return
-            self.statusBar().showMessage(f"{count} Favoriten exportiert nach {path}")
+            self.statusBar().showMessage(f"{count} Ausschnitte exportiert nach {path}")
 
     def import_favorites_dialog(self) -> None:
         start = str(self.backup_dir if self.backup_dir.is_dir() else Path.home())
-        path, _ = QFileDialog.getOpenFileName(self, "Favoriten importieren", start, "FPVCut-Sicherung (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, "Ausschnitte importieren", start, "FPVCut-Sicherung (*.json)")
         if path:
             self.import_favorites(Path(path))
 
@@ -401,6 +410,12 @@ class MainWindow(QMainWindow):
             self.library.set_reviewed([entry.media_id])
             self.reload_library()
 
+    def _on_library_video(self, entry: LibraryEntry) -> None:
+        # Ein Klick öffnet; ein weiterer Klick auf das schon offene Video soll es nicht neu laden.
+        if not self.timeline_mode and self.current_entry and self.current_entry.media_id == entry.media_id:
+            return
+        self.open_entry(entry)
+
     def _on_review_toggled(self, media_ids: list[int], reviewed: bool) -> None:
         self.library.set_reviewed(media_ids, reviewed)
         self.reload_library()
@@ -410,18 +425,18 @@ class MainWindow(QMainWindow):
     def _refresh_clips(self) -> None:
         clips = self.library.clips_for(self.current_entry.media_id) if self.current_entry else []
         self.info_panel.set_entry(self.current_entry, clips)
-        self.player.set_clips([(c.in_s, c.out_s) for c in clips])
+        self.player.set_clips([(c.in_s, c.out_s, c.favorite) for c in clips])
 
     def save_favorite(self) -> None:
         if self.current_entry is None:
-            self.statusBar().showMessage("Favoriten gehen nur für Videos aus der Bibliothek.")
+            self.statusBar().showMessage("Ausschnitte gehen nur für Videos aus der Bibliothek.")
             return
         in_ms, out_ms = resolve_range(self.player.in_point, self.player.out_point, self.player.position())
         self._save_clip(in_ms, out_ms)
 
     def save_whole_video(self) -> None:
         if self.current_entry is None:
-            self.statusBar().showMessage("Favoriten gehen nur für Videos aus der Bibliothek.")
+            self.statusBar().showMessage("Ausschnitte gehen nur für Videos aus der Bibliothek.")
             return
         self._save_clip(0, None)
 
@@ -433,12 +448,15 @@ class MainWindow(QMainWindow):
         )
         if dialog.exec() != FavoriteDialog.DialogCode.Accepted:
             return
-        self.library.add_clip(self.current_entry.media_id, in_ms, out_ms, dialog.tags, dialog.note)
+        self.library.add_clip(
+            self.current_entry.media_id, in_ms, out_ms, dialog.tags, dialog.note, favorite=dialog.favorite
+        )
         self.player.clear_marks()
         self._refresh_clips()
         self.reload_library()
         tags = ", ".join(dialog.tags) or "ohne Tags"
-        self.statusBar().showMessage(f"Favorit gespeichert ({tags})")
+        kind = "Favorit" if dialog.favorite else "Ausschnitt"
+        self.statusBar().showMessage(f"{kind} gespeichert ({tags})")
 
     def play_clip(self, clip: Clip) -> None:
         self.player.play_range(clip.in_s, clip.out_s)
@@ -453,16 +471,21 @@ class MainWindow(QMainWindow):
     def edit_clip(self, clip: Clip) -> None:
         dialog = FavoriteDialog(
             clip_range_text(clip.in_s, clip.out_s), self.library.all_tags(), clip.tags, clip.note,
-            title="Favorit bearbeiten", parent=self,
+            title="Ausschnitt bearbeiten", favorite=clip.favorite, parent=self,
         )
         if dialog.exec() == FavoriteDialog.DialogCode.Accepted:
-            self.library.update_clip(clip.id, dialog.tags, dialog.note)
+            self.library.update_clip(clip.id, dialog.tags, dialog.note, favorite=dialog.favorite)
             self._refresh_clips()
             self.reload_library()
 
+    def set_favorite(self, clip: Clip, favorite: bool) -> None:
+        self.library.set_favorite(clip.id, favorite)
+        self._refresh_clips()
+        self.reload_library()
+
     def delete_clip(self, clip: Clip) -> None:
         answer = QMessageBox.question(
-            self, "Favorit löschen", f"Favorit {clip_range_text(clip.in_s, clip.out_s)} wirklich löschen?"
+            self, "Ausschnitt löschen", f"Ausschnitt {clip_range_text(clip.in_s, clip.out_s)} wirklich löschen?"
         )
         if answer == QMessageBox.StandardButton.Yes:
             self.library.delete_clip(clip.id)
@@ -519,7 +542,7 @@ class MainWindow(QMainWindow):
         elif (clip := self.info_panel.current_clip()) is not None:
             self.add_favorites_to_timeline([clip.id])
         else:
-            self.statusBar().showMessage("Erst Videos oder Favoriten auswählen oder im Player mit I/O markieren.")
+            self.statusBar().showMessage("Erst Videos oder Ausschnitte auswählen oder im Player mit I/O markieren.")
 
     def resolve_timeline(self, timeline: Timeline) -> Timeline:
         """Pfade der Clips über den Fingerprint in der Bibliothek suchen."""
@@ -547,6 +570,7 @@ class MainWindow(QMainWindow):
 
     def _on_timeline_changed(self) -> None:
         self._save_timeline()
+        self._update_title()
         if self.timeline_mode:
             self._preview_reload.start()
 
@@ -655,6 +679,7 @@ class MainWindow(QMainWindow):
         dialog = RenderDialog(timeline, source, ffmpeg, self.encoder_report, parent=self)
         dialog.exec()
         self._save_timeline()  # gewähltes Profil merken
+        self._update_title()
 
     def add_music_dialog(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Musik wählen", "", MUSIC_FILTER)
@@ -668,12 +693,71 @@ class MainWindow(QMainWindow):
             pass
         self.timeline_panel.set_music(MusicTrack(path, duration))
 
-    def new_timeline(self) -> None:
-        if self.timeline_panel.timeline.clips:
-            answer = QMessageBox.question(self, "Neue Timeline", "Aktuelle Timeline verwerfen?")
-            if answer != QMessageBox.StandardButton.Yes:
-                return
+    # --- Projekt ---------------------------------------------------------
+
+    def _load_project_state(self) -> None:
+        """Zuletzt gespeicherte Projektdatei merken; die Timeline selbst kommt aus der Autosicherung."""
+        try:
+            path = Path(json.loads(self.project_state_path.read_text(encoding="utf-8"))["path"])
+            self._saved_project = self.resolve_timeline(Timeline.load(path)).to_dict()
+        except (OSError, ValueError, TypeError, KeyError):
+            return
+        self.project_path = path
+
+    def _set_project(self, path: Path | None) -> None:
+        self.project_path = path
+        self._saved_project = self.timeline_panel.timeline.to_dict() if path else None
+        try:
+            if path:
+                self.project_state_path.write_text(json.dumps({"path": str(path)}), encoding="utf-8")
+            else:
+                self.project_state_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        self._update_title()
+
+    def project_modified(self) -> bool:
+        """Ungespeicherte Änderungen: Abweichung von der Projektdatei, ohne Datei jede nicht leere Timeline."""
+        timeline = self.timeline_panel.timeline
+        if self.project_path is None:
+            return bool(timeline.clips or timeline.music)
+        return timeline.to_dict() != self._saved_project
+
+    def project_name(self) -> str:
+        if self.project_path is None:
+            return "Unbenanntes Projekt"
+        return self.project_path.name.removesuffix(".json").removesuffix(".fpvcut")
+
+    def _update_title(self) -> None:
+        marker = "*" if self.project_modified() else ""
+        self.setWindowTitle(f"{self.project_name()}{marker} – FPVCut {__version__}")
+
+    def _confirm_discard(self, title: str) -> bool:
+        """Bei ungespeicherten Änderungen fragen; False heißt abbrechen."""
+        if not self.project_modified():
+            return True
+        buttons = QMessageBox.StandardButton
+        box = QMessageBox(QMessageBox.Icon.Question, title, f"Änderungen an „{self.project_name()}“ speichern?",
+                          buttons.Save | buttons.Discard | buttons.Cancel, self)
+        # Ohne Qt-Übersetzung stünde auf den Knöpfen sonst Englisch.
+        for button, text in ((buttons.Save, "Speichern"), (buttons.Discard, "Nicht speichern"),
+                             (buttons.Cancel, "Abbrechen")):
+            box.button(button).setText(text)
+        box.setDefaultButton(buttons.Save)
+        answer = self._ask(box)
+        if answer == buttons.Save:
+            return self.save_project()
+        return answer == buttons.Discard
+
+    def _ask(self, box: QMessageBox) -> QMessageBox.StandardButton:
+        box.exec()
+        return box.standardButton(box.clickedButton())
+
+    def new_project(self) -> None:
+        if not self._confirm_discard("Neues Projekt"):
+            return
         self._replace_timeline(Timeline())
+        self._set_project(None)
 
     def _replace_timeline(self, timeline: Timeline) -> None:
         self.timeline_panel.remember()
@@ -681,24 +765,46 @@ class MainWindow(QMainWindow):
         self.timeline_panel.set_playhead(0)
         self._on_timeline_changed()
 
-    def open_timeline_dialog(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Timeline öffnen", "", TIMELINE_FILTER)
-        if not path:
+    def open_project_dialog(self) -> None:
+        if not self._confirm_discard("Projekt öffnen"):
             return
+        path, _ = QFileDialog.getOpenFileName(self, "Projekt öffnen", self._project_dir(), PROJECT_FILTER)
+        if path:
+            self.open_project(Path(path))
+
+    def open_project(self, path: Path) -> bool:
         try:
             timeline = self.resolve_timeline(Timeline.load(path))
         except (OSError, ValueError, TypeError) as exc:
-            QMessageBox.warning(self, "Timeline öffnen", f"Datei konnte nicht gelesen werden:\n{exc}")
-            return
+            QMessageBox.warning(self, "Projekt öffnen", f"Datei konnte nicht gelesen werden:\n{exc}")
+            return False
         self._replace_timeline(timeline)
+        self._set_project(path)
+        return True
 
-    def save_timeline_dialog(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Timeline speichern", "timeline.fpvcut.json", TIMELINE_FILTER)
-        if path:
-            try:
-                self.timeline_panel.timeline.save(path)
-            except OSError as exc:
-                QMessageBox.warning(self, "Timeline speichern", str(exc))
+    def save_project(self) -> bool:
+        """Strg+S: in die aktuelle Projektdatei speichern, beim ersten Mal mit Dateiauswahl."""
+        if self.project_path is None:
+            return self.save_project_as()
+        return self._write_project(self.project_path)
+
+    def save_project_as(self) -> bool:
+        suggestion = str(Path(self._project_dir()) / f"{self.project_name() if self.project_path else 'projekt'}.fpvcut.json")
+        path, _ = QFileDialog.getSaveFileName(self, "Projekt speichern", suggestion, PROJECT_FILTER)
+        return bool(path) and self._write_project(Path(path))
+
+    def _write_project(self, path: Path) -> bool:
+        try:
+            self.timeline_panel.timeline.save(path)
+        except OSError as exc:
+            QMessageBox.warning(self, "Projekt speichern", str(exc))
+            return False
+        self._set_project(path)
+        self.statusBar().showMessage(f"Projekt gespeichert: {path}", 5000)
+        return True
+
+    def _project_dir(self) -> str:
+        return str(self.project_path.parent) if self.project_path else ""
 
     def _on_escape(self) -> None:
         if self.isFullScreen():

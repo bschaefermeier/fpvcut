@@ -56,7 +56,7 @@ class RenameDialog(QDialog):
         intro = QLabel(
             "Neue Namen lassen sich per Doppelklick ändern. Unklare Fälle (gelb) sind nicht "
             "vorausgewählt, Konflikte (rot) müssen erst einen anderen Namen bekommen. "
-            "Favoriten und Timeline bleiben erhalten.", self)
+            "Ausschnitte und Timeline bleiben erhalten.", self)
         intro.setWordWrap(True)
         self._show_same = QCheckBox("Auch Ordner zeigen, die schon passen", self)
         self._show_same.toggled.connect(self._fill)

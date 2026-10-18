@@ -85,7 +85,7 @@ class RootFolder:
 
 @dataclass
 class Clip:
-    """Ein Favorit: Ausschnitt eines Videos (oder das ganze Video) mit Tags."""
+    """Ein gespeicherter Ausschnitt eines Videos (oder das ganze Video) mit Tags."""
 
     id: int
     media_id: int
@@ -94,6 +94,7 @@ class Clip:
     note: str
     created_at: float
     tags: list[str] = field(default_factory=list)
+    favorite: bool = False  # besonders gute Ausschnitte; in der Datenbank ``rating`` = 1
 
     @property
     def is_whole_video(self) -> bool:
@@ -128,6 +129,7 @@ class LibraryEntry:
     reviewed_at: float | None
     fingerprint: str = ""
     clip_count: int = 0
+    favorite_count: int = 0
 
     @property
     def path(self) -> Path:
@@ -254,7 +256,8 @@ class Library:
         """Alle Videos mit einem Fundort; vorhandene Fundorte haben Vorrang vor fehlenden."""
         rows = self.conn.execute(
             """SELECT m.*, p.rel_path, p.missing, r.path AS root_path,
-                      (SELECT COUNT(*) FROM clip c WHERE c.media_id = m.id) AS clip_count
+                      (SELECT COUNT(*) FROM clip c WHERE c.media_id = m.id) AS clip_count,
+                      (SELECT COUNT(*) FROM clip c WHERE c.media_id = m.id AND c.rating > 0) AS favorite_count
                FROM media_file m
                JOIN media_path p ON p.id = (
                    SELECT id FROM media_path WHERE media_id = m.id ORDER BY missing, last_seen DESC LIMIT 1)
@@ -268,6 +271,7 @@ class Library:
                 height=r["height"], fps=r["fps"], vcodec=r["vcodec"], bit_depth=r["bit_depth"],
                 acodec=r["acodec"], first_seen=r["first_seen"], reviewed_at=r["reviewed_at"],
                 fingerprint=r["fingerprint"], clip_count=r["clip_count"],
+                favorite_count=r["favorite_count"],
             )
             for r in rows
         ]
@@ -275,23 +279,30 @@ class Library:
     def entry_for_media(self, media_id: int) -> LibraryEntry | None:
         return next((e for e in self.entries() if e.media_id == media_id), None)
 
-    # --- Favoriten und Tags ---------------------------------------------
+    # --- Ausschnitte und Tags -------------------------------------------
 
     def add_clip(
-        self, media_id: int, in_ms: int, out_ms: int | None, tags: list[str] = (), note: str = ""
+        self, media_id: int, in_ms: int, out_ms: int | None, tags: list[str] = (), note: str = "",
+        favorite: bool = False,
     ) -> int:
         with self.conn:
             cur = self.conn.execute(
-                "INSERT INTO clip (media_id, in_ms, out_ms, note, created_at) VALUES (?, ?, ?, ?, ?)",
-                (media_id, in_ms, out_ms, note, time.time()),
+                "INSERT INTO clip (media_id, in_ms, out_ms, rating, note, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (media_id, in_ms, out_ms, 1 if favorite else None, note, time.time()),
             )
             self._set_tags(cur.lastrowid, tags)
         return cur.lastrowid
 
-    def update_clip(self, clip_id: int, tags: list[str], note: str) -> None:
+    def update_clip(self, clip_id: int, tags: list[str], note: str, favorite: bool | None = None) -> None:
         with self.conn:
             self.conn.execute("UPDATE clip SET note = ? WHERE id = ?", (note, clip_id))
+            if favorite is not None:
+                self.set_favorite(clip_id, favorite)
             self._set_tags(clip_id, tags)
+
+    def set_favorite(self, clip_id: int, favorite: bool) -> None:
+        with self.conn:
+            self.conn.execute("UPDATE clip SET rating = ? WHERE id = ?", (1 if favorite else None, clip_id))
 
     def delete_clip(self, clip_id: int) -> None:
         with self.conn:
@@ -299,7 +310,7 @@ class Library:
             self.conn.execute("DELETE FROM tag WHERE id NOT IN (SELECT tag_id FROM clip_tag)")
 
     def clips_for(self, media_id: int | None) -> list[Clip]:
-        """Favoriten eines Videos; ``None`` liefert alle Favoriten der Bibliothek."""
+        """Ausschnitte eines Videos; ``None`` liefert alle Ausschnitte der Bibliothek."""
         rows = self.conn.execute(
             """SELECT c.*, GROUP_CONCAT(t.name, char(31)) AS tag_names
                FROM clip c
@@ -313,14 +324,14 @@ class Library:
         return [
             Clip(
                 id=r["id"], media_id=r["media_id"], in_ms=r["in_ms"], out_ms=r["out_ms"], note=r["note"],
-                created_at=r["created_at"],
+                created_at=r["created_at"], favorite=bool(r["rating"]),
                 tags=sorted(r["tag_names"].split(chr(31)), key=str.lower) if r["tag_names"] else [],
             )
             for r in rows
         ]
 
     def all_clips(self) -> list[tuple[Clip, LibraryEntry]]:
-        """Alle Favoriten mit ihrem Video (für den Favoriten-Browser)."""
+        """Alle Ausschnitte mit ihrem Video (für den Ausschnitt-Browser)."""
         entries = {e.media_id: e for e in self.entries()}
         return [(c, entries[c.media_id]) for c in self.clips_for(None) if c.media_id in entries]
 

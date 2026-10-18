@@ -61,3 +61,24 @@ def test_migrates_existing_database(tmp_path):
     assert lib.conn.execute("PRAGMA user_version").fetchone()[0] == len(MIGRATIONS)
     assert lib.all_tags() == []
     lib.close()
+
+
+def test_favorite_flag(tmp_path):
+    from fpvcut.core.clip_filter import filter_clips
+
+    lib, _, media_id = make_lib(tmp_path)
+    normal = lib.add_clip(media_id, 0, 1000, ["Flip"])
+    best = lib.add_clip(media_id, 2000, 3000, ["Gap"], favorite=True)
+    assert [c.favorite for c in lib.clips_for(media_id)] == [False, True]
+    entry = lib.entries()[0]
+    assert (entry.clip_count, entry.favorite_count) == (2, 1)
+
+    lib.set_favorite(normal, True)
+    lib.update_clip(best, ["Gap"], "", favorite=False)
+    assert [c.favorite for c in lib.clips_for(media_id)] == [True, False]
+    lib.update_clip(normal, ["Flip"], "Notiz")  # ohne Angabe bleibt die Markierung
+    assert lib.clips_for(media_id)[0].favorite
+
+    only = filter_clips(lib.all_clips(), [], favorites_only=True)
+    assert [c.id for c, _ in only] == [normal]
+    lib.close()

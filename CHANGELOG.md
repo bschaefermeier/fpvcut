@@ -6,12 +6,25 @@ durch, wird daraus die fertige Version.
 
 ## Unveröffentlicht
 
+### Neu
+
+- **Ausschnitte und Favoriten:** Was bisher „Favorit“ hieß, heißt jetzt Ausschnitt. Einzelne
+  Ausschnitte lassen sich zusätzlich als Favorit (★) markieren: im Speichern-Dialog, per Klick auf
+  den Stern im Ausschnitte-Reiter oder über das Kontextmenü. Favoriten sind unter der Zeitleiste
+  kräftiger eingefärbt, und der Ausschnitte-Reiter hat einen Filter „Nur Favoriten“
+- **Bibliothek:** zeigt pro Video die Favoriten (★n) und die übrigen Ausschnitte (✂n) getrennt; ein
+  einfacher Klick öffnet das Video
+- **Projekte:** Neues Projekt (Strg+N), Projekt öffnen, Speichern (Strg+S) und Speichern unter
+  (Strg+Umschalt+S) im Menü Datei. Bei ungespeicherten Änderungen fragt FPVCut, ob gespeichert,
+  verworfen oder abgebrochen werden soll. Der Fenstertitel zeigt den Projektnamen und ein `*` bei
+  Änderungen
+
 ### Behoben
 
 - **Frame zurück (←)** blieb bei manchen Dateien (z. B. DVR-Aufnahmen) an bestimmten Stellen hängen
-- **Tags im Favoriten-Dialog:** Knöpfe sind nur so breit wie ihr Text und brechen um; alle Tags
+- **Tags im Speichern-Dialog:** Knöpfe sind nur so breit wie ihr Text und brechen um; alle Tags
   werden angezeigt statt höchstens 16
-- **Favoriten-Browser:** Das Tag-Feld wächst mit (bis acht Zeilen) und lässt sich am Trenner darunter
+- **Ausschnitte-Reiter:** Das Tag-Feld wächst mit (bis acht Zeilen) und lässt sich am Trenner darunter
   größer oder kleiner ziehen
 - **Vollbild per Doppelklick** löst nicht mehr aus Versehen aus: Die Klicks müssen innerhalb von 0,3 s
   kommen (wie bei mpv und YouTube) statt der 0,5 s von Windows

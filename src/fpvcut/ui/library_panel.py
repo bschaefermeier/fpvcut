@@ -7,7 +7,7 @@ from collections import defaultdict
 from functools import cache
 
 from PySide6.QtCore import QMimeData, QPoint, QSize, Qt, QUrl, Signal
-from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QBrush, QColor, QDesktopServices, QFont, QGuiApplication, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -28,23 +28,43 @@ from fpvcut.ui.mime import MIME_MEDIA
 
 NEW_COLOR = QColor("#3daee9")
 STAR_COLOR = QColor("#ffc400")  # wie die Favoriten-Balken unter der Zeitleiste
-STAR_ICON_SIZE = QSize(26, 16)
+CLIP_COLOR = QColor("#9a9a9a")
+STAR_ICON_SIZE = QSize(52, 16)
 
 
 @cache
-def star_icon(count: int) -> QIcon:
-    """Gelbes "★n" als Icon links vom Namen; ohne Favoriten ein leeres Icon, damit die Namen fluchten."""
+def star_icon(favorites: int, others: int = 0) -> QIcon:
+    """Goldenes "★n" für Favoriten und graues "✂n" für die übrigen Ausschnitte links vom Namen.
+
+    Ohne Ausschnitte ein leeres Icon, damit die Namen fluchten.
+    """
     pixmap = QPixmap(STAR_ICON_SIZE)
     pixmap.fill(Qt.GlobalColor.transparent)
-    if count:
+    if favorites or others:
         painter = QPainter(pixmap)
         font = QFont()
         font.setBold(True)
         painter.setFont(font)
-        painter.setPen(STAR_COLOR)
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, f"★{count}")
+        rect = pixmap.rect()
+        for count, symbol, color in ((favorites, "★", STAR_COLOR), (others, "✂", CLIP_COLOR)):
+            if not count:
+                continue
+            text = f"{symbol}{count}"
+            painter.setPen(color)
+            painter.drawText(rect, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, text)
+            rect.setLeft(rect.left() + painter.fontMetrics().horizontalAdvance(text) + 3)
         painter.end()
     return QIcon(pixmap)
+
+
+def clip_count_text(entry: LibraryEntry) -> str:
+    """Anzahl der Ausschnitte für Vorlesetext und Tooltip, z. B. "3 Ausschnitte, davon 1 Favorit"."""
+    if not entry.clip_count:
+        return ""
+    text = f"{entry.clip_count} Ausschnitt" + ("e" if entry.clip_count != 1 else "")
+    if entry.favorite_count:
+        text += f", davon {entry.favorite_count} Favorit" + ("en" if entry.favorite_count != 1 else "")
+    return text
 ENTRY_ROLE = Qt.ItemDataRole.UserRole
 
 
@@ -70,6 +90,8 @@ def entry_tooltip(entry: LibraryEntry) -> str:
     if entry.acodec:
         lines.append(f"Audio: {entry.acodec}")
     lines.append(f"{entry.size / 1_000_000:.1f} MB · Dauer {format_duration(entry.duration)}")
+    if entry.clip_count:
+        lines.append(clip_count_text(entry))
     return "\n".join(lines)
 
 
@@ -132,6 +154,8 @@ class LibraryPanel(QWidget):
         self._tree.setIconSize(STAR_ICON_SIZE)
         # Strg/Shift+Klick wählt mehrere Videos; ein Flugtag steht für alle seine Videos.
         self._tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        # Ein einfacher Klick öffnet das Video, Enter ebenso; Strg/Shift+Klick bleibt Mehrfachauswahl.
+        self._tree.itemClicked.connect(self._on_item_clicked)
         self._tree.itemActivated.connect(self._on_item_activated)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
@@ -198,9 +222,9 @@ class LibraryPanel(QWidget):
     def _make_item(self, entry: LibraryEntry, bold: QFont) -> QTreeWidgetItem:
         name = entry.path.name
         item = QTreeWidgetItem([name, format_duration(entry.duration), format_video(entry)])
-        item.setIcon(0, star_icon(entry.clip_count))
+        item.setIcon(0, star_icon(entry.favorite_count, entry.clip_count - entry.favorite_count))
         if entry.clip_count:
-            item.setData(0, Qt.ItemDataRole.AccessibleTextRole, f"{name}, {entry.clip_count} Favoriten")
+            item.setData(0, Qt.ItemDataRole.AccessibleTextRole, f"{name}, {clip_count_text(entry)}")
         item.setData(0, ENTRY_ROLE, entry)
         item.setToolTip(0, entry_tooltip(entry))
         if entry.missing:
@@ -243,6 +267,13 @@ class LibraryPanel(QWidget):
         self._placeholder.setText(text)
 
     # --- Interaktion -----------------------------------------------------
+
+    def _on_item_clicked(self, item: QTreeWidgetItem, column: int) -> None:
+        if QGuiApplication.keyboardModifiers() & (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        ):
+            return
+        self._on_item_activated(item, column)
 
     def _on_item_activated(self, item: QTreeWidgetItem, _column: int) -> None:
         entry = item.data(0, ENTRY_ROLE)

@@ -143,7 +143,7 @@ class TimelineView(QWidget):
             painter.drawText(
                 self._video_rect().adjusted(self.PAD + 4, 0, 0, 0),
                 Qt.AlignmentFlag.AlignVCenter,
-                "Favoriten hierher ziehen oder im Favoriten-Reiter E drücken",
+                "Ausschnitte hierher ziehen oder im Ausschnitte-Reiter E drücken",
             )
 
         for index, (rect, clip) in enumerate(zip(self.clip_rects(), self.timeline.clips)):

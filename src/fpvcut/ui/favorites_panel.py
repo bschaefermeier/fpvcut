@@ -1,11 +1,11 @@
-"""Favoriten-Browser: alle Favoriten der Bibliothek, filterbar nach Tags und Text."""
+"""Ausschnitt-Browser: alle Ausschnitte der Bibliothek, filterbar nach Favorit, Tags und Text."""
 
 from __future__ import annotations
 
 import json
 
 from PySide6.QtCore import QEvent, QMimeData, QPoint, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QKeySequence, QShortcut
+from PySide6.QtGui import QBrush, QColor, QGuiApplication, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -26,15 +26,17 @@ from PySide6.QtWidgets import (
 from fpvcut.core.clip_filter import clip_duration, filter_clips
 from fpvcut.core.library import Clip, LibraryEntry
 from fpvcut.ui.flow_layout import TagArea
+from fpvcut.ui.stars import set_star
 from fpvcut.ui.info_panel import clip_range_text
 from fpvcut.ui.library_panel import format_duration
 from fpvcut.ui.mime import MIME_CLIPS
 
 ITEM_ROLE = Qt.ItemDataRole.UserRole
+COL_STAR, COL_TITLE, COL_LENGTH, COL_TAGS = range(4)
 
 
 class _FavoritesTree(QTreeWidget):
-    """Ausgewählte Favoriten lassen sich in die Timeline ziehen."""
+    """Ausgewählte Ausschnitte lassen sich in die Timeline ziehen."""
 
     def mimeTypes(self) -> list[str]:  # noqa: N802  (Qt-Name)
         return [MIME_CLIPS]
@@ -50,7 +52,8 @@ class FavoritesPanel(QWidget):
     clip_activated = Signal(object, object)  # Clip, LibraryEntry
     clip_edit_requested = Signal(object)  # Clip
     clip_delete_requested = Signal(object)  # Clip
-    add_to_timeline_requested = Signal(list)  # Favoriten-IDs
+    add_to_timeline_requested = Signal(list)  # Ausschnitt-IDs
+    favorite_toggled = Signal(object, bool)  # Clip, soll Favorit sein
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -70,11 +73,17 @@ class FavoritesPanel(QWidget):
         self._mode.addItems(["mind. ein Tag", "alle Tags"])
         self._mode.setToolTip("Bei mehreren gewählten Tags: reicht einer, oder müssen alle passen?")
         self._mode.currentIndexChanged.connect(lambda _i: self._rebuild())
+        self._favorites_only = QToolButton(self)
+        self._favorites_only.setText("★ Nur Favoriten")
+        self._favorites_only.setCheckable(True)
+        self._favorites_only.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._favorites_only.toggled.connect(lambda _checked: self._rebuild())
         reset = QPushButton("Filter zurücksetzen", self)
         reset.clicked.connect(self.reset_filter)
         filter_row = QHBoxLayout()
         filter_row.addWidget(QLabel("Tags:", self))
         filter_row.addWidget(self._mode)
+        filter_row.addWidget(self._favorites_only)
         filter_row.addStretch(1)
         filter_row.addWidget(reset)
 
@@ -84,16 +93,18 @@ class FavoritesPanel(QWidget):
         self._tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._tree.setDragEnabled(True)
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
-        self._tree.setHeaderLabels(["Favorit", "Länge", "Tags"])
+        self._tree.setHeaderLabels(["★", "Ausschnitt", "Länge", "Tags"])
         self._tree.setRootIsDecorated(False)
         self._tree.setUniformRowHeights(True)
         self._tree.setAlternatingRowColors(True)
         header = self._tree.header()
         header.setStretchLastSection(False)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
-        header.resizeSection(2, 120)
+        header.setSectionResizeMode(COL_STAR, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(COL_TITLE, QHeaderView.ResizeMode.Stretch)
+        header.setSectionResizeMode(COL_LENGTH, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(COL_TAGS, QHeaderView.ResizeMode.Interactive)
+        header.resizeSection(COL_TAGS, 120)
+        self._tree.itemClicked.connect(self._on_clicked)
         self._tree.itemActivated.connect(self._on_activated)
         self._tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._tree.customContextMenuRequested.connect(self._show_menu)
@@ -102,7 +113,7 @@ class FavoritesPanel(QWidget):
         delete.activated.connect(self._delete_current)
 
         self._placeholder = QLabel(
-            "Noch keine Favoriten.\nIm Player mit I/O einen Ausschnitt wählen und F drücken.", self
+            "Noch keine Ausschnitte.\nIm Player mit I/O einen Ausschnitt wählen und F drücken.", self
         )
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -167,6 +178,9 @@ class FavoritesPanel(QWidget):
 
     def reset_filter(self) -> None:
         self._search.clear()
+        self._favorites_only.blockSignals(True)
+        self._favorites_only.setChecked(False)
+        self._favorites_only.blockSignals(False)
         for button in self._tag_buttons.values():
             button.blockSignals(True)
             button.setChecked(False)
@@ -175,7 +189,8 @@ class FavoritesPanel(QWidget):
 
     def visible_items(self) -> list[tuple[Clip, LibraryEntry]]:
         return filter_clips(
-            self._items, self.selected_tags(), self._mode.currentIndex() == 1, self._search.text().strip()
+            self._items, self.selected_tags(), self._mode.currentIndex() == 1, self._search.text().strip(),
+            favorites_only=self._favorites_only.isChecked(),
         )
 
     def _rebuild(self) -> None:
@@ -187,17 +202,18 @@ class FavoritesPanel(QWidget):
             start = "ganzes Video" if clip.is_whole_video else f"ab {format_duration(clip.in_s)}"
             title = f"{entry.path.name}  ·  {start}"
             item = QTreeWidgetItem(
-                [title, format_duration(clip_duration(clip, entry)), ", ".join(clip.tags)]
+                ["", title, format_duration(clip_duration(clip, entry)), ", ".join(clip.tags)]
             )
             item.setData(0, ITEM_ROLE, (clip, entry))
+            set_star(item, COL_STAR, clip.favorite)
             tooltip = [clip_range_text(clip.in_s, clip.out_s), entry.flight_day.label, str(entry.path)]
             if clip.note:
                 tooltip.append(f"Notiz: {clip.note}")
-            item.setToolTip(0, "\n".join(tooltip))
-            item.setToolTip(2, ", ".join(clip.tags))
+            item.setToolTip(COL_TITLE, "\n".join(tooltip))
+            item.setToolTip(COL_TAGS, ", ".join(clip.tags))
             if entry.missing:
-                item.setText(0, f"{title} (Datei fehlt)")
-                for col in range(3):
+                item.setText(COL_TITLE, f"{title} (Datei fehlt)")
+                for col in (COL_TITLE, COL_LENGTH, COL_TAGS):
                     item.setForeground(col, QBrush(QColor("gray")))
             self._tree.addTopLevelItem(item)
             if clip.id == current_id:
@@ -205,8 +221,11 @@ class FavoritesPanel(QWidget):
 
         total = sum(clip_duration(c, e) or 0 for c, e in visible)
         filtered = len(visible) != len(self._items)
-        count = f"{len(visible)} von {len(self._items)}" if filtered else str(len(visible))
-        self._summary.setText(f"{count} Favoriten · zusammen {format_duration(total)}")
+        if filtered:
+            count = f"{len(visible)} von {len(self._items)} Ausschnitten"
+        else:
+            count = f"{len(visible)} Ausschnitt" + ("" if len(visible) == 1 else "e")
+        self._summary.setText(f"{count} · zusammen {format_duration(total)}")
         empty = not self._items
         self._tree.setVisible(not empty)
         self._summary.setVisible(not empty)
@@ -215,7 +234,7 @@ class FavoritesPanel(QWidget):
     # --- Interaktion -----------------------------------------------------
 
     def selected_clip_ids(self) -> list[int]:
-        """Ausgewählte Favoriten in Anzeigereihenfolge, ohne fehlende Dateien."""
+        """Ausgewählte Ausschnitte in Anzeigereihenfolge, ohne fehlende Dateien."""
         result = []
         for i in range(self._tree.topLevelItemCount()):
             item = self._tree.topLevelItem(i)
@@ -224,7 +243,14 @@ class FavoritesPanel(QWidget):
                 result.append(clip.id)
         return result
 
-    def _on_activated(self, item: QTreeWidgetItem, _column: int) -> None:
+    def _on_clicked(self, item: QTreeWidgetItem, column: int) -> None:
+        if column == COL_STAR:
+            clip = item.data(0, ITEM_ROLE)[0]
+            self.favorite_toggled.emit(clip, not clip.favorite)
+
+    def _on_activated(self, item: QTreeWidgetItem, column: int) -> None:
+        if column == COL_STAR and QGuiApplication.mouseButtons():
+            return  # Doppelklick auf den Stern: nur umschalten, nicht abspielen; Enter spielt immer ab
         clip, entry = item.data(0, ITEM_ROLE)
         if not entry.missing:
             self.clip_activated.emit(clip, entry)
@@ -246,11 +272,13 @@ class FavoritesPanel(QWidget):
             self._tree.setCurrentItem(item)
         ids = self.selected_clip_ids()
         add = menu.addAction(
-            "Zur Timeline hinzufügen (E)" if len(ids) < 2 else f"{len(ids)} Favoriten zur Timeline hinzufügen (E)",
+            "Zur Timeline hinzufügen (E)" if len(ids) < 2 else f"{len(ids)} Ausschnitte zur Timeline hinzufügen (E)",
             lambda: self.add_to_timeline_requested.emit(ids),
         )
         add.setEnabled(bool(ids))
+        menu.addAction("Favorit entfernen" if clip.favorite else "Als Favorit markieren",
+                       lambda: self.favorite_toggled.emit(clip, not clip.favorite))
         menu.addAction("Tags und Notiz bearbeiten …", lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
-        menu.addAction("Favorit löschen", lambda: self.clip_delete_requested.emit(clip))
+        menu.addAction("Ausschnitt löschen", lambda: self.clip_delete_requested.emit(clip))
         menu.exec(self._tree.viewport().mapToGlobal(pos))

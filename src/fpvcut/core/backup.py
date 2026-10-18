@@ -68,7 +68,7 @@ def export_to(library: Library, path: Path) -> int:
 def import_data(library: Library, data: dict) -> ImportResult:
     """Sicherung in die Bibliothek übernehmen; Vorhandenes bleibt, Doppeltes wird übersprungen."""
     if data.get("format") != FORMAT:
-        raise ValueError("Das ist keine FPVCut-Favoritensicherung.")
+        raise ValueError("Das ist keine FPVCut-Sicherung der Ausschnitte.")
     if data.get("version", 0) > VERSION:
         raise ValueError("Die Sicherung stammt aus einer neueren FPVCut-Version.")
     result = ImportResult()
@@ -98,6 +98,9 @@ def import_data(library: Library, data: dict) -> ImportResult:
                 if existing is not None:
                     clip_id = existing["id"]
                     result.clips_skipped += 1
+                    if clip.get("rating"):  # Favorit-Markierung aus der Sicherung übernehmen
+                        conn.execute("UPDATE clip SET rating = ? WHERE id = ? AND rating IS NULL",
+                                     (clip["rating"], clip_id))
                 else:
                     cur = conn.execute(
                         "INSERT INTO clip (media_id, in_ms, out_ms, rating, note, created_at) VALUES (?, ?, ?, ?, ?, ?)",

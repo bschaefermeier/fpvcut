@@ -87,7 +87,7 @@ def test_favorites_panel_filters_and_plays(monkeypatch, tmp_path):
     assert panel.selected_tags() == ["Crash"]
     assert panel.selected_tags() == ["Crash"]
     assert panel._tree.topLevelItemCount() == 1
-    assert panel._summary.text().startswith("1 von 3 Favoriten")
+    assert panel._summary.text().startswith("1 von 3 Ausschnitten")
 
     # Doppelklick öffnet das Video mit dem Ausschnitt als Auswahl.
     item = panel._tree.topLevelItem(0)
@@ -158,3 +158,39 @@ def test_tag_area_fits_when_tab_is_opened_later():
     app.processEvents()
     assert panel._splitter.sizes()[0] > 3 * panel._tags.row_height()
     tabs.close()
+
+
+def test_star_column_toggles_favorite(monkeypatch, tmp_path):
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    QtWidgets = pytest.importorskip("PySide6.QtWidgets")
+    from PySide6.QtCore import Qt
+
+    from fpvcut.ui import player
+    from fpvcut.ui.favorites_panel import COL_STAR, COL_TITLE
+    from fpvcut.ui.main_window import MainWindow
+
+    make_lib(tmp_path).close()
+    monkeypatch.setattr(player, "load_mpv", lambda: (None, "test"))
+    monkeypatch.setattr(MainWindow, "rescan_library", lambda self: None)
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    window = MainWindow(db_path=tmp_path / "lib.sqlite")
+    panel = window.favorites_panel
+
+    def first():
+        return panel._tree.topLevelItem(0)
+
+    clip_id = first().data(0, Qt.ItemDataRole.UserRole)[0].id
+    panel._on_clicked(first(), COL_TITLE)  # Klick auf den Titel schaltet nicht um
+    assert not any(c.favorite for c, _ in window.library.all_clips())
+    panel._on_clicked(first(), COL_STAR)
+    assert [c.id for c, _ in window.library.all_clips() if c.favorite] == [clip_id]
+    assert first().text(COL_STAR) == "★"
+
+    panel._favorites_only.setChecked(True)
+    assert panel._tree.topLevelItemCount() == 1
+    panel.reset_filter()
+    assert panel._tree.topLevelItemCount() == 3
+
+    library_item = window.library_panel._tree.topLevelItem(0).child(0)
+    assert "davon 1 Favorit" in library_item.data(0, Qt.ItemDataRole.AccessibleTextRole)
+    window.close()

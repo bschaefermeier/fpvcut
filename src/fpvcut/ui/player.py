@@ -330,7 +330,7 @@ class PlayerWidget(QWidget):
         self._clip_bar.set_marks(self.in_point, self.out_point)
         self.marks_changed.emit()
 
-    def set_clips(self, clips: list[tuple[float, float | None]]) -> None:
+    def set_clips(self, clips: list[tuple]) -> None:
         """Gespeicherte Favoriten des aktuellen Videos in der Leiste anzeigen."""
         self._clip_bar.set_clips(clips)
 

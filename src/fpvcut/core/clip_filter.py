@@ -1,4 +1,4 @@
-"""Favoriten nach Tags und Freitext filtern und sortieren."""
+"""Ausschnitte nach Favorit, Tags und Freitext filtern und sortieren."""
 
 from __future__ import annotations
 
@@ -8,8 +8,11 @@ from fpvcut.core.library import Clip, LibraryEntry
 
 
 def clip_matches(
-    clip: Clip, entry: LibraryEntry, tags: list[str], match_all: bool = False, text: str = ""
+    clip: Clip, entry: LibraryEntry, tags: list[str], match_all: bool = False, text: str = "",
+    favorites_only: bool = False,
 ) -> bool:
+    if favorites_only and not clip.favorite:
+        return False
     if tags:
         clip_tags = {t.lower() for t in clip.tags}
         wanted = [t.lower() for t in tags]
@@ -24,10 +27,11 @@ def clip_matches(
 
 
 def filter_clips(
-    items: list[tuple[Clip, LibraryEntry]], tags: list[str], match_all: bool = False, text: str = ""
+    items: list[tuple[Clip, LibraryEntry]], tags: list[str], match_all: bool = False, text: str = "",
+    favorites_only: bool = False,
 ) -> list[tuple[Clip, LibraryEntry]]:
     """Gefiltert und sortiert: neueste Flugtage zuerst, innerhalb eines Videos nach Zeit."""
-    selected = [(c, e) for c, e in items if clip_matches(c, e, tags, match_all, text)]
+    selected = [(c, e) for c, e in items if clip_matches(c, e, tags, match_all, text, favorites_only)]
 
     def key(item: tuple[Clip, LibraryEntry]):
         clip, entry = item

@@ -1,4 +1,4 @@
-"""Seitenleiste zum aktuellen Video: Favoriten-Liste und Metadaten."""
+"""Seitenleiste zum aktuellen Video: Ausschnitte und Metadaten."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from fpvcut.core.library import Clip, LibraryEntry
 from fpvcut.ui.player import format_time
+from fpvcut.ui.stars import star_icon
 
 CLIP_ROLE = Qt.ItemDataRole.UserRole
 
@@ -35,7 +36,8 @@ class InfoPanel(QTabWidget):
     clip_activated = Signal(object)  # Clip
     clip_edit_requested = Signal(object)  # Clip
     clip_delete_requested = Signal(object)  # Clip
-    add_to_timeline_requested = Signal(list)  # Favoriten-IDs
+    add_to_timeline_requested = Signal(list)  # Ausschnitt-IDs
+    favorite_toggled = Signal(object, bool)  # Clip, soll Favorit sein
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -57,7 +59,7 @@ class InfoPanel(QTabWidget):
         fav_layout.setContentsMargins(4, 4, 4, 4)
         fav_layout.addWidget(self._clips, 1)
         fav_layout.addWidget(self._hint)
-        self.addTab(favorites, "Favoriten")
+        self.addTab(favorites, "Ausschnitte")
 
         meta = QWidget(self)
         self._meta_form = QFormLayout(meta)
@@ -74,14 +76,17 @@ class InfoPanel(QTabWidget):
                 text += "\n" + "  ".join(f"#{t}" for t in clip.tags)
             if clip.note:
                 text += f"\n{clip.note}"
-            item = QListWidgetItem(text, self._clips)
+            item = QListWidgetItem(star_icon(clip.favorite), text, self._clips)
             item.setData(CLIP_ROLE, clip)
+            if clip.favorite:
+                item.setToolTip("Favorit")
         if entry is None:
-            self._hint.setText("Öffne ein Video aus der Bibliothek, um Favoriten zu speichern.")
+            self._hint.setText("Öffne ein Video aus der Bibliothek, um Ausschnitte zu speichern.")
         else:
             self._hint.setText(
-                "I = In-Punkt · O = Out-Punkt · F = Favorit speichern · Shift+F = ganzes Video · "
-                "Esc = Auswahl aufheben. Doppelklick auf einen Favoriten spielt ihn in Schleife ab."
+                "I = In-Punkt · O = Out-Punkt · F = Ausschnitt speichern · Shift+F = ganzes Video · "
+                "Esc = Auswahl aufheben. Doppelklick auf einen Ausschnitt spielt ihn in Schleife ab, "
+                "per Rechtsklick lässt er sich als Favorit markieren."
             )
         self._fill_metadata(entry)
 
@@ -131,7 +136,9 @@ class InfoPanel(QTabWidget):
         menu = QMenu(self)
         menu.addAction("Abspielen (Schleife)", lambda: self.clip_activated.emit(clip))
         menu.addAction("Zur Timeline hinzufügen (E)", lambda: self.add_to_timeline_requested.emit([clip.id]))
+        menu.addAction("Favorit entfernen" if clip.favorite else "Als Favorit markieren",
+                       lambda: self.favorite_toggled.emit(clip, not clip.favorite))
         menu.addAction("Tags und Notiz bearbeiten …", lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
-        menu.addAction("Favorit löschen", lambda: self.clip_delete_requested.emit(clip))
+        menu.addAction("Ausschnitt löschen", lambda: self.clip_delete_requested.emit(clip))
         menu.exec(self._clips.viewport().mapToGlobal(pos))

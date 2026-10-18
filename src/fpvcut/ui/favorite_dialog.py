@@ -1,8 +1,9 @@
-"""Dialog zum Speichern oder Bearbeiten eines Favoriten: Tags und Notiz."""
+"""Dialog zum Speichern oder Bearbeiten eines Ausschnitts: Favorit, Tags und Notiz."""
 
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -33,7 +34,8 @@ class FavoriteDialog(QDialog):
         known_tags: list[str],
         tags: list[str] = (),
         note: str = "",
-        title: str = "Favorit speichern",
+        title: str = "Ausschnitt speichern",
+        favorite: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -61,6 +63,10 @@ class FavoriteDialog(QDialog):
         if self._buttons:
             form.addRow("", self._quick)
         form.addRow("Notiz:", self.note_edit)
+        self.favorite_check = QCheckBox("★ Favorit", self)
+        self.favorite_check.setChecked(favorite)
+        self.favorite_check.setToolTip("Besonders gute Ausschnitte; im Ausschnitte-Reiter separat filterbar")
+        form.addRow("", self.favorite_check)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self.accept)
@@ -79,6 +85,10 @@ class FavoriteDialog(QDialog):
     @property
     def tags(self) -> list[str]:
         return parse_tags(self.tags_edit.text())
+
+    @property
+    def favorite(self) -> bool:
+        return self.favorite_check.isChecked()
 
     @property
     def note(self) -> str:
