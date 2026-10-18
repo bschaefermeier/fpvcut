@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -20,7 +21,7 @@ from PySide6.QtCore import (
     Signal,
 )
 from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
-from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMenu, QMessageBox, QSplitter, QTabWidget
+from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QSplitter, QTabWidget
 
 from fpvcut import __version__
 from fpvcut.core import backup
@@ -33,6 +34,7 @@ from fpvcut.core.scanner import ScanResult, scan_library
 from fpvcut.render.command import SourceFormat, source_format
 from fpvcut.timeline.edl import build_edl, build_lavfi, build_vf
 from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
+from fpvcut.timeline.preview_audio import PreviewAudio
 from fpvcut.ui.favorite_dialog import FavoriteDialog
 from fpvcut.ui.favorites_panel import FavoritesPanel
 from fpvcut.ui.grade_panel import GradePanel
@@ -128,6 +130,7 @@ class MainWindow(QMainWindow):
         self.project_path: Path | None = None
         self._saved_project: dict | None = None  # Stand der Projektdatei, um Änderungen zu erkennen
         self.backup_dir = self.db_path.with_name("sicherungen")
+        self.preview_audio = PreviewAudio(self.db_path.with_name("vorschau"))
 
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
@@ -595,10 +598,26 @@ class MainWindow(QMainWindow):
         self.timeline_mode = True
         self.current_entry = None
         self._refresh_clips()
-        self.player.open_timeline(build_edl(timeline), build_lavfi(timeline, start), build_vf(timeline), start, paused)
+        original, problem = self._preview_original_audio(timeline)
+        self.player.open_timeline(
+            build_edl(timeline, original), build_lavfi(timeline, start, original is not None), build_vf(timeline),
+            start, paused,
+        )
         self.player.seek_handler = self._seek_timeline
         self.timeline_panel.set_playhead(start)
-        self.statusBar().showMessage("Timeline-Vorschau")
+        self.statusBar().showMessage(f"Timeline-Vorschau ohne Originalton: {problem}" if problem else "Timeline-Vorschau")
+
+    def _preview_original_audio(self, timeline: Timeline) -> tuple[Path | None, str | None]:
+        """Originalton der Clips als eine Datei für die Vorschau, bei Bedarf neu gemischt."""
+        if not timeline.has_original_audio:
+            return None, None
+        QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            return self.preview_audio.get(find_tool("ffmpeg"), timeline), None
+        except (FFmpegNotFound, OSError, subprocess.SubprocessError) as exc:
+            return None, str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        finally:
+            QGuiApplication.restoreOverrideCursor()
 
     def _on_grade_changed(self) -> None:
         """Farbkorrektur geändert: Vorschau an einer Stelle im Clip zeigen, damit man das Ergebnis sieht."""

@@ -214,6 +214,10 @@ def test_library_videos_go_to_timeline(monkeypatch, tmp_path):
 def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp_path):
     window = _window(monkeypatch, tmp_path)
     window.timeline_panel.set_timeline(Timeline(clips()))
+    # Der Originalton wird vorab in eine Datei gemischt; ffmpeg ist hier nicht nötig.
+    mixed = []
+    monkeypatch.setattr(window.preview_audio, "get", lambda ffmpeg, tl: mixed.append(tl) or tmp_path / "o.wav")
+    monkeypatch.setattr("fpvcut.ui.main_window.find_tool", lambda name: Path(name))
     calls = []
     monkeypatch.setattr(window.player, "open_timeline", lambda edl, lavfi, vf, start=0, paused=False: calls.append((start, paused)))
     window.player.toggle_pause()  # Leertaste/Play, ohne dass ein Video geladen ist
@@ -229,6 +233,7 @@ def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp
     window.player.seek_absolute(20.0)  # Schieberegler des Players, hinter das Ende
     assert [c[0] for c in calls[-2:]] == [11.0, pytest.approx(14.9)]
     assert "first_pts=528000" in lavfis[0]
+    assert mixed  # Originalton für die Vorschau gemischt
     shortcuts = {a.shortcut().toString(): a for a in window.actions()}
     shortcuts["Ctrl+Left"].trigger()
     shortcuts["Ctrl+Right"].trigger()

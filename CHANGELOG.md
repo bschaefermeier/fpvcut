@@ -25,6 +25,8 @@ durch, wird daraus die fertige Version.
 
 - **Timeline-Vorschau** blieb stehen, sobald zwei aufeinanderfolgende Clips verschiedene Formate
   hatten (z. B. MP4 und TS, andere Auflösung oder Bildrate), und ließ sich ab dort nicht mehr abspielen
+- **Originalton in der Vorschau** kam nach längeren stummen Strecken zu früh (z. B. der Ton von
+  AVI-Clips mitten in fremden Clips). Er wird jetzt wie beim Export vorab zusammengemischt
 - **Frame zurück (←)** blieb bei manchen Dateien (z. B. DVR-Aufnahmen) an bestimmten Stellen hängen
 - **Tags im Speichern-Dialog:** Knöpfe sind nur so breit wie ihr Text und brechen um; alle Tags
   werden angezeigt statt höchstens 16
