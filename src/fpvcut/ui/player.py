@@ -70,7 +70,7 @@ class PlayerWidget(QWidget):
     duration_changed = Signal(float)
     double_clicked = Signal()
     marks_changed = Signal()
-    range_marked = Signal()  # Bereich auf der Leiste gezogen, In und Out sind gesetzt
+    save_requested = Signal()  # Speichern-Knopf neben der Zeitleiste: Auswahl als Ausschnitt speichern
     nothing_loaded = Signal()  # Play gedrückt, aber nichts geladen
     _mpv_click = Signal()
     _mpv_double = Signal()
@@ -120,6 +120,14 @@ class PlayerWidget(QWidget):
         # Kein Fokus, damit Leertaste und Pfeiltasten immer beim Fenster ankommen.
         self._play_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._slider.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._save_button = QPushButton(self)
+        self._save_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
+        self._save_button.setFixedWidth(40)
+        self._save_button.setToolTip("Markierten Bereich als Ausschnitt speichern (F)")
+        self._save_button.setAccessibleName("Ausschnitt speichern")
+        self._save_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._save_button.setEnabled(False)
+        self._save_button.clicked.connect(self.save_requested)
         self._time_label = QLabel(f"{format_time(None)} / {format_time(None)}", self)
 
         self.in_point: float | None = None
@@ -136,7 +144,8 @@ class PlayerWidget(QWidget):
         controls.addWidget(self._play_button, 0, 0, 2, 1)
         controls.addWidget(self._slider, 0, 1)
         controls.addWidget(self._clip_bar, 1, 1)
-        controls.addWidget(self._time_label, 0, 2, 2, 1)
+        controls.addWidget(self._save_button, 0, 2, 2, 1)
+        controls.addWidget(self._time_label, 0, 3, 2, 1)
         controls.setColumnStretch(1, 1)
 
         layout = QVBoxLayout(self)
@@ -345,13 +354,16 @@ class PlayerWidget(QWidget):
         self.in_point, self.out_point = start, end
         self._set_loop(None, None)
         self._marks_updated()
-        self.range_marked.emit()
 
     def has_marks(self) -> bool:
         return self.in_point is not None or self.out_point is not None
 
     def _marks_updated(self) -> None:
         self._clip_bar.set_marks(self.in_point, self.out_point)
+        # Nur ein vollständiger Bereich (In und Out) eines einzelnen Videos lässt sich speichern.
+        self._save_button.setEnabled(
+            self.in_point is not None and self.out_point is not None and self.seek_handler is None
+        )
         self.marks_changed.emit()
 
     def set_clips(self, clips: list[tuple]) -> None:

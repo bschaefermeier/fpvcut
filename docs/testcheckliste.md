@@ -18,7 +18,8 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 - [ ] F5 scannt neu, neue Videos sind markiert, "Nur neue" filtert
 - [ ] I/O setzen, F speichert Ausschnitt mit Tags, gelber Balken erscheint; mit Haken "★ Favorit"
       ist der Balken kräftiger und die Bibliothek zeigt ★ statt ✂
-- [ ] Bereich auf der Leiste unter der Zeitleiste ziehen: Bild folgt, Speichern-Dialog öffnet sich
+- [ ] Bereich auf der Leiste unter der Zeitleiste ziehen: Bild folgt, Speichern-Knopf rechts neben
+      der Zeitleiste wird aktiv und öffnet den Dialog
 - [ ] Ausschnitte-Reiter: Tag-Filter, Suche, "Nur Favoriten", Klick auf den Stern schaltet um,
       Doppelklick spielt in Schleife
 

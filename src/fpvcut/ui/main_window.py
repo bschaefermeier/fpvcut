@@ -136,7 +136,7 @@ class MainWindow(QMainWindow):
         self.player.double_clicked.connect(self.toggle_fullscreen)
         self.player.position_changed.connect(self._on_player_position)
         self.player.nothing_loaded.connect(self._on_nothing_loaded)
-        self.player.range_marked.connect(self.save_favorite)  # Bereich gezogen: gleich speichern
+        self.player.save_requested.connect(self.save_favorite)
         self.library_panel = LibraryPanel(self)
         self.library_panel.video_activated.connect(self._on_library_video)
         self.library_panel.review_toggled.connect(self._on_review_toggled)

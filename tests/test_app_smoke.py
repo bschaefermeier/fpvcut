@@ -439,7 +439,7 @@ def test_project_dialog_folder_and_recent_projects(monkeypatch, tmp_path):
     window.close()
 
 
-def test_drag_on_clip_bar_marks_range_and_opens_save_dialog(monkeypatch, tmp_path):
+def test_drag_on_clip_bar_marks_range_for_save_button(monkeypatch, tmp_path):
     from PySide6.QtCore import QEvent, QPointF, Qt, QThreadPool
     from PySide6.QtGui import QMouseEvent
 
@@ -475,12 +475,22 @@ def test_drag_on_clip_bar_marks_range_and_opens_save_dialog(monkeypatch, tmp_pat
     mouse(QEvent.Type.MouseButtonPress, 60, left)
     mouse(QEvent.Type.MouseButtonRelease, 61, none)
     assert not dialogs and window.player.in_point is None
-    # Von rechts nach links ziehen: 8 s bis 3 s.
+    save = window.player._save_button
+    assert not save.isEnabled()
+    # Von rechts nach links ziehen: 8 s bis 3 s. Das markiert nur, der Dialog bleibt zu.
     mouse(QEvent.Type.MouseButtonPress, 90, left)
     mouse(QEvent.Type.MouseMove, 70, left)
     mouse(QEvent.Type.MouseMove, 40, left)
     mouse(QEvent.Type.MouseButtonRelease, 40, none)
+    assert not dialogs and (window.player.in_point, window.player.out_point) == (3.0, 8.0)
+    assert save.isEnabled()
+    save.click()
     assert len(dialogs) == 1
     [clip] = window.library.clips_for(window.current_entry.media_id)
     assert (clip.in_ms, clip.out_ms) == (3000, 8000)
+    assert not save.isEnabled()  # Auswahl nach dem Speichern aufgehoben
+    # Nur ein In-Punkt ist noch kein Bereich.
+    monkeypatch.setattr(window.player, "position", lambda: 4.0)
+    window.player.set_in()
+    assert not save.isEnabled()
     window.close()

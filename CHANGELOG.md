@@ -15,7 +15,8 @@ durch, wird daraus die fertige Version.
 - **Bibliothek:** zeigt pro Video die Favoriten (★n) und die übrigen Ausschnitte (✂n) getrennt; ein
   einfacher Klick öffnet das Video
 - **Ausschnitt per Ziehen:** Einen Bereich auf der Leiste unter der Zeitleiste ziehen markiert ihn
-  als Auswahl und öffnet gleich den Speichern-Dialog
+  als Auswahl. Der neue Speichern-Knopf rechts neben der Zeitleiste speichert sie als Ausschnitt;
+  er ist nur aktiv, solange ein Bereich markiert ist
 - **Projekte:** Neues Projekt (Strg+N), Projekt öffnen, Speichern (Strg+S) und Speichern unter
   (Strg+Umschalt+S) im Menü Datei. Bei ungespeicherten Änderungen fragt FPVCut, ob gespeichert,
   verworfen oder abgebrochen werden soll. Der Fenstertitel zeigt den Projektnamen und ein `*` bei
