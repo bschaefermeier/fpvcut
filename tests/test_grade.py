@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from fpvcut.render.command import build_command, build_filter
-from fpvcut.timeline.edl import build_edl, build_lavfi
+from fpvcut.timeline.edl import build_edl, build_vf
 from fpvcut.timeline.grade import Grade, grade_filters
 from fpvcut.timeline.model import Timeline, TimelineClip
 from tests.test_render import settings
@@ -35,9 +35,9 @@ def test_preview_and_render_filters_use_grade():
     clips = [TimelineClip("a", 0, 2, 4, path=Path("/v/a.mp4")),
              TimelineClip("b", 1, 4, 4, path=Path("/v/b.mp4"), grade={"saturation": 0.0})]
     tl = Timeline(clips)
-    lavfi = build_lavfi(tl)
-    assert lavfi.startswith("[vid1]eq=brightness=0.000:contrast=1.000:saturation=0.000:gamma=1.000"
-                            ":enable='gte(t,2.000)*lt(t,5.000)'[vo]")
+    assert build_vf(tl) == ("lavfi=[eq=brightness=0.000:contrast=1.000:saturation=0.000:gamma=1.000"
+                            ":enable='gte(t,2.000)*lt(t,5.000)']")
+    assert build_vf(Timeline(clips[:1])) == ""
     f = build_filter(tl, settings(Path("/tmp")))
     assert "[0:v]scale=" in f and "[1:v]eq=brightness=0.000:contrast=1.000:saturation=0.000:gamma=1.000,scale=" in f
 
@@ -78,10 +78,10 @@ def test_preview_applies_grade_only_in_its_clip(tmp_path):
     tl = _graded_timeline(tmp_path)
     for start, checks in ((0.0, {1.0: True, 3.0: False}), (1.5, {0.2: True, 1.5: False})):
         out = tmp_path / f"vorschau_{start}.mkv"
-        lavfi = build_lavfi(tl, start)
+        vf = build_vf(tl)
         player = mpv.MPV(vo="null", ao="null", o=str(out), ovc="ffv1")
         try:
-            player.loadfile(build_edl(tl), start=str(start), lavfi_complex=f"%{len(lavfi.encode())}%{lavfi}")
+            player.loadfile(build_edl(tl), start=str(start), vf=f"%{len(vf.encode())}%{vf}")
             player.wait_for_playback(timeout=30)
         finally:
             player.terminate()
@@ -103,7 +103,7 @@ def test_grade_panel_edits_selected_clip_with_undo(monkeypatch, tmp_path):
     window = MainWindow(db_path=tmp_path / "lib.sqlite")
     previews = []
     monkeypatch.setattr(window.player, "open_timeline",
-                        lambda edl, lavfi, start=0, paused=False: previews.append((lavfi, start, paused)))
+                        lambda edl, lavfi, vf, start=0, paused=False: previews.append((vf, start, paused)))
     clips = [TimelineClip(n, 0, 4, 10, f"{n}.mp4", path=Path(f"/v/{n}.mp4")) for n in "abc"]
     window.timeline_panel.set_timeline(Timeline(clips))
     panel = window.grade_panel

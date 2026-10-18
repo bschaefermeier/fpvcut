@@ -23,6 +23,8 @@ durch, wird daraus die fertige Version.
 
 ### Behoben
 
+- **Timeline-Vorschau** blieb stehen, sobald zwei aufeinanderfolgende Clips verschiedene Formate
+  hatten (z. B. MP4 und TS, andere Auflösung oder Bildrate), und ließ sich ab dort nicht mehr abspielen
 - **Frame zurück (←)** blieb bei manchen Dateien (z. B. DVR-Aufnahmen) an bestimmten Stellen hängen
 - **Tags im Speichern-Dialog:** Knöpfe sind nur so breit wie ihr Text und brechen um; alle Tags
   werden angezeigt statt höchstens 16

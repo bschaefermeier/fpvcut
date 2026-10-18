@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from fpvcut.timeline.edl import build_edl, build_lavfi
+from fpvcut.timeline.edl import build_edl, build_lavfi, build_vf
 from fpvcut.timeline.model import MIN_CLIP, MusicTrack, Timeline, TimelineClip
 
 
@@ -81,7 +81,7 @@ def test_music_length():
 def test_edl_and_filter():
     tl = Timeline([clip("a", 1, 3)])
     assert build_edl(tl) == "edl://!new_stream;%8%/v/a.mp4,1.000,2.000"
-    assert build_lavfi(tl) == "[vid1]null[vo];[aid1]aresample=48000:async=1:first_pts=0,volume=1.00[ao]"
+    assert build_lavfi(tl) == "[aid1]aresample=48000:async=1:first_pts=0,volume=1.00[ao]"
     tl.music = MusicTrack("/m/x, y.mp3", duration=60, volume=0.5, fade_in=0.5, fade_out=1)
     assert build_edl(tl).endswith(";!new_stream;%11%/m/x, y.mp3,0.000,2.000")
     lavfi = build_lavfi(tl)
@@ -91,9 +91,9 @@ def test_edl_and_filter():
     assert build_lavfi(tl, 1.5).count("first_pts=72000,") == 2
     # Kein Clip mit Ton: die Musik ist die erste Audiospur.
     tl.clips[0].has_audio = False
-    assert build_lavfi(tl) == f"[vid1]null[vo];[aid1]aresample=48000:async=1:first_pts=0,volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[ao]"
+    assert build_lavfi(tl) == f"[aid1]aresample=48000:async=1:first_pts=0,volume=0.50,afade=t=in:st=0:d=0.50,afade=t=out:st=1.000:d=1.00[ao]"
     tl.music = None
-    assert build_lavfi(tl) == "[vid1]null[vo]"
+    assert build_lavfi(tl) == ""
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg fehlt")
@@ -166,3 +166,35 @@ def test_mpv_music_stays_in_sync_when_starting_mid_timeline(tmp_path):
         samples = array.array("h", raw)
         assert _tone(samples, range(300, 1100, 100)) == 300 + 100 * math.floor(t), f"Musik bei {t} s"
         assert _tone(samples, (2000,)) == (None if t < 4 else 2000), f"Originalton bei {t} s"
+
+
+@pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg fehlt")
+def test_mpv_plays_through_format_change(tmp_path):
+    """Wechsel von Codec, Auflösung und Bildrate zwischen Clips: Die Vorschau läuft bis zum Ende.
+
+    Lief das Bild durch ``lavfi-complex``, blieb mpv beim ersten Formatwechsel stehen.
+    """
+    from fpvcut.ui.player import load_mpv, quote_option
+
+    mpv, _error = load_mpv()
+    if mpv is None:
+        pytest.skip("libmpv fehlt")
+    a, b, music = tmp_path / "a.mp4", tmp_path / "b.ts", tmp_path / "m.mp3"
+    run = ["ffmpeg", "-loglevel", "error", "-y"]
+    subprocess.run([*run, "-f", "lavfi", "-i", "testsrc=size=160x90:rate=50:duration=2",
+                    "-c:v", "libx264", "-preset", "ultrafast", str(a)], check=True)
+    subprocess.run([*run, "-f", "lavfi", "-i", "testsrc2=size=192x108:rate=30:duration=2",
+                    "-c:v", "mpeg2video", "-f", "mpegts", str(b)], check=True)
+    subprocess.run([*run, "-f", "lavfi", "-i", "sine=f=880:d=10", str(music)], check=True)
+    grade = {"saturation": 1.2}
+    tl = Timeline([TimelineClip("a", 0, 1, 2, path=a, has_audio=False, grade=grade),
+                   TimelineClip("b", 0, 1, 2, path=b, has_audio=False, grade=grade),
+                   TimelineClip("a", 1, 2, 2, path=a, has_audio=False, grade=grade)])
+    tl.music = MusicTrack(str(music), duration=10)
+    player = mpv.MPV(vo="null", ao="null", keep_open="yes")
+    try:
+        player.loadfile(build_edl(tl), lavfi_complex=quote_option(build_lavfi(tl)), vf=quote_option(build_vf(tl)))
+        player.wait_for_property("eof-reached", lambda v: v, timeout=20)
+        assert player.time_pos == pytest.approx(3.0, abs=0.1)
+    finally:
+        player.terminate()

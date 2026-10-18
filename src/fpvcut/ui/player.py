@@ -51,6 +51,11 @@ def load_mpv():
     return mpv, None
 
 
+def quote_option(value: str) -> str:
+    """mpv-Optionswert mit beliebigen Zeichen, z. B. für Filter in ``loadfile``."""
+    return f"%{len(value.encode())}%{value}"
+
+
 def format_time(seconds: float | None) -> str:
     if seconds is None:
         return "--:--.---"
@@ -268,18 +273,19 @@ class PlayerWidget(QWidget):
             self._player.loadfile(str(path), **options)
         self._player.pause = False
 
-    def open_timeline(self, edl: str, lavfi: str, start: float = 0.0, paused: bool = False) -> None:
-        """Timeline als EDL abspielen; ``lavfi`` mischt Originalton und Musik."""
+    def open_timeline(self, edl: str, lavfi: str, vf: str, start: float = 0.0, paused: bool = False) -> None:
+        """Timeline als EDL abspielen; ``lavfi`` mischt Originalton und Musik, ``vf`` korrigiert Farben."""
         self.clear_marks()
         self.set_clips([])
         if self._player is None:
             return
         self._loaded = True
-        # Als Datei-Option gilt der Filter nur für die Timeline und verschwindet beim nächsten Video.
-        # %Länge% schützt Kommas und Semikolons im Filtergraphen.
-        self._player.loadfile(
-            edl, start=f"{max(start, 0.0):.3f}", lavfi_complex=f"%{len(lavfi.encode())}%{lavfi}"
-        )
+        # Als Datei-Optionen gelten die Filter nur für die Timeline und verschwinden beim nächsten Video.
+        # %Länge% schützt Kommas und Semikolons in den Filtern.
+        options = {"lavfi_complex": quote_option(lavfi)} if lavfi else {"aid": "no"}
+        if vf:
+            options["vf"] = quote_option(vf)
+        self._player.loadfile(edl, start=f"{max(start, 0.0):.3f}", **options)
         self._player.pause = paused
 
     def stop(self) -> None:

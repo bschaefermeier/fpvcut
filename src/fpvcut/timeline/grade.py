@@ -1,6 +1,6 @@
 """Farbkorrektur eines Timeline-Clips und ihre Übersetzung in ffmpeg-Filter.
 
-Dieselben Filter laufen in der Vorschau (mpv ``lavfi-complex``, per ``enable`` auf den
+Dieselben Filter laufen in der Vorschau (mpv ``vf``, per ``enable`` auf den
 Zeitraum des Clips beschränkt) und beim Rendern (in der Filterkette des Clips). So sieht
 der Export aus wie die Vorschau.
 """

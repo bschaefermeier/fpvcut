@@ -215,7 +215,7 @@ def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp
     window = _window(monkeypatch, tmp_path)
     window.timeline_panel.set_timeline(Timeline(clips()))
     calls = []
-    monkeypatch.setattr(window.player, "open_timeline", lambda edl, lavfi, start=0, paused=False: calls.append((start, paused)))
+    monkeypatch.setattr(window.player, "open_timeline", lambda edl, lavfi, vf, start=0, paused=False: calls.append((start, paused)))
     window.player.toggle_pause()  # Leertaste/Play, ohne dass ein Video geladen ist
     assert window.timeline_mode and calls == [(0.0, False)]
     window.timeline_mode = False
@@ -224,7 +224,7 @@ def test_play_without_video_and_click_in_timeline_start_preview(monkeypatch, tmp
     # Sprünge in der laufenden Vorschau laden sie ab der neuen Stelle neu (Musik bleibt synchron).
     lavfis = []
     monkeypatch.setattr(window.player, "open_timeline",
-                        lambda edl, lavfi, start=0, paused=False: (calls.append((start, paused)), lavfis.append(lavfi)))
+                        lambda edl, lavfi, vf, start=0, paused=False: (calls.append((start, paused)), lavfis.append(lavfi)))
     window._on_timeline_seek(11.0)
     window.player.seek_absolute(20.0)  # Schieberegler des Players, hinter das Ende
     assert [c[0] for c in calls[-2:]] == [11.0, pytest.approx(14.9)]

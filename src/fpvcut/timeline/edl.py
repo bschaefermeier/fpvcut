@@ -2,6 +2,11 @@
 
 Die Videospur und die Musik werden als zwei Streams in eine EDL geschrieben; ein
 ``lavfi-complex``-Filter mischt Originalton und Musik mit Lautstärke und Blenden.
+
+Das Bild läuft bewusst nicht durch ``lavfi-complex``: Wechselt zwischen zwei Clips das
+Videoformat (Codec, Auflösung, Bildrate), baut mpv den ganzen Filtergraphen neu auf, und die
+Wiedergabe bleibt an dieser Stelle stehen. Die Farbkorrektur läuft deshalb als normaler
+Videofilter (``vf``), den mpv bei einem Formatwechsel problemlos neu startet.
 """
 
 from __future__ import annotations
@@ -28,8 +33,17 @@ def build_edl(timeline: Timeline) -> str:
     return "edl://" + ";".join(parts)
 
 
+def build_vf(timeline: Timeline) -> str:
+    """Videofilter für mpvs ``vf``-Option mit der Farbkorrektur aller Clips, leer ohne Korrektur."""
+    video = []
+    for clip, begin in zip(timeline.clips, timeline.starts()):
+        # Zeitstempel der EDL sind Timeline-Zeit: Korrektur nur im Zeitraum dieses Clips.
+        video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
+    return f"lavfi=[{','.join(video)}]" if video else ""
+
+
 def build_lavfi(timeline: Timeline, start: float = 0.0) -> str:
-    """Filtergraph für mpvs ``lavfi-complex``: Originalton und Musik mischen.
+    """Filtergraph für mpvs ``lavfi-complex``: Originalton und Musik mischen; leer ohne Ton.
 
     Clips ohne Tonspur hinterlassen Lücken im Originalton. ``aresample=async=1`` füllt sie
     anhand der Zeitstempel mit Stille, sonst rutscht der Ton der folgenden Clips nach vorn.
@@ -38,7 +52,7 @@ def build_lavfi(timeline: Timeline, start: float = 0.0) -> str:
     deshalb wird die Vorschau für jeden Sprung mit neuer Startposition neu geladen.
     Hat kein Clip Ton, ist die Musik die erste (und einzige) Audiospur. Hat ab ``start``
     kein Clip mehr Ton, bleibt der Originalton weg: mpv liefert sonst Ton aus einem
-    früheren Clip.
+    früheren Clip. Ist der Graph leer, muss der Ton deshalb ganz abgeschaltet werden.
     """
     original = timeline.has_original_audio
     original_ahead = any(
@@ -50,11 +64,7 @@ def build_lavfi(timeline: Timeline, start: float = 0.0) -> str:
     has_music = music is not None and length > 0
     # Beide Spuren an den Zeitstempeln ausrichten; mpv liefert nach dem Sprung etwas Vorlauf.
     align = f"aresample={SAMPLE_RATE}:async=1:first_pts={round(max(start, 0.0) * SAMPLE_RATE)}"
-    video = []
-    for clip, begin in zip(timeline.clips, timeline.starts()):
-        # Zeitstempel der EDL sind Timeline-Zeit: Korrektur nur im Zeitraum dieses Clips.
-        video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
-    parts = [f"[vid1]{','.join(video) or 'null'}[vo]"]
+    parts = []
     labels = []
     if original_ahead:
         parts.append(f"[aid1]{align},volume={timeline.original_volume:.2f}[a1]")

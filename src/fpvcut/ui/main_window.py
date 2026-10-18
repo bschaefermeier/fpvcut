@@ -31,7 +31,7 @@ from fpvcut.core.marks import resolve_range
 from fpvcut.core.probe import probe
 from fpvcut.core.scanner import ScanResult, scan_library
 from fpvcut.render.command import SourceFormat, source_format
-from fpvcut.timeline.edl import build_edl, build_lavfi
+from fpvcut.timeline.edl import build_edl, build_lavfi, build_vf
 from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
 from fpvcut.ui.favorite_dialog import FavoriteDialog
 from fpvcut.ui.favorites_panel import FavoritesPanel
@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
         self.timeline_mode = True
         self.current_entry = None
         self._refresh_clips()
-        self.player.open_timeline(build_edl(timeline), build_lavfi(timeline, start), start, paused)
+        self.player.open_timeline(build_edl(timeline), build_lavfi(timeline, start), build_vf(timeline), start, paused)
         self.player.seek_handler = self._seek_timeline
         self.timeline_panel.set_playhead(start)
         self.statusBar().showMessage("Timeline-Vorschau")
