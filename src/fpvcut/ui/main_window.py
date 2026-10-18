@@ -32,9 +32,9 @@ from fpvcut.core.marks import resolve_range
 from fpvcut.core.probe import probe
 from fpvcut.core.scanner import ScanResult, scan_library
 from fpvcut.render.command import SourceFormat, source_format
-from fpvcut.timeline.edl import build_edl, build_lavfi, build_vf
+from fpvcut.timeline.edl import build_edl, build_vf
 from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
-from fpvcut.timeline.preview_audio import PreviewAudio
+from fpvcut.timeline.preview_audio import PreviewAudio, has_audio
 from fpvcut.ui.favorite_dialog import FavoriteDialog
 from fpvcut.ui.favorites_panel import FavoritesPanel
 from fpvcut.ui.grade_panel import GradePanel
@@ -598,18 +598,15 @@ class MainWindow(QMainWindow):
         self.timeline_mode = True
         self.current_entry = None
         self._refresh_clips()
-        original, problem = self._preview_original_audio(timeline)
-        self.player.open_timeline(
-            build_edl(timeline, original), build_lavfi(timeline, start, original is not None), build_vf(timeline),
-            start, paused,
-        )
+        audio, problem = self._preview_audio(timeline)
+        self.player.open_timeline(build_edl(timeline, audio), audio is not None, build_vf(timeline), start, paused)
         self.player.seek_handler = self._seek_timeline
         self.timeline_panel.set_playhead(start)
-        self.statusBar().showMessage(f"Timeline-Vorschau ohne Originalton: {problem}" if problem else "Timeline-Vorschau")
+        self.statusBar().showMessage(f"Timeline-Vorschau ohne Ton: {problem}" if problem else "Timeline-Vorschau")
 
-    def _preview_original_audio(self, timeline: Timeline) -> tuple[Path | None, str | None]:
-        """Originalton der Clips als eine Datei für die Vorschau, bei Bedarf neu gemischt."""
-        if not timeline.has_original_audio:
+    def _preview_audio(self, timeline: Timeline) -> tuple[Path | None, str | None]:
+        """Ton der Timeline (Originalton und Musik) als eine Datei, bei Bedarf neu gemischt."""
+        if not has_audio(timeline):
             return None, None
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:

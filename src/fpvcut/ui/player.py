@@ -273,18 +273,17 @@ class PlayerWidget(QWidget):
             self._player.loadfile(str(path), **options)
         self._player.pause = False
 
-    def open_timeline(self, edl: str, lavfi: str, vf: str, start: float = 0.0, paused: bool = False) -> None:
-        """Timeline als EDL abspielen; ``lavfi`` mischt Originalton und Musik, ``vf`` korrigiert Farben."""
+    def open_timeline(self, edl: str, audio: bool, vf: str, start: float = 0.0, paused: bool = False) -> None:
+        """Timeline als EDL abspielen; ``audio``: die EDL beginnt mit dem gemischten Ton, ``vf`` korrigiert Farben."""
         self.clear_marks()
         self.set_clips([])
         if self._player is None:
             return
         self._loaded = True
-        # Als Datei-Optionen gelten die Filter nur für die Timeline und verschwinden beim nächsten Video.
-        # %Länge% schützt Kommas und Semikolons in den Filtern.
-        options = {"lavfi_complex": quote_option(lavfi)} if lavfi else {"aid": "no"}
+        # Als Datei-Optionen gelten sie nur für die Timeline und verschwinden beim nächsten Video.
+        options = {"aid": "1" if audio else "no"}
         if vf:
-            options["vf"] = quote_option(vf)
+            options["vf"] = quote_option(vf)  # %Länge% schützt Kommas im Filter
         self._player.loadfile(edl, start=f"{max(start, 0.0):.3f}", **options)
         self._player.pause = paused
 

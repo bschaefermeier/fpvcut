@@ -1,7 +1,8 @@
 """Timeline als mpv-EDL abspielen, ohne vorher zu rendern.
 
-Videospur, Musik und der vorab gemischte Originalton werden als eigene Streams in eine EDL
-geschrieben; ein ``lavfi-complex``-Filter mischt Originalton und Musik mit Lautstärke und Blenden.
+Die EDL hat zwei Streams: den vorab gemischten Ton (siehe :mod:`fpvcut.timeline.preview_audio`)
+und die Videospur aus den Clips. Der Ton steht vorn, damit er immer ``aid1`` ist; die
+Tonspuren der Clips selbst folgen mit der Videospur und bleiben ungenutzt.
 
 Das Bild läuft bewusst nicht durch ``lavfi-complex``: Wechselt zwischen zwei Clips das
 Videoformat (Codec, Auflösung, Bildrate), baut mpv den ganzen Filtergraphen neu auf, und die
@@ -16,27 +17,17 @@ from pathlib import Path
 from fpvcut.timeline.grade import grade_filters
 from fpvcut.timeline.model import Timeline
 
-SAMPLE_RATE = 48000
-
 
 def _quote(path: str) -> str:
     # %Länge% erlaubt beliebige Zeichen (Kommas, Semikolons) im Pfad; mpv zählt Bytes.
     return f"%{len(path.encode('utf-8'))}%{path}"
 
 
-def build_edl(timeline: Timeline, original_audio: Path | str | None = None) -> str:
-    """``edl://``-URL für mpv. Fehlende Clips müssen vorher geprüft werden.
-
-    Die Tonspuren stehen vorn, damit ihre Nummern feststehen: ``aid1`` ist der vorab gemischte
-    Originalton (falls vorhanden), danach kommt die Musik. Die Tonspuren der Clips selbst
-    folgen erst mit der Videospur und bleiben ungenutzt.
-    """
+def build_edl(timeline: Timeline, audio: Path | str | None = None) -> str:
+    """``edl://``-URL für mpv. Fehlende Clips müssen vorher geprüft werden."""
     parts = []
-    if original_audio is not None:
-        parts += ["!new_stream", f"{_quote(str(original_audio))},0.000,{timeline.duration:.3f}"]
-    if timeline.music is not None and timeline.music_length() > 0:
-        parts.append("!new_stream")
-        parts.append(f"{_quote(timeline.music.path)},{timeline.music.src_in:.3f},{timeline.music_length():.3f}")
+    if audio is not None:
+        parts += ["!new_stream", f"{_quote(str(audio))},0.000,{timeline.duration:.3f}"]
     parts.append("!new_stream")
     for clip in timeline.clips:
         parts.append(f"{_quote(str(clip.path))},{clip.src_in:.3f},{clip.duration:.3f}")
@@ -50,40 +41,3 @@ def build_vf(timeline: Timeline) -> str:
         # Zeitstempel der EDL sind Timeline-Zeit: Korrektur nur im Zeitraum dieses Clips.
         video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
     return f"lavfi=[{','.join(video)}]" if video else ""
-
-
-def build_lavfi(timeline: Timeline, start: float = 0.0, original_audio: bool = False) -> str:
-    """Filtergraph für mpvs ``lavfi-complex``: Originalton und Musik mischen; leer ohne Ton.
-
-    ``original_audio`` heißt, dass die EDL den vorab gemischten Originalton als erste Spur
-    enthält (siehe :mod:`fpvcut.timeline.preview_audio`). ``aresample`` mit ``first_pts`` richtet
-    beide Spuren an der Startposition aus; mpv liefert nach dem Sprung etwas Vorlauf. Hat ab
-    ``start`` kein Clip mehr Ton, bleibt der Originalton ganz weg.
-    """
-    original_ahead = original_audio and any(
-        clip.has_audio and begin + clip.duration > start + 0.01
-        for clip, begin in zip(timeline.clips, timeline.starts())
-    )
-    music = timeline.music
-    length = timeline.music_length()
-    has_music = music is not None and length > 0
-    align = f"aresample={SAMPLE_RATE}:async=1:first_pts={round(max(start, 0.0) * SAMPLE_RATE)}"
-    parts = []
-    labels = []
-    if original_ahead:
-        parts.append(f"[aid1]{align},volume={timeline.original_volume:.2f}[a1]")
-        labels.append("[a1]")
-    if has_music:
-        filters = [align, f"volume={music.volume:.2f}"]
-        if music.fade_in > 0:
-            filters.append(f"afade=t=in:st=0:d={min(music.fade_in, length):.2f}")
-        if music.fade_out > 0:
-            fade = min(music.fade_out, length)
-            filters.append(f"afade=t=out:st={length - fade:.3f}:d={fade:.2f}")
-        parts.append(f"[aid{2 if original_audio else 1}]{','.join(filters)}[a2]")
-        labels.append("[a2]")
-    if len(labels) == 2:
-        parts.append("[a1][a2]amix=inputs=2:normalize=0:duration=longest[ao]")
-    elif labels:
-        parts[-1] = parts[-1][: -len(labels[0])] + "[ao]"
-    return ";".join(parts)
