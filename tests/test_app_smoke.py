@@ -437,3 +437,50 @@ def test_project_dialog_folder_and_recent_projects(monkeypatch, tmp_path):
     window.open_recent_project(projects[1])
     assert window.recent_projects() == [str(projects[0])]
     window.close()
+
+
+def test_drag_on_clip_bar_marks_range_and_opens_save_dialog(monkeypatch, tmp_path):
+    from PySide6.QtCore import QEvent, QPointF, Qt, QThreadPool
+    from PySide6.QtGui import QMouseEvent
+
+    from fpvcut.core.library import Library
+    from fpvcut.ui import favorite_dialog
+
+    day = tmp_path / "FPV" / "2026_08_28_Wiese"
+    day.mkdir(parents=True)
+    (day / "a.mp4").write_bytes(b"a")
+    lib = Library(tmp_path / "lib.sqlite")
+    lib.add_root(tmp_path / "FPV")
+    lib.close()
+    app, window = _window(monkeypatch, tmp_path)
+    QThreadPool.globalInstance().waitForDone(10000)
+    app.processEvents()
+    window.open_entry(window.library.entries()[0])
+    window.player._loaded = True  # ohne mpv: so tun, als liefe das Video
+    bar = window.player._clip_bar
+    bar.resize(220, bar.height())
+    bar.set_inset(10)
+    bar.set_duration(20.0)  # 200 Pixel Schiene für 20 s: 10 Pixel je Sekunde
+    dialogs = []
+    monkeypatch.setattr(favorite_dialog.FavoriteDialog, "exec",
+                        lambda self: dialogs.append(self) or favorite_dialog.QDialog.DialogCode.Accepted)
+
+    def mouse(kind, x, buttons):
+        button = Qt.MouseButton.LeftButton if kind != QEvent.Type.MouseMove else Qt.MouseButton.NoButton
+        event = QMouseEvent(kind, QPointF(x, 5), QPointF(x, 5), button, buttons, Qt.KeyboardModifier.NoModifier)
+        QtWidgets.QApplication.sendEvent(bar, event)
+
+    left, none = Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton
+    # Ein Klick springt nur und öffnet nichts.
+    mouse(QEvent.Type.MouseButtonPress, 60, left)
+    mouse(QEvent.Type.MouseButtonRelease, 61, none)
+    assert not dialogs and window.player.in_point is None
+    # Von rechts nach links ziehen: 8 s bis 3 s.
+    mouse(QEvent.Type.MouseButtonPress, 90, left)
+    mouse(QEvent.Type.MouseMove, 70, left)
+    mouse(QEvent.Type.MouseMove, 40, left)
+    mouse(QEvent.Type.MouseButtonRelease, 40, none)
+    assert len(dialogs) == 1
+    [clip] = window.library.clips_for(window.current_entry.media_id)
+    assert (clip.in_ms, clip.out_ms) == (3000, 8000)
+    window.close()

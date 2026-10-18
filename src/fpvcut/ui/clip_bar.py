@@ -12,19 +12,30 @@ MARK_COLOR = QColor(61, 174, 233)  # aktuelle Auswahl
 TRACK_COLOR = QColor(128, 128, 128, 60)
 
 
+DRAG_PIXELS = 4  # ab hier wird aus einem Klick ein gezogener Bereich
+
+
 class ClipBar(QWidget):
     seek_requested = Signal(float)  # Sekunden
+    scrub_requested = Signal(float)  # beim Ziehen: Bild an dieser Stelle zeigen
+    range_selected = Signal(float, float)  # gezogener Bereich (Start, Ende)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setFixedHeight(10)
+        self.setFixedHeight(14)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.setToolTip("Gelb: Ausschnitte, kräftig gelb = Favorit · Blau: aktuelle In/Out-Auswahl (Klick springt)")
+        self.setCursor(Qt.CursorShape.IBeamCursor)
+        self.setToolTip(
+            "Gelb: Ausschnitte, kräftig gelb = Favorit · Blau: aktuelle In/Out-Auswahl\n"
+            "Klick springt, Ziehen markiert einen neuen Ausschnitt"
+        )
         self._duration = 0.0
         self._clips: list[tuple[float, float | None, bool]] = []
         self._in: float | None = None
         self._out: float | None = None
         self._inset = 0
+        self._press_x: float | None = None
+        self._drag: tuple[float, float] | None = None  # (Start, aktuelle Stelle) beim Ziehen
 
     def set_inset(self, pixels: int) -> None:
         """Seitlicher Abstand, damit die Leiste mit der Schiene des Sliders fluchtet."""
@@ -44,6 +55,10 @@ class ClipBar(QWidget):
         self._in, self._out = in_s, out_s
         self.update()
 
+    def _seconds(self, x: float) -> float:
+        width = max(self.width() - 2 * self._inset, 1)
+        return min(max((x - self._inset) / width, 0.0), 1.0) * self._duration
+
     def _x(self, seconds: float) -> float:
         width = self.width() - 2 * self._inset
         return self._inset + width * min(max(seconds / self._duration, 0.0), 1.0)
@@ -58,15 +73,35 @@ class ClipBar(QWidget):
         for start, end, favorite in sorted(self._clips, key=lambda c: c[2]):
             x1, x2 = self._x(start), self._x(self._duration if end is None else end)
             painter.fillRect(QRectF(x1, 1, max(x2 - x1, 2), h - 2), FAVORITE_COLOR if favorite else CLIP_COLOR)
-        if self._in is not None and self._out is not None:
-            x1, x2 = self._x(self._in), self._x(self._out)
+        marks = (self._in, self._out) if self._drag is None else self._drag
+        if marks[0] is not None and marks[1] is not None:
+            x1, x2 = sorted((self._x(marks[0]), self._x(marks[1])))
             painter.fillRect(QRectF(x1, 0, max(x2 - x1, 2), h), MARK_COLOR)
-        for mark in (self._in, self._out):
+        for mark in marks:
             if mark is not None:
                 painter.fillRect(QRectF(self._x(mark) - 1, 0, 3, h), MARK_COLOR)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:  # noqa: N802
         if event.button() == Qt.MouseButton.LeftButton and self._duration > 0:
-            width = max(self.width() - 2 * self._inset, 1)
-            fraction = (event.position().x() - self._inset) / width
-            self.seek_requested.emit(min(max(fraction, 0.0), 1.0) * self._duration)
+            self._press_x = event.position().x()
+            self.seek_requested.emit(self._seconds(self._press_x))
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if self._press_x is None or not event.buttons() & Qt.MouseButton.LeftButton:
+            return
+        x = event.position().x()
+        if self._drag is None and abs(x - self._press_x) < DRAG_PIXELS:
+            return
+        self._drag = (self._seconds(self._press_x), self._seconds(x))
+        self.update()
+        self.scrub_requested.emit(self._drag[1])
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:  # noqa: N802
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+        drag, self._drag, self._press_x = self._drag, None, None
+        self.update()
+        if drag is not None:
+            start, end = sorted(drag)
+            if end > start:
+                self.range_selected.emit(start, end)

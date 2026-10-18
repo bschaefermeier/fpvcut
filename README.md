@@ -49,7 +49,8 @@ Projekte bleiben dabei erhalten.
 1. Über **Datei → Bibliotheksordner hinzufügen** den Ordner mit den Aufnahmen wählen. FPVCut
    erkennt Flugtage am Datum im Ordnernamen, z. B. `2026-08-28_Wiese` oder `28_08_26_Wiese`.
 2. Ein Video per Klick öffnen, Szenen mit **I** und **O** markieren und mit **F** als Ausschnitt
-   speichern.
+   speichern. Alternativ einen Bereich auf der Leiste unter der Zeitleiste ziehen, dann öffnet sich
+   der Speichern-Dialog direkt.
 3. Ausschnitte aus dem Reiter **Ausschnitte** in die Timeline ziehen, optional Musik hinzufügen und
    mit **Strg+R** exportieren. Mit **Strg+S** wird das Projekt gespeichert.
 

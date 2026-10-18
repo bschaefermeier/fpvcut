@@ -70,6 +70,7 @@ class PlayerWidget(QWidget):
     duration_changed = Signal(float)
     double_clicked = Signal()
     marks_changed = Signal()
+    range_marked = Signal()  # Bereich auf der Leiste gezogen, In und Out sind gesetzt
     nothing_loaded = Signal()  # Play gedrückt, aber nichts geladen
     _mpv_click = Signal()
     _mpv_double = Signal()
@@ -125,6 +126,8 @@ class PlayerWidget(QWidget):
         self.out_point: float | None = None
         self._clip_bar = ClipBar(self)
         self._clip_bar.seek_requested.connect(self.seek_absolute)
+        self._clip_bar.scrub_requested.connect(self._on_scrub)
+        self._clip_bar.range_selected.connect(self._on_range_selected)
         self._clip_bar.set_inset(self.style().pixelMetric(QStyle.PixelMetric.PM_SliderLength) // 2)
 
         controls = QGridLayout()
@@ -327,6 +330,22 @@ class PlayerWidget(QWidget):
         self.in_point = self.out_point = None
         self._set_loop(None, None)
         self._marks_updated()
+
+    def _on_scrub(self, seconds: float) -> None:
+        # Nur bei einem einzelnen Video; die Timeline-Vorschau würde bei jedem Sprung neu laden.
+        if self._player is None or self.seek_handler is not None or not self._loaded:
+            return
+        self._player.pause = True
+        self._player.seek(seconds, reference="absolute", precision="exact")
+
+    def _on_range_selected(self, start: float, end: float) -> None:
+        """Gezogener Bereich wird zur In/Out-Auswahl."""
+        if self.seek_handler is not None or not self._loaded:
+            return
+        self.in_point, self.out_point = start, end
+        self._set_loop(None, None)
+        self._marks_updated()
+        self.range_marked.emit()
 
     def has_marks(self) -> bool:
         return self.in_point is not None or self.out_point is not None
