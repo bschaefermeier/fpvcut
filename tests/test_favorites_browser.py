@@ -137,3 +137,24 @@ def test_tag_area_grows_with_tags_and_can_be_dragged():
     app.processEvents()
     assert panel._splitter.sizes()[0] == 100
     panel.close()
+
+
+def test_tag_area_fits_when_tab_is_opened_later():
+    """Beim Start liegt der Browser in einem verdeckten Reiter; beim ersten Öffnen muss das Feld passen."""
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    QtWidgets = pytest.importorskip("PySide6.QtWidgets")
+    from fpvcut.ui.favorites_panel import FavoritesPanel
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    tabs = QtWidgets.QTabWidget()
+    panel = FavoritesPanel()
+    tabs.addTab(QtWidgets.QLabel("Bibliothek"), "Bibliothek")
+    tabs.addTab(panel, "Favoriten")
+    panel.set_data([], [(f"Tag{i}", i) for i in range(40)])
+    tabs.resize(370, 700)
+    tabs.show()
+    app.processEvents()
+    tabs.setCurrentIndex(1)
+    app.processEvents()
+    assert panel._splitter.sizes()[0] > 3 * panel._tags.row_height()
+    tabs.close()

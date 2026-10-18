@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 
-from PySide6.QtCore import QMimeData, QPoint, Qt, Signal
+from PySide6.QtCore import QEvent, QMimeData, QPoint, Qt, Signal
 from PySide6.QtGui import QBrush, QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -119,6 +119,7 @@ class FavoritesPanel(QWidget):
         self._splitter.setChildrenCollapsible(False)
         self._splitter.setStretchFactor(1, 1)
         self._splitter.splitterMoved.connect(self._on_splitter_moved)
+        self._splitter.installEventFilter(self)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
@@ -145,7 +146,9 @@ class FavoritesPanel(QWidget):
         """Tag-Feld so hoch wie nötig (höchstens acht Zeilen), solange es niemand von Hand gezogen hat."""
         if self._tags_sized_by_user or not self._tag_buttons:
             return
-        total = sum(self._splitter.sizes())
+        total = self._splitter.height() - self._splitter.handleWidth()
+        if total <= 0:
+            return
         width = self._splitter.width() - self._tags.verticalScrollBar().sizeHint().width()
         height = min(self._tags.fitting_height(max(width, 1)), max(total - 80, self._tags.row_height()))
         self._splitter.setSizes([height, max(total - height, 0)])
@@ -153,9 +156,11 @@ class FavoritesPanel(QWidget):
     def _on_splitter_moved(self, _pos: int, _index: int) -> None:
         self._tags_sized_by_user = True
 
-    def resizeEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
-        super().resizeEvent(event)
-        self._fit_tags()
+    def eventFilter(self, watched, event) -> bool:  # noqa: N802  (Qt-Name)
+        # Erst wenn der Splitter selbst seine Größe hat (z. B. beim ersten Öffnen des Reiters), passt die Rechnung.
+        if watched is self._splitter and event.type() in (QEvent.Type.Resize, QEvent.Type.Show):
+            self._fit_tags()
+        return super().eventFilter(watched, event)
 
     def selected_tags(self) -> list[str]:
         return [name for name, button in self._tag_buttons.items() if button.isChecked()]
