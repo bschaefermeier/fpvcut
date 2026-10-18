@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt
-from PySide6.QtWidgets import QLayout, QLayoutItem, QWidget
+from PySide6.QtWidgets import QFrame, QLayout, QLayoutItem, QScrollArea, QToolButton, QWidget
 
 
 class FlowLayout(QLayout):
@@ -64,3 +64,62 @@ class FlowLayout(QLayout):
             x += hint.width() + self.spacing()
             line_height = max(line_height, hint.height())
         return y + line_height - rect.y() + margins.bottom()
+
+
+class TagArea(QScrollArea):
+    """Umschaltbare Tag-Knöpfe, so breit wie ihr Text, die wie Text umbrechen.
+
+    Die Höhe wächst mit den Zeilen bis ``max_rows``, danach wird gescrollt.
+    """
+
+    def __init__(self, max_rows: int = 6, auto_height: bool = True, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.max_rows = max_rows
+        self.auto_height = auto_height  # sonst bestimmt der Aufrufer die Höhe (z. B. per Splitter)
+        self.buttons: dict[str, QToolButton] = {}
+        self._box = QWidget()
+        self._flow = FlowLayout(self._box)
+        self.setWidget(self._box)
+        self.setWidgetResizable(True)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+    def set_tags(self, tags: list[tuple[str, str]], checked: set[str] = frozenset()) -> None:
+        """``tags`` als (Name, Beschriftung); vorhandene Knöpfe werden ersetzt."""
+        for button in self.buttons.values():
+            self._flow.removeWidget(button)
+            button.deleteLater()
+        self.buttons = {}
+        for name, label in tags:
+            button = QToolButton(self._box)
+            button.setText(label)
+            button.setCheckable(True)
+            button.setChecked(name in checked)
+            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+            self._flow.addWidget(button)
+            self.buttons[name] = button
+        self.setVisible(bool(tags))
+        self.updateGeometry()
+
+    def row_height(self) -> int:
+        if not self.buttons:
+            return 0
+        return next(iter(self.buttons.values())).sizeHint().height() + self._flow.spacing()
+
+    def needed_height(self, width: int | None = None) -> int:
+        """Höhe für alle Zeilen bei dieser Breite."""
+        return self._flow.heightForWidth(width or self.viewport().width() or self.width())
+
+    def fitting_height(self, width: int | None = None) -> int:
+        """Nötige Höhe, höchstens ``max_rows`` Zeilen."""
+        if not self.buttons:
+            return 0
+        return min(self.needed_height(width), self.max_rows * self.row_height() - self._flow.spacing())
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802  (Qt-Name)
+        return QSize(0, min(self.row_height(), self.fitting_height()))  # Scroll-Areas wollen sonst ~70 px
+
+    def resizeEvent(self, event) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        if self.auto_height and self.buttons:
+            self.setFixedHeight(self.fitting_height(event.size().width()))

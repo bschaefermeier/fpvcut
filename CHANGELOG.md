@@ -4,6 +4,18 @@ Versionen nach [Semantic Versioning](https://semver.org/lang/de/). Vorabversione
 sind Release-Kandidaten zum Testen; ist die [Testcheckliste](docs/testcheckliste.md) ohne Fehler
 durch, wird daraus die fertige Version.
 
+## Unveröffentlicht
+
+### Behoben
+
+- **Frame zurück (←)** blieb bei manchen Dateien (z. B. DVR-Aufnahmen) an bestimmten Stellen hängen
+- **Tags im Favoriten-Dialog:** Knöpfe sind nur so breit wie ihr Text und brechen um; alle Tags
+  werden angezeigt statt höchstens 16
+- **Favoriten-Browser:** Das Tag-Feld wächst mit (bis acht Zeilen) und lässt sich am Trenner darunter
+  größer oder kleiner ziehen
+- **Vollbild per Doppelklick** löst nicht mehr aus Versehen aus: Die Klicks müssen innerhalb von 0,3 s
+  kommen (wie bei mpv und YouTube) statt der 0,5 s von Windows
+
 ## 1.0.0-rc1 (2026-10-17)
 
 Erster Release-Kandidat mit allen Funktionen aus dem [Plan](docs/plan.md).

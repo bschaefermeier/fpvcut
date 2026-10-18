@@ -117,6 +117,16 @@ def test_click_on_video_toggles_pause_once(monkeypatch, tmp_path):
     p._mpv_double.emit()  # dasselbe von mpv gemeldet: zählt nicht doppelt
     assert len(doubles) == 1
     assert len(toggles) % 2 == 0
+
+    # Zwei Klicks mit mehr als 0,3 s Abstand: für Windows ein Doppelklick, für uns zwei Klicks.
+    import time
+
+    before = len(toggles)
+    p._last_press = time.monotonic() - 0.4
+    QtWidgets.QApplication.sendEvent(p._video, dbl)
+    QTest.mouseRelease(p._video, left, pos=pos.toPoint())
+    assert len(doubles) == 1
+    assert len(toggles) == before + 1
     window.close()
 
 
@@ -163,6 +173,54 @@ def test_favorite_dialog_quick_tags():
     assert dialog.tags == ["crash", "Flip"]
     dialog._buttons["crash"].click()
     assert dialog.tags == ["Flip"]
+
+
+def test_favorite_dialog_shows_all_tags_wrapped():
+    from fpvcut.ui.favorite_dialog import FavoriteDialog
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    tags = [f"Tag{i}" for i in range(30)] + ["crash", "Crash"]
+    dialog = FavoriteDialog("00:01 – 00:03", tags)
+    dialog.show()
+    app.processEvents()
+    buttons = list(dialog._buttons.values())
+    assert len(buttons) == 31  # kein Limit mehr, Groß/klein-Dubletten nur einmal
+    assert len({b.y() for b in buttons}) > 1  # umgebrochen
+    assert all(b.width() < 100 for b in buttons)  # so breit wie der Text
+    assert buttons[-1].geometry().bottom() <= dialog._quick.viewport().height()
+    dialog.close()
+
+
+class _FakeMpv(dict):
+    """Steht für python-mpv: Frame-zurück bleibt beim ersten Versuch hängen."""
+
+    def __init__(self):
+        super().__init__({"hr-seek-demuxer-offset": 1.0})
+        self.time_pos = 5.0
+        self.commands = []
+
+    def command(self, name):
+        self.commands.append((name, self["hr-seek-demuxer-offset"]))
+        if self["hr-seek-demuxer-offset"] > 1.0:
+            self.time_pos -= 0.02
+
+
+def test_stuck_frame_back_step_retries_with_larger_offset(monkeypatch, tmp_path):
+    _app, window = _window(monkeypatch, tmp_path)
+    p = window.player
+    fake = _FakeMpv()
+    p._player = fake
+    p.step_frame(False)
+    p._check_back_step(p._back_steps)
+    assert [c[0] for c in fake.commands] == ["frame-back-step", "frame-back-step"]
+    assert fake.commands[-1][1] == 5.0
+    assert fake.time_pos < 5.0
+    # Läuft es, wird nicht noch einmal nachgeschoben.
+    p.step_frame(False)
+    p._check_back_step(p._back_steps)
+    assert len(fake.commands) == 3
+    p._player = None
+    window.close()
 
 
 def test_save_favorite_from_marks(monkeypatch, tmp_path):

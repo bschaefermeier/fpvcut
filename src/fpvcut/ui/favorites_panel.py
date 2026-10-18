@@ -9,14 +9,13 @@ from PySide6.QtGui import QBrush, QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
-    QFrame,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
     QMenu,
     QPushButton,
-    QScrollArea,
+    QSplitter,
     QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
@@ -26,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from fpvcut.core.clip_filter import clip_duration, filter_clips
 from fpvcut.core.library import Clip, LibraryEntry
-from fpvcut.ui.flow_layout import FlowLayout
+from fpvcut.ui.flow_layout import TagArea
 from fpvcut.ui.info_panel import clip_range_text
 from fpvcut.ui.library_panel import format_duration
 from fpvcut.ui.mime import MIME_CLIPS
@@ -62,15 +61,10 @@ class FavoritesPanel(QWidget):
         self._search.setClearButtonEnabled(True)
         self._search.textChanged.connect(lambda _text: self._rebuild())
 
-        # Tags als umschaltbare Knöpfe, die wie Text umbrechen; ab drei Zeilen wird gescrollt.
-        self._tag_buttons: dict[str, QToolButton] = {}
-        self._tag_box = QWidget()
-        self._tag_flow = FlowLayout(self._tag_box)
-        self._tags = QScrollArea(self)
-        self._tags.setWidget(self._tag_box)
-        self._tags.setWidgetResizable(True)
-        self._tags.setFrameShape(QFrame.Shape.NoFrame)
-        self._tags.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Tags als umschaltbare Knöpfe, die wie Text umbrechen. Das Feld wächst bis acht Zeilen mit,
+        # danach wird gescrollt; über den Trenner darunter lässt es sich größer oder kleiner ziehen.
+        self._tags = TagArea(max_rows=8, auto_height=False, parent=self)
+        self._tags_sized_by_user = False
 
         self._mode = QComboBox(self)
         self._mode.addItems(["mind. ein Tag", "alle Tags"])
@@ -112,44 +106,52 @@ class FavoritesPanel(QWidget):
         )
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
+        lower = QWidget(self)
+        lower_layout = QVBoxLayout(lower)
+        lower_layout.setContentsMargins(0, 0, 0, 0)
+        lower_layout.addWidget(self._summary)
+        lower_layout.addWidget(self._tree, 1)
+        lower_layout.addWidget(self._placeholder, 1)
+
+        self._splitter = QSplitter(Qt.Orientation.Vertical, self)
+        self._splitter.addWidget(self._tags)
+        self._splitter.addWidget(lower)
+        self._splitter.setChildrenCollapsible(False)
+        self._splitter.setStretchFactor(1, 1)
+        self._splitter.splitterMoved.connect(self._on_splitter_moved)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.addWidget(self._search)
         layout.addLayout(filter_row)
-        layout.addWidget(self._tags)
-        layout.addWidget(self._summary)
-        layout.addWidget(self._tree, 1)
-        layout.addWidget(self._placeholder, 1)
+        layout.addWidget(self._splitter, 1)
 
     # --- Daten -----------------------------------------------------------
 
     def set_data(self, items: list[tuple[Clip, LibraryEntry]], tag_counts: list[tuple[str, int]]) -> None:
         self._items = items
-        checked = set(self.selected_tags())
-        for button in self._tag_buttons.values():
-            self._tag_flow.removeWidget(button)
-            button.deleteLater()
-        self._tag_buttons = {}
-        for name, count in tag_counts:
-            button = QToolButton(self._tag_box)
-            button.setText(f"{name} ({count})")
-            button.setCheckable(True)
-            button.setChecked(name in checked)
-            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self._tags.set_tags([(name, f"{name} ({count})") for name, count in tag_counts],
+                            checked=set(self.selected_tags()))
+        for button in self._tags.buttons.values():
             button.toggled.connect(lambda _checked: self._rebuild())
-            self._tag_flow.addWidget(button)
-            self._tag_buttons[name] = button
-        self._tags.setVisible(bool(tag_counts))
         self._fit_tags()
         self._rebuild()
 
+    @property
+    def _tag_buttons(self) -> dict[str, QToolButton]:
+        return self._tags.buttons
+
     def _fit_tags(self) -> None:
-        """Tag-Feld nur so hoch wie nötig, höchstens drei Zeilen (dann mit Scrollbalken)."""
-        if not self._tag_buttons:
+        """Tag-Feld so hoch wie nötig (höchstens acht Zeilen), solange es niemand von Hand gezogen hat."""
+        if self._tags_sized_by_user or not self._tag_buttons:
             return
-        row = next(iter(self._tag_buttons.values())).sizeHint().height()
-        needed = self._tag_flow.heightForWidth(self._tags.viewport().width() or self._tags.width())
-        self._tags.setFixedHeight(min(needed, 3 * row + 2 * self._tag_flow.spacing()))
+        total = sum(self._splitter.sizes())
+        width = self._splitter.width() - self._tags.verticalScrollBar().sizeHint().width()
+        height = min(self._tags.fitting_height(max(width, 1)), max(total - 80, self._tags.row_height()))
+        self._splitter.setSizes([height, max(total - height, 0)])
+
+    def _on_splitter_moved(self, _pos: int, _index: int) -> None:
+        self._tags_sized_by_user = True
 
     def resizeEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
         super().resizeEvent(event)

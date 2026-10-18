@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-MAX_QUICK_TAGS = 16
+from fpvcut.ui.flow_layout import TagArea
 
 
 def parse_tags(text: str) -> list[str]:
@@ -48,24 +46,20 @@ class FavoriteDialog(QDialog):
         self.note_edit = QLineEdit(note, self)
         self.note_edit.setPlaceholderText("optional")
 
-        # Bekannte Tags als Schaltflächen zum schnellen An- und Abwählen.
-        self._buttons: dict[str, QPushButton] = {}
-        quick = QHBoxLayout()
-        quick.setSpacing(4)
-        for tag in known_tags[:MAX_QUICK_TAGS]:
-            button = QPushButton(tag, self)
-            button.setCheckable(True)
-            button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-            button.toggled.connect(lambda checked, t=tag: self._toggle_tag(t, checked))
-            quick.addWidget(button)
-            self._buttons[tag.lower()] = button
-        quick.addStretch(1)
+        # Bekannte Tags als Knöpfe zum schnellen An- und Abwählen; brechen um, ab 8 Zeilen wird gescrollt.
+        self._quick = TagArea(max_rows=8, parent=self)
+        unique = list({tag.lower(): tag for tag in reversed(known_tags)}.values())[::-1]
+        self._quick.set_tags([(tag.lower(), tag) for tag in unique])
+        self._quick.setFixedHeight(self._quick.fitting_height(330))  # Schätzung, bis die Breite feststeht
+        self._buttons: dict[str, QToolButton] = self._quick.buttons
+        for tag in unique:
+            self._buttons[tag.lower()].toggled.connect(lambda checked, t=tag: self._toggle_tag(t, checked))
 
         form = QFormLayout()
         form.addRow("Ausschnitt:", QLabel(range_text, self))
         form.addRow("Tags:", self.tags_edit)
         if self._buttons:
-            form.addRow("", quick)
+            form.addRow("", self._quick)
         form.addRow("Notiz:", self.note_edit)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
@@ -77,6 +71,10 @@ class FavoriteDialog(QDialog):
         layout.addWidget(buttons)
         self._sync_buttons()
         self.tags_edit.setFocus()
+
+    def showEvent(self, event) -> None:  # noqa: N802  (Qt-Name)
+        super().showEvent(event)
+        self.adjustSize()  # Tag-Feld steht jetzt in der echten Breite fest
 
     @property
     def tags(self) -> list[str]:

@@ -36,6 +36,11 @@ def _prepare_libmpv_search_path() -> None:
                 os.add_dll_directory(str(d))
 
 
+MAX_DOUBLE_CLICK = 0.3  # Sekunden
+DEMUXER_OFFSET = 1.0  # Sekunden; bei hängendem Frame-zurück wird auf DEMUXER_OFFSET_STUCK erhöht
+DEMUXER_OFFSET_STUCK = 5.0
+
+
 def load_mpv():
     """Importiert python-mpv. Gibt ``(modul, None)`` oder ``(None, fehlermeldung)`` zurück."""
     _prepare_libmpv_search_path()
@@ -87,6 +92,8 @@ class PlayerWidget(QWidget):
         self._video.installEventFilter(self)
         self._last_press = 0.0
         self._double_pending = False
+        self._back_step_from: float | None = None  # Position vor dem letzten Frame-zurück
+        self._back_steps = 0
         self._last_double = 0.0
 
         self._message = QLabel(self)
@@ -162,6 +169,10 @@ class PlayerWidget(QWidget):
                 osc="no",
                 input_default_bindings="no",
                 input_vo_keyboard="no",
+                input_doubleclick_time=int(self._double_click_interval() * 1000),
+                # Manche Dateien (z. B. DVR-Aufnahmen) springen beim Suchen auf einen Keyframe *nach*
+                # dem Ziel; dann bleibt Frame-zurück dort hängen. Etwas früher suchen behebt das.
+                hr_seek_demuxer_offset=DEMUXER_OFFSET,
             )
         except Exception as exc:  # noqa: BLE001  (mpv meldet Fehler als diverse Typen)
             self._show_message(f"mpv konnte nicht gestartet werden:\n{exc}")
@@ -196,7 +207,10 @@ class PlayerWidget(QWidget):
             if kind == QEvent.Type.MouseButtonPress:
                 self._on_video_press()
             elif kind == QEvent.Type.MouseButtonDblClick:
-                self._double_pending = True  # Vollbild erst beim Loslassen, wie bei anderen Playern
+                if time.monotonic() - self._last_press < self._double_click_interval():
+                    self._double_pending = True  # Vollbild erst beim Loslassen, wie bei anderen Playern
+                else:
+                    self._on_video_press()  # für Windows ein Doppelklick, für uns zwei einzelne Klicks
             elif self._double_pending:
                 self._double_pending = False
                 self._on_video_double_click()
@@ -224,7 +238,8 @@ class PlayerWidget(QWidget):
 
     @staticmethod
     def _double_click_interval() -> float:
-        return QApplication.doubleClickInterval() / 1000
+        """Höchstens 0,3 s wie bei mpv und YouTube; Windows erlaubt 0,5 s, das löst zu leicht Vollbild aus."""
+        return min(QApplication.doubleClickInterval() / 1000, MAX_DOUBLE_CLICK)
 
     def _show_message(self, text: str) -> None:
         self._message.setText(text)
@@ -355,7 +370,24 @@ class PlayerWidget(QWidget):
                 fps = self._player.container_fps or 30.0
                 self.seek_absolute(pos - 1.0 / fps)
         elif self._player is not None:
+            if not forward:
+                self._back_step_from = self.position()
+                self._back_steps += 1
+                count = self._back_steps
+                QTimer.singleShot(400, lambda: self._check_back_step(count))
             self._player.command("frame-step" if forward else "frame-back-step")
+
+    def _check_back_step(self, count: int) -> None:
+        """Hat Frame-zurück nichts bewirkt, mit größerem Vorlauf noch einmal versuchen."""
+        if count != self._back_steps:  # schon wieder gedrückt (Taste gehalten): nur den letzten prüfen
+            return
+        start, self._back_step_from = self._back_step_from, None
+        if self._player is None or start is None or self.position() is None:
+            return
+        if abs(self.position() - start) < 1e-4 and start > 0.05:
+            if self._player["hr-seek-demuxer-offset"] < DEMUXER_OFFSET_STUCK:
+                self._player["hr-seek-demuxer-offset"] = DEMUXER_OFFSET_STUCK
+                self._player.command("frame-back-step")
 
     def position(self) -> float | None:
         return self._player.time_pos if self._player is not None else None

@@ -107,3 +107,33 @@ def test_favorites_panel_filters_and_plays(monkeypatch, tmp_path):
     assert panel._tree.topLevelItemCount() == 1
     app.processEvents()
     window.close()
+
+
+def test_tag_area_grows_with_tags_and_can_be_dragged():
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    QtWidgets = pytest.importorskip("PySide6.QtWidgets")
+    from fpvcut.ui.favorites_panel import FavoritesPanel
+
+    app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    panel = FavoritesPanel()
+    panel.resize(370, 700)
+    panel.show()
+    panel.set_data([], [("Crash", 1), ("Flip", 2)])
+    app.processEvents()
+    row = panel._tags.row_height()
+    one_row = panel._splitter.sizes()[0]
+    assert one_row < 2 * row  # nur eine Zeile
+
+    panel.set_data([], [(f"Tag{i}", i) for i in range(40)])
+    app.processEvents()
+    grown = panel._splitter.sizes()[0]
+    assert grown > 3 * row + 10  # mehr als die früheren drei Zeilen
+    assert grown <= 8 * row  # aber gedeckelt, danach wird gescrollt
+
+    # Von Hand gezogen: die Höhe bleibt, auch wenn sich die Tags ändern.
+    panel._splitter.setSizes([100, 500])
+    panel._on_splitter_moved(100, 1)
+    panel.set_data([], [("Crash", 1)])
+    app.processEvents()
+    assert panel._splitter.sizes()[0] == 100
+    panel.close()
