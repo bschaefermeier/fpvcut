@@ -1,208 +1,135 @@
 # FPVCut
 
-Schlanke Desktop-Software zum Sichten, Markieren und Schneiden von FPV-Videos.
-Python + PySide6 als Oberfläche, libmpv als Player, ffmpeg (mit NVIDIA NVENC) zum Rendern.
+FPVCut ist ein schlanker Videoeditor für FPV-Aufnahmen. Er bündelt die typischen Arbeitsschritte nach
+einem Flugtag in einer Anwendung: Aufnahmen sichten, die besten Szenen als Favoriten markieren, sie
+in einer Timeline mit Musik zusammenstellen und das Ergebnis mit GPU-Beschleunigung exportieren.
 
 ![FPVCut mit Favoriten-Browser, Vorschau, Farbkorrektur und Timeline](docs/bilder/fpvcut.png)
 
-Aktuelle Version: siehe [Releases](https://github.com/bschaefermeier/fpvcut/releases) und
-[CHANGELOG.md](CHANGELOG.md). Der ursprüngliche Plan liegt in [docs/plan.md](docs/plan.md).
-
-## Installation (Windows)
-
-Unter [Releases](https://github.com/bschaefermeier/fpvcut/releases) das neueste
-`FPVCut-…-windows.zip` herunterladen, irgendwohin entpacken (z. B. nach
-`Dokumente\FPVCut`) und `FPVCut.exe` starten. libmpv und ffmpeg sind dabei, sonst muss nichts
-installiert werden. Beim ersten Start warnt Windows SmartScreen evtl., weil die .exe nicht signiert
-ist: "Weitere Informationen" → "Trotzdem ausführen".
-
-Die Daten liegen wie bei der Entwicklerversion in `%APPDATA%\FPVCut`, beide Varianten teilen sie
-sich. Ein Update ist: alten Programmordner löschen, neues ZIP entpacken.
-
-Mitgeliefert werden ffmpeg von [BtbN/FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) und
-libmpv von [shinchiro/mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake), beide
-unter GPL. Die Lizenztexte aller mitgelieferten Bestandteile und die genauen Build-Versionen liegen im
-Programmordner unter `lizenzen\` (Vorlage: `packaging/lizenzen/`).
-
 ## Funktionen
 
-### Player und Systemcheck
+- **Bibliothek:** Videoordner werden automatisch nach Flugtagen gruppiert. Neue, noch nicht
+  gesichtete Aufnahmen sind hervorgehoben. Umbenannte oder verschobene Dateien werden
+  wiedererkannt.
+- **Sichten und Favoriten:** Frame-genaue Wiedergabe, Szenen per In- und Out-Punkt markieren und
+  mit Tags und Notizen als Favorit speichern.
+- **Favoriten-Browser:** Alle Favoriten über alle Flugtage hinweg, filterbar nach Tags und Freitext.
+- **Timeline:** Clips per Drag & Drop anordnen, trimmen und teilen, eine Musikspur mit
+  Lautstärkeregelung und Ausblenden hinzufügen. Die Vorschau läuft ohne vorheriges Rendern.
+- **Farbkorrektur:** Helligkeit, Kontrast, Sättigung, Gamma und Farbtemperatur pro Clip, dazu
+  3D-LUTs (`.cube`) für D-Log- oder Flat-Profile.
+- **Export:** Profile für Originalqualität (H.265), Web (H.264) und Archiv (H.265, 10 Bit).
+  Encodiert wird mit NVIDIA NVENC, ohne passende Grafikkarte auf der CPU.
+- **Ordner umbenennen:** Flugtag-Ordner lassen sich einheitlich ins Schema `JJJJ-MM-TT_Spot`
+  bringen, mit Vorschau und Rückgängig.
 
-- Fenster mit eingebettetem mpv-Player: Video öffnen (Strg+O), Leertaste = Play/Pause,
-  ←/→ = ein Frame, Shift+←/→ = 1 s, J/L = 5 s, Zeitleiste zum Springen,
-  Klick aufs Video = Play/Pause, Doppelklick oder F11 = Vollbild (Esc beendet)
-- Systemcheck (Hilfe → Systemcheck, Status unten rechts): findet ffmpeg/ffprobe und prüft per
-  Testencode, welche Encoder wirklich funktionieren (NVENC wird von ffmpeg auch ohne passende GPU
-  gelistet, daher der Test)
+## Installation
 
-### Bibliothek
+Voraussetzung ist Windows 10 oder 11 (64 Bit).
 
-- Datei → Bibliotheksordner hinzufügen (z. B. `E:\FPV_Videos`); beim Start und mit F5 wird neu gescannt
-- Videos gruppiert nach Flugtag, neueste oben. Das Datum kommt aus dem Ordnernamen
-  (`2026-08-28_Spot`, `2026_08_28_Spot`, `28_08_26_Spot` oder `Spot_28_08_26`)
-- Neue, noch nicht gesichtete Videos sind blau mit ● markiert; "Nur neue" blendet den Rest aus.
-  Ein Video gilt als gesichtet, sobald es geöffnet wird. Per Rechtsklick lassen sich auch mehrere
-  Videos (Strg/Shift+Klick) oder ganze Flugtage auf einmal markieren
-- Jede Datei bekommt einen Fingerprint (Größe + je 4 MB von Anfang, Mitte und Ende). Umbenannte oder
-  verschobene Ordner werden dadurch wiedererkannt, der Sichtungsstatus bleibt erhalten. Gelöschte
-  Dateien werden als "fehlt" angezeigt, nicht vergessen
-- Datenbank: `%APPDATA%\FPVCut\library.sqlite`
+1. Unter [Releases](https://github.com/bschaefermeier/fpvcut/releases) das aktuelle
+   `FPVCut-…-windows.zip` herunterladen.
+2. Das Archiv entpacken und `FPVCut.exe` starten.
 
-### Sichten, Favoriten, Tags
+Alle benötigten Komponenten (libmpv, ffmpeg) sind enthalten.
 
-- I = In-Punkt, O = Out-Punkt, F = Ausschnitt als Favorit speichern, Shift+F = ganzes Video,
-  Esc = Auswahl aufheben. Ohne Out-Punkt reicht der Ausschnitt bis zur aktuellen Position
-- Beim Speichern Tags vergeben (mit Komma getrennt oder per Klick auf bekannte Tags) plus optionale Notiz
-- Gelbe Balken unter der Zeitleiste zeigen gespeicherte Favoriten, blau die aktuelle Auswahl
-- Seitenleiste rechts: Favoriten des Videos (Doppelklick = in Schleife abspielen, Rechtsklick =
-  bearbeiten/löschen, Entf = löschen) und Metadaten (Auflösung, fps, Codec, Bitrate, Flugtag …)
-- Videos mit Favoriten tragen in der Bibliothek ein ★ mit der Anzahl
-- Favoriten hängen am Fingerprint und überleben Umbenennen und Verschieben
+> **Hinweis:** Da die .exe nicht signiert ist, zeigt Windows SmartScreen beim ersten Start
+> möglicherweise eine Warnung. Über „Weitere Informationen“ → „Trotzdem ausführen“ lässt sich
+> FPVCut starten. Alternativ kann FPVCut direkt aus dem Quellcode gestartet oder selbst gebaut werden,
+> siehe [Aus dem Quellcode starten](#aus-dem-quellcode-starten).
 
-### Favoriten-Browser
+Für ein Update wird der Programmordner durch die neue Version ersetzt. Bibliothek, Favoriten und
+Timeline bleiben dabei erhalten.
 
-- Reiter "Favoriten" neben der Bibliothek: alle Favoriten aller Videos, neueste Flugtage oben
-- Tags anklicken filtert die Liste; bei mehreren Tags wählbar, ob einer reicht oder alle passen müssen
-- Suchfeld durchsucht Dateiname, Flugtag, Notiz und Tags (mehrere Wörter müssen alle vorkommen)
-- Unten steht, wie viele Favoriten passen und wie lang sie zusammen sind
-- Doppelklick öffnet das Video und spielt den Favoriten direkt in Schleife ab; Rechtsklick =
-  bearbeiten/löschen, Entf = löschen
+## Bedienung
 
-### Timeline
+### Erste Schritte
 
-- Timeline unter dem Player mit Videospur und Musikspur
-- Clips hinzufügen: Favoriten aus dem Favoriten-Reiter oder ganze Videos (auch ganze Flugtage) aus der
-  Bibliothek in die Timeline ziehen (mehrere mit Strg/Shift), oder auswählen und E drücken. E nimmt auch einen mit I/O markierten Ausschnitt direkt
-  aus dem Player, ohne ihn als Favorit zu speichern. Rechtsklick auf einen Favoriten geht ebenfalls
-- Bearbeiten: Clip ziehen = Reihenfolge ändern, Kante ziehen = trimmen, S = am roten Abspielkopf
-  teilen, Entf = ausgewählten Clip (oder die Musik) entfernen, Strg+Z / Strg+Y = rückgängig/wiederholen.
-  Mausrad = zoomen (um die Mausposition), Shift+Mausrad = seitlich scrollen.
-  Strg+←/→ = an den Anfang bzw. ans Ende der Timeline springen.
-  Zwischen zwei Clips trimmt die Kante den ausgewählten (gelben) Clip. Über den Favoriten hinaus
-  verlängerte Teile sind hell schraffiert
-- Musik: "♪ Musik …" wählt eine Audiodatei. Regler für Originalton und Musik. "Ausblenden" macht
-  die Musik in den letzten Sekunden der Timeline langsam leiser bis zur Stille (0 s = hartes Ende)
-- Vorschau: "▶ Timeline abspielen" oder P spielt die Timeline direkt aus den Quelldateien ab
-  (mpv-EDL, kein Rendern). Ist kein Video geöffnet, startet auch Leertaste/Play die Timeline.
-  Doppelklick auf einen Clip spielt ab dort, ein Klick in die Timeline zeigt das Bild an dieser Stelle.
-  Clips ohne Ton werden mit Stille aufgefüllt, damit der Ton synchron bleibt.
-  Änderungen während der Vorschau werden sofort übernommen. Ein Video aus der Bibliothek öffnen
-  verlässt die Vorschau
-- Die Timeline wird automatisch gespeichert (`%APPDATA%\FPVCut\timeline.json`) und beim Start wieder
-  geladen. Timeline → Speichern unter/Öffnen für weitere Projekte. Clips hängen am Fingerprint und
-  finden umbenannte Videos wieder
+1. Über **Datei → Bibliotheksordner hinzufügen** den Ordner mit den Aufnahmen wählen. FPVCut
+   erkennt Flugtage am Datum im Ordnernamen, z. B. `2026-08-28_Wiese` oder `28_08_26_Wiese`.
+2. Ein Video per Doppelklick öffnen, Szenen mit **I** und **O** markieren und mit **F** als Favorit
+   speichern.
+3. Favoriten aus dem Reiter **Favoriten** in die Timeline ziehen, optional Musik hinzufügen und mit
+   **Strg+R** exportieren.
 
-### Rendern
+### Tastenkürzel
 
-- "Rendern …" in der Timeline-Leiste oder Strg+R
-- Profile: **Original** (H.265, sehr hohe Qualität), **Web** (H.264, läuft überall, kleiner),
-  **Archiv** (H.265 10 Bit). Auflösung, Bildrate und Qualität lassen sich im Dialog anpassen;
-  "Wie Quelle" nimmt das Format, das in der Timeline am längsten vorkommt
-- Encodiert mit NVENC auf der GPU, wenn der Systemcheck es gefunden hat, sonst auf der CPU
-- Clips mit anderer Auflösung werden eingepasst (schwarze Ränder statt Verzerrung), andere
-  Bildraten angeglichen, Clips ohne Ton bekommen Stille, die Musik wird wie in der Vorschau gemischt
-- Fortschritt mit Restzeit, Abbrechen löscht die halbfertige Datei. Standardordner:
-  `Videos\FPVCut`, danach der zuletzt benutzte
+| Taste | Funktion |
+| --- | --- |
+| Leertaste | Wiedergabe / Pause |
+| ← / → | Ein Frame zurück / vor |
+| Umschalt + ← / → | 1 Sekunde zurück / vor |
+| J / L | 5 Sekunden zurück / vor |
+| I / O | In- / Out-Punkt setzen |
+| F | Auswahl als Favorit speichern |
+| Umschalt + F | Ganzes Video als Favorit speichern |
+| Esc | Auswahl aufheben, Vollbild beenden |
+| F11 oder Doppelklick | Vollbild |
+| E | Auswahl zur Timeline hinzufügen |
+| S | Clip am Abspielkopf teilen |
+| Entf | Ausgewählten Clip entfernen |
+| P | Timeline abspielen |
+| Strg + ← / → | Anfang / Ende der Timeline |
+| Strg + Z / Strg + Y | Rückgängig / Wiederholen |
+| Strg + R | Rendern |
+| F5 | Bibliothek neu einlesen |
 
-### Umbenennungs-Helfer
+## Daten und Sicherung
 
-- Datei → "Ordner ins Schema umbenennen …" schlägt für alle Flugtag-Ordner den Namen
-  `JJJJ-MM-TT_Spot` vor, z. B. `2026-10-17_Flugspot` (aus `28_08_26_Spot`, `Spot_28_08_26`,
-  `2026_08_28_Spot`, `28.08.26 Spot` usw.)
-- Vorschau alt → neu; neue Namen lassen sich per Doppelklick ändern. Eindeutige Fälle sind
-  vorausgewählt. **Prüfen** (gelb): Datum in der Zukunft, sehr alt oder auch anders herum lesbar
-  (z. B. `12_08_15`). **Konflikt** (rot): Zielname gibt es schon oder mehrere Ordner bekämen ihn.
-  **Kein Datum**: Video-Ordner ohne erkennbares Datum, Name von Hand eintragen
-- Unterordner eines Flugtags (z. B. `…/raw`) bleiben, wie sie sind
-- Erst nach Bestätigung wird umbenannt; die Bibliothek übernimmt die neuen Pfade direkt (kein
-  Neu-Scan), Favoriten und Timeline bleiben erhalten. "Rückgängig" nimmt die Umbenennung zurück,
-  ein Protokoll alt → neu liegt im App-Datenordner unter `umbenannt\`
+FPVCut verändert die Videodateien nicht. Bibliothek, Favoriten, Tags und die Timeline werden unter
+`%APPDATA%\FPVCut` gespeichert.
 
-### Farbkorrektur
+Favoriten, Tags und der Sichtungsstatus werden beim Start und Beenden automatisch gesichert; die
+Sicherungen der letzten 30 Tage liegen unter `%APPDATA%\FPVCut\sicherungen`. Zusätzlich lassen sich
+die Favoriten über **Datei → Favoriten exportieren** an einem beliebigen Ort sichern und über
+**Favoriten importieren** wieder einlesen. Startet FPVCut mit einer leeren Bibliothek, bietet es an,
+die letzte Sicherung wiederherzustellen.
 
-- Clip in der Timeline anklicken, rechts den Reiter **Farbe** öffnen: Helligkeit, Kontrast,
-  Sättigung, Gamma und Farbtemperatur per Regler, dazu optional eine 3D-LUT (`.cube`, z. B. um
-  D-Log- oder Flat-Aufnahmen in normale Farben umzuwandeln; die LUT wirkt vor den Reglern)
-- Die Vorschau springt in den Clip und zeigt das Ergebnis sofort; ein Doppelklick auf einen Wert
-  setzt ihn zurück. "Auf alle Clips übertragen" nimmt dieselbe Korrektur für die ganze Timeline
-- Korrigierte Clips haben einen orangen Strich am unteren Rand. Rückgängig (Strg+Z) gilt auch hier
-- Vorschau und Render nutzen dieselben ffmpeg-Filter (`lut3d`, `colortemperature`, `eq`), der
-  Export sieht also aus wie die Vorschau
+## Aus dem Quellcode starten
 
-## Wo liegen meine Daten?
+### Voraussetzungen
 
-Bibliothek, Favoriten, Tags und Gesichtet-Status stehen in `%APPDATA%\FPVCut\library.sqlite`, die
-Timeline in `timeline.json` daneben. Die Videos selbst werden nie verändert (außer beim Umbenennen
-von Ordnern auf Wunsch). Der Ordner bleibt beim Neuinstallieren von FPVCut oder der `.venv` erhalten.
+- [uv](https://docs.astral.sh/uv/) als Paketmanager für Python
+- [ffmpeg](https://www.gyan.dev/ffmpeg/builds/) mit NVENC-Unterstützung
+- `libmpv-2.dll` aus einem `mpv-dev-x86_64`-Paket von
+  [mpv-winbuild-cmake](https://github.com/shinchiro/mpv-winbuild-cmake/releases)
 
-- **Automatische Sicherung:** Beim Start und beim Beenden schreibt FPVCut die Favoriten, Tags und den
-  Gesichtet-Status nach `%APPDATA%\FPVCut\sicherungen\favoriten_JJJJ-MM-TT.json` (die letzten 30 Tage).
-- **Von Hand:** Datei → "Favoriten exportieren …" speichert dasselbe an einen beliebigen Ort, z. B.
-  auf die Videoplatte oder ein NAS. "Favoriten importieren …" liest eine Sicherung wieder ein; schon
-  vorhandene Favoriten werden nicht verdoppelt.
-- **Neuanfang:** Startet FPVCut mit einer leeren Bibliothek und findet eine Sicherung, bietet es die
-  Wiederherstellung an. Weil alles am Fingerprint hängt, funktioniert das auch vor dem ersten Scan.
+### Einrichtung
 
-## Einrichtung zum Entwickeln (Windows)
+```powershell
+# uv installieren
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
-1. **uv** installieren (Paketmanager für Python):
-   `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-2. **ffmpeg** mit NVENC: z. B. den "full"-Build von <https://www.gyan.dev/ffmpeg/builds/> oder
-   `winget install Gyan.FFmpeg`. Entweder in den PATH, oder `ffmpeg.exe`/`ffprobe.exe` nach
-   `vendor/ffmpeg/` legen.
-3. **libmpv**: `mpv-dev-x86_64-…7z` von <https://github.com/shinchiro/mpv-winbuild-cmake/releases>
-   herunterladen und `libmpv-2.dll` nach `vendor/mpv/` entpacken (alternativ Ordner per
-   Umgebungsvariable `FPVCUT_MPV_DIR` angeben).
-4. Starten:
+# Repository klonen und Abhängigkeiten installieren
+git clone https://github.com/bschaefermeier/fpvcut.git
+cd fpvcut
+uv sync
+```
 
-   ```powershell
-   uv sync
-   uv run fpvcut                      # oder: uv run fpvcut E:\FPV_Videos\...\clip.mp4
-   ```
+`libmpv-2.dll` gehört nach `vendor\mpv\`, `ffmpeg.exe` und `ffprobe.exe` nach `vendor\ffmpeg\`.
+Alternativ wird ffmpeg auch über den `PATH` gefunden.
 
-   uv nimmt dabei sein eigenes Python (`python-preference = "only-managed"` in `pyproject.toml`),
-   nicht das aus dem Microsoft Store. Mit dem Store-Python zeigt die Taskleiste das Python-Icon
-   statt des FPVCut-Icons. Wer die `.venv` noch mit dem Store-Python angelegt hat, löscht sie
-   einmal und ruft `uv sync` erneut auf.
+### Starten
 
-Der Ordner `vendor/` ist in `.gitignore`, die DLLs landen also nicht im Repository.
+```powershell
+uv run fpvcut
+```
 
-## Entwicklung
+### Tests
 
 ```powershell
 uv run pytest
 ```
 
-**Neue Version veröffentlichen:** Version in `src/fpvcut/__init__.py` und `pyproject.toml` erhöhen,
-Abschnitt oben in `CHANGELOG.md` ergänzen, mergen und einen Tag setzen (`v1.0.0-rc2`, `v1.0.0`).
-Der Workflow `.github/workflows/windows-build.yml` baut dann auf GitHub die `FPVCut.exe`, prüft sie
-mit `FPVCut.exe --selbsttest bericht.txt` und hängt das ZIP an das Release (Tags mit Bindestrich
-werden als Vorabversion markiert). Unter "Actions" lässt er sich auch ohne Tag starten, das ZIP liegt
-dann als Artefakt am Lauf.
-
-Lokal bauen (libmpv und ffmpeg müssen in `vendor/` liegen):
+### Windows-Paket bauen
 
 ```powershell
-uv run --with pyinstaller pyinstaller --noconfirm packaging/fpvcut.spec   # Ergebnis: dist\FPVCut\
+uv run --with pyinstaller pyinstaller --noconfirm packaging/fpvcut.spec
 ```
 
-Das Icon `src/fpvcut/resources/fpvcut.ico` entsteht aus dem SVG mit
-`uv run python packaging/make_icon.py`.
-
-Aufbau:
-
-```
-src/fpvcut/
-  core/      ohne UI, testbar: ffmpeg-Erkennung, ffprobe, Fingerprints, Ordnernamen, Datenbank, Scanner
-  timeline/  Timeline-Modell, Projektdatei, EDL für die Vorschau
-  render/    Render-Profile und ffmpeg-Befehl
-  ui/        PySide6-Oberfläche (Hauptfenster, Bibliothek, Favoriten, Player, Timeline)
-tests/
-```
+Das Ergebnis liegt unter `dist\FPVCut\`. Das Vorgehen für neue Versionen ist in
+[docs/release.md](docs/release.md) beschrieben.
 
 ## Lizenz
 
-FPVCut steht unter der [GNU General Public License v3.0 oder später](LICENSE) (GPL-3.0-or-later):
-Nutzen, auch kommerziell, Verändern und Weitergeben sind erlaubt, solange Weitergaben den Quellcode
-mitliefern und unter derselben Lizenz bleiben. Die Lizenzen der mitgelieferten Bestandteile (mpv,
-ffmpeg, Qt, …) stehen in [packaging/lizenzen/LIESMICH.txt](packaging/lizenzen/LIESMICH.txt).
+FPVCut steht unter der [GNU General Public License v3.0](LICENSE) oder einer späteren Version.
