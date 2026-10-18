@@ -320,6 +320,7 @@ def test_shift_and_ctrl_click_select_several_clips_and_delete_them():
     QTest.keyClick(view, Qt.Key.Key_Delete)
     assert [c.fingerprint for c in panel.timeline.clips] == ["b", "c", "e"]
     assert panel.undo() and [c.fingerprint for c in panel.timeline.clips] == ["a", "b", "c", "d", "e"]
+    assert view.selection == [0, 3]  # die gelöschten Clips sind wieder ausgewählt
     QTest.keyClick(view, Qt.Key.Key_A, Qt.KeyboardModifier.ControlModifier)
     assert view.selection == [0, 1, 2, 3, 4]
 
@@ -336,7 +337,10 @@ def test_drag_several_selected_clips_as_block():
     QTest.mouseRelease(view, Qt.MouseButton.LeftButton, pos=target)
     assert [c.fingerprint for c in panel.timeline.clips] == ["b", "d", "e", "a", "c"]
     assert view.selection == [3, 4] and view.selected == 4
+    # Rückgängig holt auch die Auswahl zurück, Wiederholen wieder die neue.
     assert panel.undo() and [c.fingerprint for c in panel.timeline.clips] == ["a", "b", "c", "d", "e"]
+    assert view.selection == [0, 2] and view.selected == 2
+    assert panel.redo() and view.selection == [3, 4] and view.selected == 4
 
 
 def test_grade_change_applies_moved_slider_to_all_selected(monkeypatch, tmp_path):

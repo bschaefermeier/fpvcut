@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QDoubleSpinBox,
@@ -22,6 +24,13 @@ from fpvcut.ui.timeline_view import TimelineView
 HISTORY_LIMIT = 100
 
 
+@dataclass
+class Snapshot:
+    timeline: Timeline
+    selection: list[int]
+    selected: int | str | None
+
+
 class TimelinePanel(QWidget):
     preview_requested = Signal(float)  # ab dieser Timeline-Zeit abspielen
     seek_requested = Signal(float)
@@ -33,8 +42,9 @@ class TimelinePanel(QWidget):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self._undo: list[Timeline] = []
-        self._redo: list[Timeline] = []
+        # Verlauf: Stand der Timeline samt Auswahl, damit Rückgängig auch die Auswahl zurückholt.
+        self._undo: list[Snapshot] = []
+        self._redo: list[Snapshot] = []
 
         self.view = TimelineView()
         self.view.seek_requested.connect(self.seek_requested)
@@ -171,7 +181,7 @@ class TimelinePanel(QWidget):
     # --- Bearbeiten ------------------------------------------------------
 
     def remember(self) -> None:
-        self._undo.append(self.timeline.copy())
+        self._undo.append(self._snapshot())
         del self._undo[:-HISTORY_LIMIT]
         self._redo.clear()
 
@@ -203,7 +213,7 @@ class TimelinePanel(QWidget):
         self._on_edited()
 
     def split_at_playhead(self) -> bool:
-        snapshot = self.timeline.copy()
+        snapshot = self._snapshot()
         index = self.timeline.split(self.view.playhead)
         if index is None:
             return False
@@ -248,10 +258,19 @@ class TimelinePanel(QWidget):
     def redo(self) -> bool:
         return self._step(self._redo, self._undo)
 
-    def _step(self, source: list[Timeline], target: list[Timeline]) -> bool:
+    def _snapshot(self) -> Snapshot:
+        view = self.view
+        return Snapshot(self.timeline.copy(), view.selection, view.selected)
+
+    def _step(self, source: list[Snapshot], target: list[Snapshot]) -> bool:
         if not source:
             return False
-        target.append(self.timeline.copy())
-        self.view.set_timeline(source.pop())
+        target.append(self._snapshot())
+        snapshot = source.pop()
+        self.view.set_timeline(snapshot.timeline)
+        if isinstance(snapshot.selected, int):
+            self.view.set_selection(snapshot.selection, snapshot.selected)
+        else:
+            self.view.select(snapshot.selected if snapshot.timeline.music else None)
         self._on_edited()
         return True
