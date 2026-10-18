@@ -14,6 +14,11 @@ durch, wird daraus die fertige Version.
   kräftiger eingefärbt, und der Ausschnitte-Reiter hat einen Filter „Nur Favoriten“
 - **Bibliothek:** zeigt pro Video die Favoriten (★n) und die übrigen Ausschnitte (✂n) getrennt; ein
   einfacher Klick öffnet das Video
+- **Mehrfachauswahl in der Timeline:** Strg+Klick nimmt Clips dazu oder heraus, Umschalt+Klick
+  wählt alle Clips bis zum angeklickten, Strg+A alle. Ausgewählte Clips lassen sich gemeinsam
+  löschen und als Block verschieben. In der Farbkorrektur zeigen die Regler den zuletzt angeklickten
+  Clip; eine Änderung übernimmt nur den bewegten Regler in alle ausgewählten Clips, „Auf
+  ausgewählte Clips übertragen“ kopiert die komplette Korrektur
 - **Ausschnitt per Ziehen:** Einen Bereich auf der Leiste unter der Zeitleiste ziehen markiert ihn
   als Auswahl. Der neue Speichern-Knopf rechts neben der Zeitleiste speichert sie als Ausschnitt;
   er ist nur aktiv, solange ein Bereich markiert ist

@@ -27,6 +27,8 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 
 - [ ] Ausschnitte und ganze Videos hineinziehen, E fügt hinzu
 - [ ] Verschieben, Trimmen, S teilt, Entf löscht, Strg+Z/Strg+Y, Mausrad-Zoom, Strg+←/→
+- [ ] Strg+Klick und Umschalt+Klick wählen mehrere Clips; gemeinsam löschen, als Block verschieben,
+      Farbregler wirkt auf alle ausgewählten
 - [ ] Musik wählen, Lautstärken, Ausblenden; Vorschau mit P, Ton bleibt nach Sprüngen synchron
 - [ ] App schließen und neu starten: Timeline ist wieder da
 - [ ] Strg+S speichert das Projekt (beim ersten Mal mit Dateiauswahl), Titel zeigt Namen und `*`

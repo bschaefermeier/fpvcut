@@ -110,6 +110,16 @@ class Timeline:
         self.clips.insert(target, clip)
         return target
 
+    def move_many(self, indices: list[int], target: int) -> list[int]:
+        """Mehrere Clips als Block an die Lücke ``target`` verschieben; gibt ihre neuen Indizes zurück."""
+        indices = sorted(set(indices))
+        block = [self.clips[i] for i in indices]
+        for i in reversed(indices):
+            self.clips.pop(i)
+        target = max(0, min(target - sum(i < target for i in indices), len(self.clips)))
+        self.clips[target:target] = block
+        return list(range(target, target + len(block)))
+
     def remove(self, index: int) -> TimelineClip:
         return self.clips.pop(index)
 

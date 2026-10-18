@@ -290,3 +290,72 @@ def test_wheel_zooms_around_mouse_and_shift_scrolls():
     value = bar.value()
     wheel(-120, Qt.KeyboardModifier.ShiftModifier)
     assert bar.value() > value and view.pps == pytest.approx(before * 1.25 ** 2)
+
+
+def panel_with_five():
+    panel = panel_with_clips()
+    panel.add_clips([TimelineClip(n, 0, 5, 10, f"{n}.mp4", path=Path(f"/v/{n}.mp4")) for n in "de"])
+    return panel
+
+
+def test_shift_and_ctrl_click_select_several_clips_and_delete_them():
+    panel = panel_with_five()
+    view = panel.view
+    ctrl, shift = Qt.KeyboardModifier.ControlModifier, Qt.KeyboardModifier.ShiftModifier
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=center(view, 1))
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, shift, center(view, 3))
+    assert view.selection == [1, 2, 3] and view.selected == 3
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, ctrl, center(view, 2))  # wieder heraus
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, ctrl, center(view, 4))  # dazu
+    assert view.selection == [1, 3, 4] and view.selected == 4
+    # Shift+Klick geht vom zuletzt angeklickten Clip aus.
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, shift, center(view, 2))
+    assert view.selection == [2, 3, 4]
+    # Ein normaler Klick auf einen Clip der Auswahl lässt nur ihn ausgewählt.
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=center(view, 3))
+    assert view.selection == [3]
+
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, ctrl, center(view, 0))
+    view.setFocus()
+    QTest.keyClick(view, Qt.Key.Key_Delete)
+    assert [c.fingerprint for c in panel.timeline.clips] == ["b", "c", "e"]
+    assert panel.undo() and [c.fingerprint for c in panel.timeline.clips] == ["a", "b", "c", "d", "e"]
+    QTest.keyClick(view, Qt.Key.Key_A, Qt.KeyboardModifier.ControlModifier)
+    assert view.selection == [0, 1, 2, 3, 4]
+
+
+def test_drag_several_selected_clips_as_block():
+    panel = panel_with_five()
+    view = panel.view
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=center(view, 0))
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.ControlModifier, center(view, 2))
+    target = QPoint(int(view.clip_rects()[4].right() - 5), center(view, 4).y())  # ans Ende
+    QTest.mousePress(view, Qt.MouseButton.LeftButton, pos=center(view, 2))
+    QTest.mouseMove(view, center(view, 3))
+    QTest.mouseMove(view, target)
+    QTest.mouseRelease(view, Qt.MouseButton.LeftButton, pos=target)
+    assert [c.fingerprint for c in panel.timeline.clips] == ["b", "d", "e", "a", "c"]
+    assert view.selection == [3, 4] and view.selected == 4
+    assert panel.undo() and [c.fingerprint for c in panel.timeline.clips] == ["a", "b", "c", "d", "e"]
+
+
+def test_grade_change_applies_moved_slider_to_all_selected(monkeypatch, tmp_path):
+    from fpvcut.ui.grade_panel import GradePanel
+
+    panel = panel_with_five()
+    panel.timeline.clips[0].grade = {"brightness": 0.1}
+    panel.timeline.clips[2].grade = {"saturation": 1.5}
+    grade = GradePanel(panel)
+    panel.view.set_selection([0, 2], current=2)
+    assert "2 Clips" in grade._hint.text()
+    assert grade._to_all.text() == "Auf ausgewählte Clips übertragen"
+    assert grade.sliders["saturation"].value() == 1500  # zeigt den zuletzt angeklickten Clip
+    grade.sliders["contrast"].setValue(1200)
+    clips = panel.timeline.clips
+    assert clips[0].grade["contrast"] == 1.2 and clips[0].grade["brightness"] == 0.1  # Rest bleibt
+    assert clips[2].grade["contrast"] == 1.2 and clips[2].grade["saturation"] == 1.5
+    assert clips[1].grade is None  # nicht ausgewählt
+    grade.apply_to_all()  # komplette Korrektur von Clip 3 auf die Auswahl
+    assert clips[0].grade == clips[2].grade and clips[1].grade is None
+    grade.reset()
+    assert clips[0].grade is None and clips[2].grade is None

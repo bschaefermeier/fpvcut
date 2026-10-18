@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeySequence, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from fpvcut.timeline.model import Timeline
@@ -45,7 +45,9 @@ class TimelineView(QWidget):
         super().__init__(parent)
         self.timeline = Timeline()
         self.pps = 20.0  # Pixel pro Sekunde
-        self._selected: int | str | None = None  # Clip-Index oder "music"
+        self._selected: int | str | None = None  # Clip-Index oder "music"; zuletzt angeklickt
+        self._group: set[int] = set()  # alle ausgewählten Clips (Strg/Shift+Klick), enthält _selected
+        self._anchor: int | None = None  # Ausgangspunkt für Shift+Klick
         self.playhead = 0.0
         self._drag: dict | None = None
         self._drop_index: int | None = None
@@ -63,14 +65,41 @@ class TimelineView(QWidget):
 
     @selected.setter
     def selected(self, value: int | str | None) -> None:
-        if value != self._selected:
-            self._selected = value
-            self.selection_changed.emit()
+        # Ein einzelner Clip außerhalb der bisherigen Auswahl ersetzt sie.
+        group = self._group if isinstance(value, int) and value in self._group else (
+            {value} if isinstance(value, int) else set()
+        )
+        self._set_selection(value, group)
+
+    @property
+    def selection(self) -> list[int]:
+        """Alle ausgewählten Clips in Timeline-Reihenfolge."""
+        return sorted(self._group)
+
+    def _set_selection(self, current: int | str | None, group: set[int]) -> None:
+        if current == self._selected and group == self._group:
+            return
+        self._selected, self._group = current, set(group)
+        self.selection_changed.emit()
+        self.update()
+
+    def set_selection(self, indices: list[int], current: int | None = None) -> None:
+        """Mehrere Clips auswählen; ``current`` (Standard: der letzte) bestimmt z. B. die Farbregler."""
+        indices = [i for i in indices if 0 <= i < len(self.timeline.clips)]
+        if current not in indices:
+            current = indices[-1] if indices else None
+        self._set_selection(current, set(indices))
+
+    def select_all(self) -> None:
+        self._anchor = 0
+        self.set_selection(list(range(len(self.timeline.clips))), self._selected if isinstance(self._selected, int) else None)
 
     def set_timeline(self, timeline: Timeline) -> None:
         self.timeline = timeline
-        if isinstance(self.selected, int) and self.selected >= len(timeline.clips):
-            self.selected = None
+        count = len(timeline.clips)
+        if isinstance(self.selected, int):
+            group = {i for i in self._group if i < count}
+            self._set_selection(self.selected if self.selected < count else max(group, default=None), group)
         if self.selected == "music" and timeline.music is None:
             self.selected = None
         self._update_size()
@@ -89,7 +118,9 @@ class TimelineView(QWidget):
         return int(self._x(self.playhead))
 
     def select(self, selection: int | str | None) -> None:
-        self.selected = selection
+        """Genau einen Clip (oder die Musik) auswählen."""
+        self._anchor = selection if isinstance(selection, int) else None
+        self._set_selection(selection, {selection} if isinstance(selection, int) else set())
         self.update()
 
     def _update_size(self) -> None:
@@ -148,7 +179,7 @@ class TimelineView(QWidget):
 
         for index, (rect, clip) in enumerate(zip(self.clip_rects(), self.timeline.clips)):
             color = MISSING_COLOR if clip.path is None else CLIP_COLORS[index % 2]
-            self._paint_block(painter, rect, color, index == self.selected)
+            self._paint_block(painter, rect, color, index in self._group)
             self._paint_extensions(painter, rect, clip)
             if clip.grade:
                 self._paint_grade_mark(painter, rect)
@@ -272,11 +303,28 @@ class TimelineView(QWidget):
         hit = self.hit(pos)
         if hit[0] == "clip":
             _, index, part = hit
+            modifiers = event.modifiers()
+            if modifiers & Qt.KeyboardModifier.ControlModifier:
+                # Strg+Klick nimmt einen Clip in die Auswahl auf oder heraus.
+                group = self._group ^ {index}
+                current = index if index in group else (self._selected if self._selected in group else max(group, default=None))
+                self._anchor = index
+                self._set_selection(current, group)
+                return
+            if modifiers & Qt.KeyboardModifier.ShiftModifier and self._anchor is not None:
+                # Shift+Klick wählt alles vom zuletzt angeklickten bis zu diesem Clip.
+                low, high = sorted((self._anchor, index))
+                self._set_selection(index, set(range(low, high + 1)))
+                return
             clip = self.timeline.clips[index]
-            self.select(index)
+            in_group = part == "body" and index in self._group and len(self._group) > 1
+            if in_group:
+                self._set_selection(index, self._group)  # Auswahl bleibt, um sie gemeinsam zu ziehen
+            else:
+                self.select(index)
             self._drag = {
                 "mode": "move" if part == "body" else part, "index": index, "x": pos.x(),
-                "src_in": clip.src_in, "src_out": clip.src_out, "active": False,
+                "src_in": clip.src_in, "src_out": clip.src_out, "active": False, "group": in_group,
             }
         elif hit[0] == "music":
             self.select("music")
@@ -317,11 +365,21 @@ class TimelineView(QWidget):
         drag, self._drag = self._drag, None
         target, self._drop_index = self._drop_index, None
         if drag is None or not drag.get("active"):
+            if drag is not None and drag.get("group"):
+                self.select(drag["index"])  # Klick ohne Ziehen auf einen Clip der Auswahl: nur noch dieser
             self.update()
             return
         if drag["mode"] == "move":
             index = drag["index"]
-            if target is not None and target not in (index, index + 1):
+            if drag.get("group"):
+                indices = self.selection
+                if target is not None and self._block_moves(indices, target):
+                    self.edit_started.emit()
+                    new = self.timeline.move_many(indices, target)
+                    self._set_selection(new[indices.index(index)], set(new))
+                    self._update_size()
+                    self.edited.emit()
+            elif target is not None and target not in (index, index + 1):
                 self.edit_started.emit()
                 self.selected = self.timeline.move(index, target)
                 self._update_size()
@@ -329,6 +387,13 @@ class TimelineView(QWidget):
         else:
             self.edited.emit()
         self.update()
+
+    def _block_moves(self, indices: list[int], target: int) -> bool:
+        """Ändert das Verschieben der Clips ``indices`` an die Lücke ``target`` die Reihenfolge?"""
+        count = len(self.timeline.clips)
+        rest = [i for i in range(count) if i not in indices]
+        at = max(0, min(target - sum(i < target for i in indices), len(rest)))
+        return rest[:at] + indices + rest[at:] != list(range(count))
 
     def mouseDoubleClickEvent(self, event) -> None:  # noqa: N802
         hit = self.hit(event.position())
@@ -353,19 +418,25 @@ class TimelineView(QWidget):
     def keyPressEvent(self, event) -> None:  # noqa: N802
         if event.key() in (Qt.Key.Key_Delete, Qt.Key.Key_Backspace):
             self.delete_selected()
+        elif event.matches(QKeySequence.StandardKey.SelectAll):
+            self.select_all()
         else:
             super().keyPressEvent(event)
 
     def delete_selected(self) -> bool:
+        """Entfernt alle ausgewählten Clips (oder die Musik)."""
         if self.selected is None:
             return False
         self.edit_started.emit()
         if self.selected == "music":
             self.timeline.music = None
-            self.selected = None
+            self.select(None)
         else:
-            self.timeline.remove(self.selected)
-            self.selected = min(self.selected, len(self.timeline.clips) - 1) if self.timeline.clips else None
+            indices = self.selection
+            for index in reversed(indices):
+                self.timeline.remove(index)
+            count = len(self.timeline.clips)
+            self.select(min(indices[0], count - 1) if count else None)
         self._update_size()
         self.update()
         self.edited.emit()

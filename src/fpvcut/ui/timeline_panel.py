@@ -220,6 +220,19 @@ class TimelinePanel(QWidget):
     def selected_clip(self) -> int | None:
         return self.view.selected if isinstance(self.view.selected, int) else None
 
+    def selected_clips(self) -> list[int]:
+        """Alle ausgewählten Clips (Strg/Shift+Klick)."""
+        return self.view.selection
+
+    def set_grades(self, grades: dict[int, dict | None], remember: bool = True) -> None:
+        """Je Clip eine eigene Farbkorrektur setzen, z. B. wenn mehrere Clips ausgewählt sind."""
+        if remember:
+            self.remember()
+        for index, grade in grades.items():
+            self.timeline.clips[index].grade = dict(grade) if grade else None
+        self.view.update()
+        self.changed.emit()
+
     def set_grade(self, indices: list[int], grade: dict | None, remember: bool = True) -> None:
         """Farbkorrektur setzen; beim Ziehen eines Reglers nur einmal für Rückgängig merken."""
         if remember:

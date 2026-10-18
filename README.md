@@ -15,8 +15,9 @@ sie in einer Timeline mit Musik zusammenstellen und das Ergebnis mit GPU-Beschle
   mit Tags und Notizen als Ausschnitt speichern. Die besten lassen sich als Favorit (★) markieren.
 - **Ausschnitte-Reiter:** Alle Ausschnitte über alle Flugtage hinweg, filterbar nach Tags,
   Favoriten und Freitext.
-- **Timeline:** Clips per Drag & Drop anordnen, trimmen und teilen, eine Musikspur mit
-  Lautstärkeregelung und Ausblenden hinzufügen. Die Vorschau läuft ohne vorheriges Rendern.
+- **Timeline:** Clips per Drag & Drop anordnen, trimmen und teilen, auch mehrere auf einmal
+  verschieben, löschen oder farblich anpassen. Dazu eine Musikspur mit Lautstärkeregelung und
+  Ausblenden. Die Vorschau läuft ohne vorheriges Rendern.
 - **Farbkorrektur:** Helligkeit, Kontrast, Sättigung, Gamma und Farbtemperatur pro Clip, dazu
   3D-LUTs (`.cube`) für D-Log- oder Flat-Profile.
 - **Export:** Profile für Originalqualität (H.265), Web (H.264) und Archiv (H.265, 10 Bit).
@@ -69,7 +70,9 @@ Projekte bleiben dabei erhalten.
 | F11 oder Doppelklick | Vollbild |
 | E | Auswahl zur Timeline hinzufügen |
 | S | Clip am Abspielkopf teilen |
-| Entf | Ausgewählten Clip entfernen |
+| Entf | Ausgewählte Clips entfernen |
+| Strg + Klick / Umschalt + Klick | Mehrere Clips in der Timeline auswählen |
+| Strg + A | Alle Clips der Timeline auswählen (Timeline im Fokus) |
 | P | Timeline abspielen |
 | Strg + ← / → | Anfang / Ende der Timeline |
 | Strg + Z / Strg + Y | Rückgängig / Wiederholen |

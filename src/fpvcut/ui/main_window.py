@@ -249,7 +249,7 @@ class MainWindow(QMainWindow):
         self._add_action(tl_menu, "Timeline abspielen", "P", lambda: self.play_timeline(None))
         self._add_action(tl_menu, "Clip am Abspielkopf teilen", "S", self.split_timeline)
         self._add_action(tl_menu, "Rendern …", "Ctrl+R", self.render_dialog)
-        self._add_action(tl_menu, "Ausgewählten Clip entfernen", None, self.timeline_panel.delete_selected)
+        self._add_action(tl_menu, "Ausgewählte Clips entfernen", None, self.timeline_panel.delete_selected)
         tl_menu.addSeparator()
         self._add_action(tl_menu, "Rückgängig", "Ctrl+Z", self.timeline_panel.undo)
         self._add_action(tl_menu, "Wiederholen", "Ctrl+Y", self.timeline_panel.redo)

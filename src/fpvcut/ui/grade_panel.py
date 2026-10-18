@@ -1,4 +1,9 @@
-"""Farbkorrektur des in der Timeline ausgewählten Clips: Regler, LUT, auf alle übertragen."""
+"""Farbkorrektur der in der Timeline ausgewählten Clips: Regler, LUT, auf alle übertragen.
+
+Sind mehrere Clips ausgewählt, zeigen die Regler die Werte des zuletzt angeklickten Clips.
+Eine Änderung übernimmt nur den bewegten Regler (bzw. die LUT) in alle ausgewählten Clips;
+ihre übrigen Werte bleiben, wie sie sind.
+"""
 
 from __future__ import annotations
 
@@ -119,6 +124,11 @@ class GradePanel(QWidget):
     def current_index(self) -> int | None:
         return self.timeline_panel.selected_clip()
 
+    def targets(self) -> list[int]:
+        """Clips, auf die eine Änderung wirkt: alle ausgewählten."""
+        index = self.current_index()
+        return [] if index is None else (self.timeline_panel.selected_clips() or [index])
+
     def current_grade(self) -> Grade:
         index = self.current_index()
         return Grade() if index is None else Grade.from_dict(self.timeline_panel.timeline.clips[index].grade)
@@ -130,7 +140,20 @@ class GradePanel(QWidget):
         enabled = index is not None
         for widget in (*self.sliders.values(), self._reset, self._to_all, self._clear_lut):
             widget.setEnabled(enabled)
-        if enabled:
+        several = enabled and len(self.targets()) > 1
+        self._to_all.setText("Auf ausgewählte Clips übertragen" if several else "Auf alle Clips übertragen")
+        self._to_all.setToolTip(
+            "Die komplette Korrektur dieses Clips für alle ausgewählten Clips" if several
+            else "Dieselbe Korrektur für alle Clips der Timeline, z. B. bei gleicher Kamera"
+        )
+        if several:
+            targets = self.targets()
+            clip = self.timeline_panel.timeline.clips[index]
+            self._hint.setText(
+                f"{len(targets)} Clips ausgewählt. Die Regler zeigen „{clip.label}“ (Clip {index + 1}); "
+                "eine Änderung übernimmt nur diesen Wert in alle ausgewählten Clips."
+            )
+        elif enabled:
             clip = self.timeline_panel.timeline.clips[index]
             self._hint.setText(f"Farbkorrektur für „{clip.label}“ (Clip {index + 1}).")
         else:
@@ -152,9 +175,19 @@ class GradePanel(QWidget):
         index = self.current_index()
         if index is None:
             return
+        # Nur geänderte Werte übernehmen, damit bei mehreren Clips deren übrige Werte bleiben.
+        before = self.current_grade()
+        changes = {f: getattr(grade, f) for f in vars(grade) if getattr(grade, f) != getattr(before, f)}
+        clips = self.timeline_panel.timeline.clips
+        grades = {}
+        for target in self.targets():
+            own = grade if target == index else Grade.from_dict(clips[target].grade)
+            for name, value in changes.items():
+                setattr(own, name, value)
+            grades[target] = own.to_dict()
         self._updating = True
         try:
-            self.timeline_panel.set_grade([index], grade.to_dict(), remember=remember)
+            self.timeline_panel.set_grades(grades, remember=remember)
         finally:
             self._updating = False
         self.refresh()
@@ -196,11 +229,19 @@ class GradePanel(QWidget):
             self.set_lut(path)
 
     def reset(self) -> None:
-        self._store(Grade(), remember=True)
+        """Alle ausgewählten Clips ganz auf neutral."""
+        if self.current_index() is None:
+            return
+        self.timeline_panel.set_grade(self.targets(), None)
+        self.grade_changed.emit()
 
     def apply_to_all(self) -> None:
+        """Korrektur des angezeigten Clips komplett übertragen: auf die Auswahl, sonst auf alle Clips."""
         if self.current_index() is None:
             return
         grade = self.current_grade().to_dict()
-        self.timeline_panel.set_grade(list(range(len(self.timeline_panel.timeline.clips))), grade)
+        targets = self.targets()
+        if len(targets) < 2:
+            targets = list(range(len(self.timeline_panel.timeline.clips)))
+        self.timeline_panel.set_grade(targets, grade)
         self.grade_changed.emit()
