@@ -75,9 +75,11 @@ def test_split_delete_and_scrub():
     view = panel.view
     seeks = []
     panel.seek_requested.connect(seeks.append)
+    view.set_selection([0, 2])
     ruler = QPoint(int(view._x(7.5)), 5)
     QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=ruler)
     assert view.playhead == pytest.approx(7.5, abs=0.05) and seeks
+    assert view.selection == [0, 2]  # Springen hebt die Auswahl nicht auf
     assert panel.split_at_playhead()
     assert [(c.fingerprint, c.src_in, c.src_out) for c in panel.timeline.clips[1:3]] == [
         ("b", 0, pytest.approx(2.5, abs=0.05)), ("b", pytest.approx(2.5, abs=0.05), 5)

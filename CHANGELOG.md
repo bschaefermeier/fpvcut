@@ -10,6 +10,8 @@ durch, wird daraus die fertige Version.
 
 - **Schärfe:** neuer Regler im Reiter Farbe, nach rechts schärfer, nach links weicher; wirkt in
   Vorschau und Export
+- **Timeline:** Ein Klick auf eine freie Stelle oder die Zeitleiste versetzt nur den Abspielkopf;
+  ausgewählte Clips bleiben ausgewählt. Esc hebt die Auswahl auf
 
 ### Behoben
 

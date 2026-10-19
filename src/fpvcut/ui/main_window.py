@@ -886,6 +886,7 @@ class MainWindow(QMainWindow):
             self.exit_fullscreen()
         else:
             self.player.clear_marks()
+            self.timeline_panel.view.select(None)  # Klick in die Timeline behält die Auswahl
 
     # --- Vollbild --------------------------------------------------------
 

@@ -329,7 +329,7 @@ class TimelineView(QWidget):
         elif hit[0] == "music":
             self.select("music")
         else:
-            self.select(None)
+            # Nur den Abspielkopf versetzen: die Auswahl bleibt (Esc hebt sie auf).
             self._drag = {"mode": "scrub"}
             self._scrub(pos.x())
 

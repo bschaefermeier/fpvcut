@@ -66,7 +66,7 @@ Projekte bleiben dabei erhalten.
 | I / O | In- / Out-Punkt setzen |
 | F | Auswahl als Ausschnitt speichern |
 | Umschalt + F | Ganzes Video als Ausschnitt speichern |
-| Esc | Auswahl aufheben, Vollbild beenden |
+| Esc | Auswahl aufheben (auch in der Timeline), Vollbild beenden |
 | F11 oder Doppelklick | Vollbild |
 | E | Auswahl zur Timeline hinzufügen |
 | S | Clip am Abspielkopf teilen |

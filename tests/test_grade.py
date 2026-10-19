@@ -180,4 +180,6 @@ def test_grade_panel_edits_selected_clip_with_undo(monkeypatch, tmp_path):
     panel.reset()
     assert window.timeline_panel.timeline.clips[1].grade is None
     assert panel.sliders["saturation"].value() == 1000
+    window._on_escape()  # Esc hebt die Auswahl in der Timeline auf
+    assert window.timeline_panel.view.selected is None and not panel.sliders["contrast"].isEnabled()
     window.close()
