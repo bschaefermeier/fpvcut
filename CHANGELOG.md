@@ -28,7 +28,7 @@ durch, wird daraus die fertige Version.
   wenn die Bilder im Grafikspeicher lagen. Mit Farbkorrektur kopiert die Vorschau die Bilder jetzt
   in den Arbeitsspeicher
 - **Vorschau mit Farbkorrektur und Clips unterschiedlicher Auflösung:** Clips, deren Auflösung von
-  der des ersten abwich, wurden in der Vorschau verzerrt dargestellt
+  der des ersten abwich, erschienen in der Vorschau in falscher Größe
 
 ## 1.0.0-rc2 (2026-10-18)
 
