@@ -38,7 +38,9 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 
 ## Farbe
 
-- [ ] Clip auswählen, Reiter Farbe: Regler wirken sofort in der Vorschau
+- [ ] Clip auswählen, Reiter Farbe: Regler wirken sofort in der Vorschau, auch bei H.265-/10-Bit-Clips
+- [ ] LUT wirkt in der Vorschau, auch nach Abspielen über mehrere Clips und Springen in der Timeline
+- [ ] Schärfe-Regler: nach rechts schärfer, nach links weicher, im Export genauso
 - [ ] Doppelklick auf Regler oder Wert setzt zurück, LUT laden, "Auf alle Clips übertragen"
 
 ## Rendern

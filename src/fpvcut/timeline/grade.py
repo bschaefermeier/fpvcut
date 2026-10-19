@@ -18,6 +18,7 @@ RANGES = {
     "saturation": (0.0, 2.0, 1.0),
     "gamma": (0.5, 2.0, 1.0),
     "temperature": (3000.0, 10000.0, NEUTRAL_KELVIN),
+    "sharpness": (-1.0, 1.5, 0.0),  # Stärke der Unschärfemaske: negativ weichzeichnen
 }
 
 
@@ -28,6 +29,7 @@ class Grade:
     saturation: float = 1.0
     gamma: float = 1.0
     temperature: float = NEUTRAL_KELVIN
+    sharpness: float = 0.0
     lut: str | None = None  # .cube-Datei, z. B. für D-Log oder Flat-Profile
 
     @classmethod
@@ -67,4 +69,6 @@ def grade_filters(grade: Grade | dict | None, enable: str | None = None) -> list
     eq = {k: getattr(grade, k) for k in ("brightness", "contrast", "saturation", "gamma")}
     if any(abs(v - RANGES[k][2]) > 1e-4 for k, v in eq.items()):
         result.append("eq=" + ":".join(f"{k}={v:.3f}" for k, v in eq.items()) + suffix)
+    if abs(grade.sharpness) > 1e-4:  # zuletzt, damit sie auf den fertigen Farben arbeitet
+        result.append(f"unsharp=lx=5:ly=5:la={grade.sharpness:.3f}{suffix}")
     return result

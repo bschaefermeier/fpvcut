@@ -1,4 +1,4 @@
-"""Farbkorrektur der in der Timeline ausgewählten Clips: Regler, LUT, auf alle übertragen.
+"""Farbkorrektur der in der Timeline ausgewählten Clips: Regler (auch Schärfe), LUT, auf alle übertragen.
 
 Sind mehrere Clips ausgewählt, zeigen die Regler die Werte des zuletzt angeklickten Clips.
 Eine Änderung übernimmt nur den bewegten Regler (bzw. die LUT) in alle ausgewählten Clips;
@@ -32,6 +32,7 @@ SLIDERS = {
     "saturation": ("Sättigung", 1000, lambda v: f"{v:.2f}"),
     "gamma": ("Gamma", 1000, lambda v: f"{v:.2f}"),
     "temperature": ("Temperatur", 1, lambda v: f"{v:.0f} K"),
+    "sharpness": ("Schärfe", 100, lambda v: f"{v:+.2f}"),
 }
 
 

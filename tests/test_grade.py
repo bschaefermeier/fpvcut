@@ -22,6 +22,7 @@ def test_grade_filters_and_storage(tmp_path):
         "colortemperature=temperature=5200:pl=1",
         "eq=brightness=0.050:contrast=1.000:saturation=1.300:gamma=1.000",
     ]
+    assert grade_filters(Grade(sharpness=-0.5)) == ["unsharp=lx=5:ly=5:la=-0.500"]
     assert grade_filters(grade.to_dict(), enable="gte(t,1)")[2].endswith(":enable='gte(t,1)'")
     assert Grade.from_dict({**grade.to_dict(), "unbekannt": 1}) == grade  # Felder späterer Versionen stören nicht
     # Die Korrektur wird mit der Timeline gespeichert und kopiert (Rückgängig).
@@ -87,6 +88,43 @@ def test_preview_applies_grade_only_in_its_clip(tmp_path):
             player.terminate()
         for t, colorful in checks.items():
             assert (_chroma(out, t) > 50) == colorful, (start, t)
+
+
+def test_preview_with_grade_copies_hw_frames_for_filters():
+    """Hardware-dekodierte Bilder liegen im Grafikspeicher; die Farbfilter brauchen sie im RAM."""
+    from fpvcut.ui.player import PlayerWidget
+
+    calls = []
+
+    class FakeMpv:
+        pause = False
+
+        def loadfile(self, url, **options):
+            calls.append(options)
+
+    player = PlayerWidget.__new__(PlayerWidget)
+    player._player = FakeMpv()
+    player.clear_marks = player.set_clips = lambda *a: None
+    player.open_timeline("edl://x", False, "lavfi=[eq=saturation=0]")
+    player.open_timeline("edl://x", False, "")
+    assert calls[0]["hwdec"] == "auto-copy-safe" and "hwdec" not in calls[1]
+
+
+@needs_ffmpeg
+def test_render_applies_sharpness(tmp_path):
+    def edges(path: Path) -> float:
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-ss", "1", "-i", str(path), "-frames:v", "1",
+                              "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True, check=True).stdout
+        return sum(abs(a - b) for a, b in zip(raw, raw[1:])) / len(raw)
+
+    src = _graded_timeline(tmp_path).clips[0].path
+    results = {}
+    for amount in (-1.0, 0.0, 1.5):
+        tl = Timeline([TimelineClip("a", 0, 2, 4, path=src, has_audio=False, grade={"sharpness": amount})])
+        s = settings(tmp_path, output=tmp_path / f"scharf_{amount}.mp4", width=160, height=90, fps=25)
+        subprocess.run(build_command("ffmpeg", tl, s), check=True, capture_output=True)
+        results[amount] = edges(s.output)
+    assert results[-1.0] < results[0.0] < results[1.5]
 
 
 def test_grade_panel_edits_selected_clip_with_undo(monkeypatch, tmp_path):

@@ -4,6 +4,20 @@ Versionen nach [Semantic Versioning](https://semver.org/lang/de/). Vorabversione
 sind Release-Kandidaten zum Testen; ist die [Testcheckliste](docs/testcheckliste.md) ohne Fehler
 durch, wird daraus die fertige Version.
 
+## Unveröffentlicht
+
+### Neu
+
+- **Schärfe:** neuer Regler im Reiter Farbe, nach rechts schärfer, nach links weicher; wirkt in
+  Vorschau und Export
+
+### Behoben
+
+- **Farbkorrektur und LUTs in der Vorschau:** wurden bei hardware-dekodierten Clips (unter Windows
+  die Regel) nicht oder nur vereinzelt angezeigt, weil mpv den Farbfilter stillschweigend abschaltete,
+  wenn die Bilder im Grafikspeicher lagen. Mit Farbkorrektur kopiert die Vorschau die Bilder jetzt
+  in den Arbeitsspeicher
+
 ## 1.0.0-rc2 (2026-10-18)
 
 ### Neu

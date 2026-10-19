@@ -296,6 +296,9 @@ class PlayerWidget(QWidget):
         options = {"aid": "1" if audio else "no"}
         if vf:
             options["vf"] = quote_option(vf)  # %Länge% schützt Kommas im Filter
+            # Filter laufen auf der CPU. Ohne Kopie stecken hardware-dekodierte Bilder im
+            # Grafikspeicher, der Filter scheitert und mpv schaltet ihn stillschweigend ab.
+            options["hwdec"] = "auto-copy-safe"
         self._player.loadfile(edl, start=f"{max(start, 0.0):.3f}", **options)
         self._player.pause = paused
 
