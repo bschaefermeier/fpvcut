@@ -39,7 +39,7 @@ def test_preview_and_render_filters_use_grade():
     clips = [TimelineClip("a", 0, 2, 4, path=Path("/v/a.mp4")),
              TimelineClip("b", 1, 4, 4, path=Path("/v/b.mp4"), grade={"saturation": 0.0})]
     tl = Timeline(clips)
-    assert build_vf(tl) == ("lavfi=[scale=w=-2:h='min(ih,1080)':flags=bilinear,"
+    assert build_vf(tl) == ("lavfi=[scale=w=-2:h='min(ih,1080)':flags=bilinear:eval=frame,"
                             "eq=brightness=0.000:contrast=1.000:saturation=0.000:gamma=1.000"
                             ":enable='gte(t,2.000)*lt(t,5.000)']")
     assert build_vf(Timeline(clips[:1])) == ""

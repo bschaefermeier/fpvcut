@@ -18,7 +18,7 @@ from fpvcut.timeline.grade import grade_filters
 from fpvcut.timeline.model import Timeline
 
 
-PREVIEW_SCALE = "scale=w=-2:h='min(ih,1080)':flags=bilinear"
+PREVIEW_SCALE = "scale=w=-2:h='min(ih,1080)':flags=bilinear:eval=frame"
 
 
 def _quote(path: str) -> str:
@@ -45,4 +45,6 @@ def build_vf(timeline: Timeline) -> str:
         video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
     # Die Filter laufen auf der CPU; 4K-Bilder vorher auf höchstens 1080 Zeilen verkleinern, das
     # macht sie etwa dreimal so schnell. Für die Vorschau reicht das, der Export nutzt volle Größe.
+    # ``eval=frame``: mpv baut den Filter bei einem Wechsel der Auflösung nicht neu auf; so passt
+    # sich die Größe pro Bild an, statt Clips anderer Auflösung zu verzerren (oder abzustürzen).
     return f"lavfi=[{PREVIEW_SCALE},{','.join(video)}]" if video else ""

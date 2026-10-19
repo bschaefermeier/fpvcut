@@ -27,6 +27,8 @@ durch, wird daraus die fertige Version.
   die Regel) nicht oder nur vereinzelt angezeigt, weil mpv den Farbfilter stillschweigend abschaltete,
   wenn die Bilder im Grafikspeicher lagen. Mit Farbkorrektur kopiert die Vorschau die Bilder jetzt
   in den Arbeitsspeicher
+- **Vorschau mit Farbkorrektur und Clips unterschiedlicher Auflösung:** Clips, deren Auflösung von
+  der des ersten abwich, wurden in der Vorschau verzerrt dargestellt
 
 ## 1.0.0-rc2 (2026-10-18)
 
