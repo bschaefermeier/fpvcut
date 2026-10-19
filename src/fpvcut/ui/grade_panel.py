@@ -1,4 +1,4 @@
-"""Farbkorrektur der in der Timeline ausgewählten Clips: Regler (auch Schärfe), LUT, auf alle übertragen.
+"""Farbkorrektur der in der Timeline ausgewählten Clips: Regler (auch Schärfe), LUT, Automatik, auf alle übertragen.
 
 Sind mehrere Clips ausgewählt, zeigen die Regler die Werte des zuletzt angeklickten Clips.
 Eine Änderung übernimmt nur den bewegten Regler (bzw. die LUT) in alle ausgewählten Clips;
@@ -7,9 +7,11 @@ ihre übrigen Werte bleiben, wie sie sind.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QFileDialog,
     QFormLayout,
@@ -22,6 +24,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from fpvcut.core.ffmpeg_tools import FFmpegNotFound, find_tool
+from fpvcut.timeline.auto_grade import measure, suggest
 from fpvcut.timeline.grade import RANGES, Grade
 from fpvcut.ui.timeline_panel import TimelinePanel
 
@@ -29,10 +33,18 @@ from fpvcut.ui.timeline_panel import TimelinePanel
 SLIDERS = {
     "brightness": ("Helligkeit", 1000, lambda v: f"{v:+.2f}"),
     "contrast": ("Kontrast", 1000, lambda v: f"{v:.2f}"),
-    "saturation": ("Sättigung", 1000, lambda v: f"{v:.2f}"),
     "gamma": ("Gamma", 1000, lambda v: f"{v:.2f}"),
+    "shadows": ("Schatten", 100, lambda v: f"{v:+.2f}"),
+    "highlights": ("Lichter", 100, lambda v: f"{v:+.2f}"),
+    "saturation": ("Sättigung", 1000, lambda v: f"{v:.2f}"),
+    "vibrance": ("Dynamik", 100, lambda v: f"{v:+.2f}"),
     "temperature": ("Temperatur", 1, lambda v: f"{v:.0f} K"),
     "sharpness": ("Schärfe", 100, lambda v: f"{v:+.2f}"),
+}
+TOOLTIPS = {
+    "shadows": "Dunkle Bildteile aufhellen (rechts) oder absenken (links)",
+    "highlights": "Helle Bildteile zurückholen (links), z. B. einen fast weißen Himmel",
+    "vibrance": "Wie Sättigung, hebt aber blasse Farben stärker an und schont kräftige",
 }
 
 
@@ -58,7 +70,7 @@ class GradePanel(QWidget):
             slider.setRange(round(low * steps), round(high * steps))
             slider.setValue(round(neutral * steps))
             slider.setPageStep(max((slider.maximum() - slider.minimum()) // 20, 1))
-            slider.setToolTip("Doppelklick: zurück auf neutral")
+            slider.setToolTip("\n".join(filter(None, [TOOLTIPS.get(name), "Doppelklick: zurück auf neutral"])))
             slider.sliderPressed.connect(self._on_press)
             slider.sliderReleased.connect(self._on_release)
             slider.valueChanged.connect(self._on_value)
@@ -93,6 +105,12 @@ class GradePanel(QWidget):
         form.addRow("LUT:", lut_row)
         form.addRow("", self._lut_label)
 
+        self._auto = QPushButton("✨ Automatisch", self)
+        self._auto.setToolTip(
+            "Misst einige Bilder des Clips und stellt Helligkeit, Kontrast, Gamma, Schatten, Lichter, "
+            "Dynamik und Temperatur passend ein (LUT und Schärfe bleiben). Danach von Hand nachstellbar."
+        )
+        self._auto.clicked.connect(self.auto_grade)
         self._reset = QPushButton("Zurücksetzen", self)
         self._reset.clicked.connect(self.reset)
         self._to_all = QPushButton("Auf alle Clips übertragen", self)
@@ -105,6 +123,10 @@ class GradePanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._hint)
+        auto_row = QHBoxLayout()
+        auto_row.addWidget(self._auto)
+        auto_row.addStretch(1)
+        layout.addLayout(auto_row)
         layout.addLayout(form)
         layout.addLayout(buttons)
         layout.addStretch(1)
@@ -139,7 +161,7 @@ class GradePanel(QWidget):
             return
         index = self.current_index()
         enabled = index is not None
-        for widget in (*self.sliders.values(), self._reset, self._to_all, self._clear_lut):
+        for widget in (*self.sliders.values(), self._auto, self._reset, self._to_all, self._clear_lut):
             widget.setEnabled(enabled)
         several = enabled and len(self.targets()) > 1
         self._to_all.setText("Auf ausgewählte Clips übertragen" if several else "Auf alle Clips übertragen")
@@ -228,6 +250,42 @@ class GradePanel(QWidget):
         path, _ = QFileDialog.getOpenFileName(self, "LUT wählen", current or "", "3D-LUT (*.cube)")
         if path:
             self.set_lut(path)
+
+    def auto_grade(self) -> None:
+        """Zauberstab: jeden ausgewählten Clip messen und seine Regler passend setzen."""
+        if self.current_index() is None:
+            return
+        clips = self.timeline_panel.timeline.clips
+        grades, problems = {}, []
+        QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            ffmpeg = find_tool("ffmpeg")
+            for index in self.targets():
+                clip = clips[index]
+                own = Grade.from_dict(clip.grade)
+                if clip.path is None:
+                    problems.append(clip.label)
+                    continue
+                try:
+                    stats = measure(ffmpeg, clip.path, clip.src_in, clip.src_out, own.lut)
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    problems.append(clip.label)
+                    continue
+                grades[index] = suggest(stats, own).to_dict()
+        except FFmpegNotFound as exc:
+            problems.append(str(exc))
+        finally:
+            QGuiApplication.restoreOverrideCursor()
+        if grades:
+            self._updating = True
+            try:
+                self.timeline_panel.set_grades(grades, remember=True)  # ein Rückgängig-Schritt für alle
+            finally:
+                self._updating = False
+            self.refresh()
+            self.grade_changed.emit()
+        if problems:
+            self._hint.setText("Automatik nicht möglich für: " + ", ".join(problems))
 
     def reset(self) -> None:
         """Alle ausgewählten Clips ganz auf neutral."""

@@ -18,6 +18,9 @@ from fpvcut.timeline.grade import grade_filters
 from fpvcut.timeline.model import Timeline
 
 
+PREVIEW_SCALE = "scale=w=-2:h='min(ih,1080)':flags=bilinear"
+
+
 def _quote(path: str) -> str:
     # %Länge% erlaubt beliebige Zeichen (Kommas, Semikolons) im Pfad; mpv zählt Bytes.
     return f"%{len(path.encode('utf-8'))}%{path}"
@@ -40,4 +43,6 @@ def build_vf(timeline: Timeline) -> str:
     for clip, begin in zip(timeline.clips, timeline.starts()):
         # Zeitstempel der EDL sind Timeline-Zeit: Korrektur nur im Zeitraum dieses Clips.
         video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
-    return f"lavfi=[{','.join(video)}]" if video else ""
+    # Die Filter laufen auf der CPU; 4K-Bilder vorher auf höchstens 1080 Zeilen verkleinern, das
+    # macht sie etwa dreimal so schnell. Für die Vorschau reicht das, der Export nutzt volle Größe.
+    return f"lavfi=[{PREVIEW_SCALE},{','.join(video)}]" if video else ""

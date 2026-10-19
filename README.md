@@ -18,8 +18,9 @@ sie in einer Timeline mit Musik zusammenstellen und das Ergebnis mit GPU-Beschle
 - **Timeline:** Clips per Drag & Drop anordnen, trimmen und teilen, auch mehrere auf einmal
   verschieben, löschen oder farblich anpassen. Dazu eine Musikspur mit Lautstärkeregelung und
   Ausblenden. Die Vorschau läuft ohne vorheriges Rendern.
-- **Farbkorrektur:** Helligkeit, Kontrast, Sättigung, Gamma, Farbtemperatur und Schärfe pro Clip,
-  dazu 3D-LUTs (`.cube`) für D-Log- oder Flat-Profile.
+- **Farbkorrektur:** Helligkeit, Kontrast, Gamma, Schatten, Lichter, Sättigung, Dynamik,
+  Farbtemperatur und Schärfe pro Clip, eine Automatik, die diese Regler per Klick setzt, dazu
+  3D-LUTs (`.cube`) für D-Log- oder Flat-Profile.
 - **Export:** Profile für Originalqualität (H.265), Web (H.264) und Archiv (H.265, 10 Bit).
   Encodiert wird mit NVIDIA NVENC, ohne passende Grafikkarte auf der CPU.
 - **Ordner umbenennen:** Flugtag-Ordner lassen sich einheitlich ins Schema `JJJJ-MM-TT_Spot`

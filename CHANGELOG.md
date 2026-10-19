@@ -10,6 +10,14 @@ durch, wird daraus die fertige Version.
 
 - **Schärfe:** neuer Regler im Reiter Farbe, nach rechts schärfer, nach links weicher; wirkt in
   Vorschau und Export
+- **Automatische Farbkorrektur (✨ Automatisch):** misst fünf Bilder jedes ausgewählten Clips (nach
+  der LUT) und stellt Helligkeit, Kontrast, Gamma, Schatten, Lichter, Dynamik und Farbtemperatur
+  ein. LUT und Schärfe bleiben; alles lässt sich danach von Hand nachstellen und in einem Schritt
+  rückgängig machen
+- **Neue Regler Schatten, Lichter und Dynamik:** dunkle bzw. helle Bildteile gezielt anheben oder
+  absenken; Dynamik hebt blasse Farben stärker an als kräftige
+- **Schnellere Vorschau mit Farbkorrektur:** die Filter laufen in der Vorschau auf höchstens 1080
+  Zeilen, bei 4K-Material etwa dreimal so schnell. Der Export rechnet weiter in voller Größe
 - **Timeline:** Ein Klick auf eine freie Stelle oder die Zeitleiste versetzt nur den Abspielkopf;
   ausgewählte Clips bleiben ausgewählt. Esc hebt die Auswahl auf
 
