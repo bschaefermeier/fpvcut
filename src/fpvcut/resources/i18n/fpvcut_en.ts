@@ -182,7 +182,7 @@ An open video will be closed for this.</numerusform>
 <context>
     <name>TimelinePanel</name>
     <message numerus="yes">
-        <location filename="../../ui/timeline_panel.py" line="158"/>
+        <location filename="../../ui/timeline_panel.py" line="168"/>
         <source>%n clip(s)</source>
         <translation>
             <numerusform>%n clip</numerusform>

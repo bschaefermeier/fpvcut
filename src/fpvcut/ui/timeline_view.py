@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from PySide6.QtCore import QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeySequence, QPainter, QPen
+from PySide6.QtGui import QBrush, QColor, QLinearGradient, QFont, QFontMetrics, QKeySequence, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
 from fpvcut.timeline.model import Timeline
@@ -211,6 +211,9 @@ class TimelineView(QWidget):
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignTop, metrics.elidedText(name, Qt.TextElideMode.ElideRight, int(text_rect.width())))
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignBottom, metrics.elidedText(f"{clip.duration:.1f} s", Qt.TextElideMode.ElideRight, int(text_rect.width())))
 
+        if (fade := self.timeline.video_fade()) is not None:
+            self._paint_video_fade(painter, *fade)
+
         music = self.timeline.music
         if (rect := self.music_rect()) is not None and music is not None:
             self._paint_block(painter, rect, MUSIC_COLOR, self.selected == "music")
@@ -253,6 +256,15 @@ class TimelineView(QWidget):
         for x in (x0, x1):
             painter.drawLine(QPointF(x, 0), QPointF(x, self.height()))
         painter.restore()
+
+    def _paint_video_fade(self, painter: QPainter, start: float, length: float) -> None:
+        """Bildausblendung am Ende: Verlauf nach Schwarz über der Videospur."""
+        track = self._video_rect()
+        rect = QRectF(self._x(start), track.top(), length * self.pps, track.height())
+        gradient = QLinearGradient(rect.topLeft(), rect.topRight())
+        gradient.setColorAt(0, QColor(0, 0, 0, 0))
+        gradient.setColorAt(1, QColor(0, 0, 0, 200))
+        painter.fillRect(rect, gradient)
 
     def _paint_grade_mark(self, painter: QPainter, rect: QRectF) -> None:
         """Farbiger Streifen am unteren Rand: Clip hat eine Farbkorrektur."""

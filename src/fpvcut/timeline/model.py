@@ -60,6 +60,7 @@ class Timeline:
     music: MusicTrack | None = None
     original_volume: float = 1.0  # Originalton aller Clips
     render_profile: str = "web"
+    video_fade_out: float = 0.0  # Bild am Ende so viele Sekunden nach Schwarz ausblenden
 
     # --- Abfragen --------------------------------------------------------
 
@@ -101,7 +102,8 @@ class Timeline:
         """Nur der Bereich ``start`` … ``end`` als eigene Timeline, z. B. zum Rendern.
 
         Angeschnittene Clips werden gekürzt, die Musik setzt an der passenden Stelle ein und blendet
-        am Ende des Bereichs aus. Eingeblendet wird sie nur, wenn der Bereich am Anfang beginnt.
+        am Ende des Bereichs aus, ebenso das Bild. Eingeblendet wird die Musik nur, wenn der Bereich
+        am Anfang beginnt.
         """
         start, end = max(start, 0.0), min(end, self.duration)
         clips = []
@@ -116,7 +118,13 @@ class Timeline:
             if self.music.duration is None or src_in < self.music.duration:
                 music = MusicTrack(**{**asdict(self.music), "src_in": src_in,
                                       "fade_in": self.music.fade_in if start < 0.01 else 0.0})
-        return Timeline(clips, music, self.original_volume, self.render_profile)
+        return Timeline(clips, music, self.original_volume, self.render_profile, self.video_fade_out)
+
+    def video_fade(self) -> tuple[float, float] | None:
+        """Beginn und Dauer der Bildausblendung am Ende, None ohne Ausblendung."""
+        length = self.duration
+        fade = min(self.video_fade_out, length)
+        return (length - fade, fade) if fade > 0 else None
 
     # --- Bearbeiten ------------------------------------------------------
 
@@ -179,6 +187,7 @@ class Timeline:
             "music": asdict(self.music) if self.music else None,
             "original_volume": self.original_volume,
             "render_profile": self.render_profile,
+            "video_fade_out": self.video_fade_out,
         }
 
     @classmethod
@@ -191,6 +200,7 @@ class Timeline:
             music=MusicTrack(**music) if music else None,
             original_volume=data.get("original_volume", 1.0),
             render_profile=data.get("render_profile", "web"),
+            video_fade_out=data.get("video_fade_out", 0.0),
         )
 
     def save(self, path: str | Path) -> None:

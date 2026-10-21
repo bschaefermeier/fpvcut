@@ -2,8 +2,8 @@
 
 Jeder Clip ist ein eigener Eingang (``-ss``/``-t`` vor ``-i``, beim Neu-Encodieren
 bildgenau). Im ``filter_complex`` wird jeder Clip auf das Zielformat gebracht (skalieren,
-schwarze Ränder, fps), Clips ohne Ton bekommen Stille, dann wird alles verkettet und die
-Musik dazugemischt.
+schwarze Ränder, fps), Clips ohne Ton bekommen Stille, dann wird alles verkettet, das Bild
+am Ende auf Wunsch nach Schwarz ausgeblendet und die Musik dazugemischt.
 """
 
 from __future__ import annotations
@@ -97,7 +97,10 @@ def build_filter(timeline: Timeline, settings: RenderSettings) -> str:
             parts.append(f"anullsrc=r={SAMPLE_RATE}:cl=stereo,atrim=duration={d}[a{i}]")
         pairs.append(f"[v{i}][a{i}]")
     n = len(timeline.clips)
-    parts.append(f"{''.join(pairs)}concat=n={n}:v=1:a=1[vout][acat]")
+    fade = timeline.video_fade()
+    parts.append(f"{''.join(pairs)}concat=n={n}:v=1:a=1[{'vcat' if fade else 'vout'}][acat]")
+    if fade:
+        parts.append(f"[vcat]fade=t=out:st={fade[0]:.3f}:d={fade[1]:.2f}:color=black[vout]")
     parts.append(f"[acat]volume={timeline.original_volume:.2f}[aorig]")
 
     music, length = timeline.music, timeline.music_length()

@@ -430,3 +430,12 @@ def test_grade_change_applies_moved_slider_to_all_selected(monkeypatch, tmp_path
     assert clips[0].grade == clips[2].grade and clips[1].grade is None
     grade.reset()
     assert clips[0].grade is None and clips[2].grade is None
+
+
+def test_fade_to_black_setting_changes_timeline():
+    panel = panel_with_clips()
+    assert panel._video_fade.isEnabled() and panel._video_fade.value() == 0
+    panel._video_fade.setValue(2.5)
+    assert panel.timeline.video_fade_out == 2.5
+    panel.set_timeline(Timeline(video_fade_out=1.0))
+    assert panel._video_fade.value() == 1.0 and not panel._video_fade.isEnabled()  # ohne Clips aus

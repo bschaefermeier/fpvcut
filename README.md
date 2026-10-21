@@ -14,7 +14,7 @@ them on a timeline with music and export the result with GPU acceleration.
   them as clips with tags and notes. The best ones can be marked as favorites (★).
 - **Clips tab:** All clips across all flight days, filterable by tags, favorites and free text.
 - **Timeline:** Arrange clips by drag and drop, trim and split them, and move, delete or color
-  several at once. Plus a music track with volume control and fade-out. The preview plays without
+  several at once. Plus a music track with volume control and fade-out, and an optional fade to black at the end. The preview plays without
   rendering first.
 - **Color correction:** Brightness, contrast, gamma, shadows, highlights, saturation, vibrance,
   color temperature and sharpness per clip, an automatic mode that sets these sliders with one

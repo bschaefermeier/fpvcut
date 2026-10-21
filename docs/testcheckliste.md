@@ -30,6 +30,8 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 - [ ] Strg+Klick und Umschalt+Klick wählen mehrere Clips; gemeinsam löschen, als Block verschieben,
       Farbregler wirkt auf alle ausgewählten
 - [ ] Musik wählen, Lautstärken, Ausblenden; Vorschau mit P, Ton bleibt nach Sprüngen synchron
+- [ ] Schwarzblende auf 2 s: Timeline zeigt am Ende einen dunklen Verlauf, Vorschau blendet das Bild
+      zum Schluss in Schwarz aus (auch nach einem Sprung kurz vors Ende)
 - [ ] App schließen und neu starten: Timeline ist wieder da
 - [ ] Strg+S speichert das Projekt (beim ersten Mal mit Dateiauswahl), Titel zeigt Namen und `*`
       bei Änderungen; Strg+N fragt nur bei ungespeicherten Änderungen (Speichern/Verwerfen/Abbrechen)
@@ -51,7 +53,8 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 - [ ] Strg+R, Profil Web: Datei entsteht, läuft im Windows-Player, Farbe und Musik wie in der Vorschau
 - [ ] Profil Original mit NVENC, Abbrechen löscht die halbfertige Datei
 - [ ] Bereich im Zeitlineal ziehen, Kante nachziehen; Strg+R bietet „Markierter Bereich“ an, Datei
-      enthält genau diesen Teil samt passender Musik; „Ganze Timeline“ rendert alles; Esc hebt ihn auf
+      enthält genau diesen Teil samt passender Musik und Schwarzblende am Bereichsende; „Ganze
+      Timeline“ rendert alles; Esc hebt ihn auf
 
 ## Ordner und Sicherung
 

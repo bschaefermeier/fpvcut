@@ -8,6 +8,10 @@ durch, wird daraus die fertige Version.
 
 ### Neu
 
+- **Schwarzblende am Ende:** Neben „Ausblenden“ der Musik stellt „Schwarzblende“ ein, wie viele
+  Sekunden das Bild am Ende in Schwarz ausblendet (0 = aus). Wirkt in Vorschau und Export; beim
+  Rendern eines markierten Bereichs blendet das Bild wie die Musik am Bereichsende aus. Die Timeline
+  zeigt die Blende als dunklen Verlauf über dem Ende der Videospur
 - **Nur einen Bereich rendern:** Im Zeitlineal über der Timeline einen Bereich ziehen (Kanten
   lassen sich nachziehen), oder unter Timeline → Bereich rendern per Umschalt+I/O am Abspielkopf
   bzw. aus den ausgewählten Clips setzen. Das Renderfenster bietet dann „Markierter Bereich“ oder

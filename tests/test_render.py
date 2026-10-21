@@ -53,6 +53,34 @@ def test_filter_fills_silence_and_mixes_music(tmp_path):
     assert cmd[-1] == str(tmp_path / "out.mp4")
 
 
+def test_filter_fades_picture_to_black(tmp_path):
+    tl = Timeline([TimelineClip("a", 1, 3, path=Path("a")), TimelineClip("b", 0, 2, path=Path("b"))])
+    assert "concat=n=2:v=1:a=1[vout][acat]" in build_filter(tl, settings(tmp_path))
+    tl.video_fade_out = 1
+    f = build_filter(tl, settings(tmp_path))
+    assert "concat=n=2:v=1:a=1[vcat][acat];[vcat]fade=t=out:st=3.000:d=1.00:color=black[vout]" in f
+
+
+def _brightness(path, t):
+    raw = subprocess.run(["ffmpeg", "-loglevel", "error", "-ss", str(t), "-i", str(path), "-frames:v", "1",
+                          "-vf", "scale=32:18,format=gray", "-f", "rawvideo", "-"], capture_output=True, check=True).stdout
+    return sum(raw) / max(len(raw), 1)
+
+
+@needs_ffmpeg
+def test_render_fades_to_black_at_end(tmp_path):
+    src = tmp_path / "src.mp4"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=25:duration=3",
+                    "-c:v", "libx264", "-preset", "ultrafast", str(src)], check=True)
+    tl = Timeline([TimelineClip("s", 0, 3, has_audio=False, path=src)], video_fade_out=1)
+    s = settings(tmp_path, width=320, height=180, fps=25, quality=30)
+    result = subprocess.run(build_command("ffmpeg", tl, s), capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert _brightness(s.output, 1.0) > 60
+    assert _brightness(s.output, 2.5) < _brightness(s.output, 1.0) * 0.7
+    assert _brightness(s.output, 2.96) < 25
+
+
 def test_parse_progress():
     assert parse_progress("out_time_us=2500000\n") == 2.5
     assert parse_progress("out_time_ms=-1") == 0
@@ -164,3 +192,31 @@ def test_render_dialog_cancel_removes_file(tmp_path, monkeypatch):
     QApplication.processEvents()
     assert not (tmp_path / "ziel" / "out.mp4").exists()
     assert dialog._status.text().startswith("Abgebrochen")
+
+
+@needs_ffmpeg
+def test_preview_fades_to_black_also_when_started_late(tmp_path):
+    """Die Vorschau blendet zur selben Timeline-Zeit aus, auch wenn sie mitten im Clip startet."""
+    from fpvcut.timeline.edl import build_edl, build_vf
+    from fpvcut.ui.player import load_mpv
+
+    mpv, _error = load_mpv()
+    if mpv is None:
+        pytest.skip("libmpv fehlt")
+    src = tmp_path / "src.mp4"
+    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=320x180:rate=25:duration=4",
+                    "-c:v", "libx264", "-preset", "ultrafast", str(src)], check=True)
+    tl = Timeline([TimelineClip("a", 0, 2, path=src, has_audio=False), TimelineClip("a", 2, 4, path=src, has_audio=False)],
+                  video_fade_out=1)
+    for start in (0.0, 2.5):
+        out = tmp_path / f"vorschau_{start}.mkv"
+        vf = build_vf(tl)
+        player = mpv.MPV(vo="null", ao="null", o=str(out), ovc="ffv1")
+        try:
+            player.loadfile(build_edl(tl), start=str(start), vf=f"%{len(vf.encode())}%{vf}")
+            player.wait_for_playback(timeout=30)
+        finally:
+            player.terminate()
+        rest = 4 - start  # so lang ist die Datei
+        assert _brightness(out, rest - 1.3) > 60, start
+        assert _brightness(out, rest - 0.05) < 25, start
