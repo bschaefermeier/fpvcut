@@ -14,6 +14,8 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import PurePath
 
+from fpvcut.i18n import format_date, translate
+
 _SEP = r"[_\-. ]"
 _YEAR_FIRST = re.compile(rf"^(\d{{4}}){_SEP}(\d{{1,2}}){_SEP}(\d{{1,2}})(?:{_SEP}+(.*))?$")
 _DAY_FIRST = re.compile(rf"^(\d{{1,2}}){_SEP}(\d{{1,2}}){_SEP}(\d{{2}}|\d{{4}})(?:{_SEP}+(.*))?$")
@@ -29,8 +31,8 @@ class FlightDay:
     @property
     def label(self) -> str:
         if self.date is None:
-            return self.folder_name
-        return f"{self.date:%d.%m.%Y} · {self.spot}" if self.spot else f"{self.date:%d.%m.%Y}"
+            return self.folder_name or translate("folder_names", "No folder")
+        return f"{format_date(self.date)} · {self.spot}" if self.spot else format_date(self.date)
 
     @property
     def canonical_name(self) -> str | None:
@@ -71,11 +73,11 @@ def flight_day_for(rel_path: str) -> FlightDay:
     """Flugtag einer Datei relativ zum Bibliotheksordner.
 
     Nimmt den nächstgelegenen Elternordner mit erkennbarem Datum, sonst den obersten Unterordner.
-    Dateien direkt im Bibliotheksordner landen unter "Ohne Ordner".
+    Dateien direkt im Bibliotheksordner landen unter "Ohne Ordner" (leerer Ordnername).
     """
     parents = PurePath(rel_path).parts[:-1]
     if not parents:
-        return FlightDay("Ohne Ordner", None, "")
+        return FlightDay("", None, "")  # Anzeige: „Ohne Ordner“ (siehe label)
     for folder in reversed(parents):
         day = parse_folder_name(folder)
         if day.date is not None:

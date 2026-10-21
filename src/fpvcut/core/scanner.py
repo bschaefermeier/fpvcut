@@ -11,6 +11,7 @@ from pathlib import Path
 from fpvcut.core.fingerprint import fingerprint
 from fpvcut.core.library import Library, RootFolder
 from fpvcut.core.probe import MediaInfo
+from fpvcut.i18n import translate
 
 VIDEO_EXTENSIONS = {".mp4", ".mov", ".mkv", ".avi", ".m4v", ".ts", ".mts", ".m2ts"}
 
@@ -47,7 +48,7 @@ def scan_root(
 ) -> ScanResult:
     result = ScanResult()
     if not root.path.is_dir():
-        result.errors.append(f"Ordner nicht erreichbar: {root.path}")
+        result.errors.append(translate("scanner", "Folder not reachable: {path}").format(path=root.path))
         return result  # z. B. externe Platte nicht angesteckt: nichts als fehlend markieren
 
     started = time.time()

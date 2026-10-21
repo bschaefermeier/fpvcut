@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from fpvcut.core.paths import vendor_dir
+from fpvcut.i18n import translate
 
 # Encoder, die für den Export interessant sind, in Reihenfolge der Bevorzugung.
 VIDEO_ENCODERS = {
@@ -41,7 +42,8 @@ def find_tool(name: str) -> Path:
     found = shutil.which(name)
     if found:
         return Path(found)
-    raise FFmpegNotFound(f"{name} wurde nicht gefunden (PATH, vendor/ffmpeg oder FPVCUT_{name.upper()}).")
+    raise FFmpegNotFound(translate("ffmpeg_tools", "{name} was not found (PATH, vendor/ffmpeg or {variable}).").format(
+        name=name, variable=f"FPVCUT_{name.upper()}"))
 
 
 def _run(args: list[str], timeout: float = 30) -> subprocess.CompletedProcess[str]:

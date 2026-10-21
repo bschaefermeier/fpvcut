@@ -15,6 +15,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fpvcut.core.library import Library
+from fpvcut.i18n import translate
 
 FORMAT = "fpvcut-favoriten"
 VERSION = 1
@@ -68,9 +69,9 @@ def export_to(library: Library, path: Path) -> int:
 def import_data(library: Library, data: dict) -> ImportResult:
     """Sicherung in die Bibliothek übernehmen; Vorhandenes bleibt, Doppeltes wird übersprungen."""
     if data.get("format") != FORMAT:
-        raise ValueError("Das ist keine FPVCut-Sicherung der Ausschnitte.")
+        raise ValueError(translate("backup", "This is not an FPVCut backup of clips."))
     if data.get("version", 0) > VERSION:
-        raise ValueError("Die Sicherung stammt aus einer neueren FPVCut-Version.")
+        raise ValueError(translate("backup", "The backup comes from a newer FPVCut version."))
     result = ImportResult()
     conn = library.conn
     with conn:

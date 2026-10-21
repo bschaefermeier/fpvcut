@@ -26,8 +26,8 @@ class ClipBar(QWidget):
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setCursor(Qt.CursorShape.IBeamCursor)
         self.setToolTip(
-            "Gelb: Ausschnitte, kräftig gelb = Favorit · Blau: aktuelle In/Out-Auswahl\n"
-            "Klick springt, Ziehen markiert einen Bereich"
+            self.tr("Yellow: clips, bright yellow = favorite · Blue: current in/out selection\n"
+                    "Click jumps, drag marks a range")
         )
         self._duration = 0.0
         self._clips: list[tuple[float, float | None, bool]] = []

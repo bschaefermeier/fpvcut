@@ -9,6 +9,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication
 
+from fpvcut import i18n
 from fpvcut.ui.app_icon import app_icon, set_windows_app_id
 from fpvcut.ui.main_window import MainWindow
 
@@ -49,6 +50,7 @@ def main() -> None:
     set_windows_app_id()
     app = QApplication(sys.argv)
     app.setApplicationName("FPVCut")
+    i18n.install(app)  # vor dem ersten Fenster, damit alle Texte übersetzt erscheinen
     app.setWindowIcon(app_icon())
     window = MainWindow()
     window.show()

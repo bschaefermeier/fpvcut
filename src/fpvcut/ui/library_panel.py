@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from fpvcut.core.folder_names import FlightDay
 from fpvcut.core.library import LibraryEntry
+from fpvcut.i18n import translate
 from fpvcut.ui.player import format_time
 from fpvcut.ui.mime import MIME_MEDIA
 
@@ -61,9 +62,9 @@ def clip_count_text(entry: LibraryEntry) -> str:
     """Anzahl der Ausschnitte für Vorlesetext und Tooltip, z. B. "3 Ausschnitte, davon 1 Favorit"."""
     if not entry.clip_count:
         return ""
-    text = f"{entry.clip_count} Ausschnitt" + ("e" if entry.clip_count != 1 else "")
+    text = translate("LibraryPanel", "%n clip(s)", "", entry.clip_count)
     if entry.favorite_count:
-        text += f", davon {entry.favorite_count} Favorit" + ("en" if entry.favorite_count != 1 else "")
+        text += translate("LibraryPanel", ", %n of them favorite(s)", "", entry.favorite_count)
     return text
 ENTRY_ROLE = Qt.ItemDataRole.UserRole
 
@@ -84,12 +85,14 @@ def format_video(entry: LibraryEntry) -> str:
 def entry_tooltip(entry: LibraryEntry) -> str:
     lines = [str(entry.path)]
     if entry.missing:
-        lines.append("Datei fehlt (Ordner verschoben, gelöscht oder Laufwerk nicht angeschlossen)")
+        lines.append(translate("LibraryPanel", "File missing (folder moved, deleted or drive not connected)"))
     if entry.width:
-        lines.append(f"{entry.width}×{entry.height} · {entry.fps:g} fps · {entry.vcodec} {entry.bit_depth or ''} Bit")
+        bits = translate("LibraryPanel", "{bits} bit").format(bits=entry.bit_depth or "")
+        lines.append(f"{entry.width}×{entry.height} · {entry.fps:g} fps · {entry.vcodec} {bits}")
     if entry.acodec:
         lines.append(f"Audio: {entry.acodec}")
-    lines.append(f"{entry.size / 1_000_000:.1f} MB · Dauer {format_duration(entry.duration)}")
+    lines.append(translate("LibraryPanel", "{size} MB · duration {duration}").format(
+        size=f"{entry.size / 1_000_000:.1f}", duration=format_duration(entry.duration)))
     if entry.clip_count:
         lines.append(clip_count_text(entry))
     return "\n".join(lines)
@@ -133,7 +136,7 @@ class LibraryPanel(QWidget):
         super().__init__(parent)
         self._entries: list[LibraryEntry] = []
 
-        self._only_new = QCheckBox("Nur neue", self)
+        self._only_new = QCheckBox(self.tr("Only new"), self)
         self._only_new.toggled.connect(lambda _checked: self._rebuild())
         self._summary = QLabel(self)
         header = QHBoxLayout()
@@ -144,7 +147,7 @@ class LibraryPanel(QWidget):
         self._tree = _LibraryTree(self)
         self._tree.setDragEnabled(True)
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
-        self._tree.setHeaderLabels(["Video", "Dauer", "Format"])
+        self._tree.setHeaderLabels([self.tr("Video"), self.tr("Duration"), self.tr("Format")])
         self._tree.header().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self._tree.header().setStretchLastSection(False)
         # Dauer und Format nur so breit wie nötig, damit der Name möglichst viel Platz bekommt.
@@ -161,7 +164,7 @@ class LibraryPanel(QWidget):
         self._tree.customContextMenuRequested.connect(self._show_context_menu)
 
         self._placeholder = QLabel(
-            "Noch kein Bibliotheksordner.\nDatei → Bibliotheksordner hinzufügen …", self
+            self.tr("No library folder yet.\nFile → Add library folder …"), self
         )
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -199,7 +202,7 @@ class LibraryPanel(QWidget):
             group.setFont(0, bold)
             group.setToolTip(0, day.folder_name)
             if new_count:
-                group.setText(2, f"{new_count} neu")
+                group.setText(2, self.tr("{count} new").format(count=new_count))
                 group.setForeground(2, QBrush(NEW_COLOR))
             for entry in entries:
                 item = self._make_item(entry, bold)
@@ -228,7 +231,7 @@ class LibraryPanel(QWidget):
         item.setData(0, ENTRY_ROLE, entry)
         item.setToolTip(0, entry_tooltip(entry))
         if entry.missing:
-            item.setText(0, f"{name} (fehlt)")
+            item.setText(0, self.tr("{name} (missing)").format(name=name))
             for col in range(3):
                 item.setForeground(col, QBrush(QColor("gray")))
         elif entry.is_new:
@@ -255,8 +258,11 @@ class LibraryPanel(QWidget):
     def _update_summary(self) -> None:
         new = sum(e.is_new for e in self._entries)
         days = len({e.flight_day for e in self._entries})
-        text = f"{len(self._entries)} Videos · {days} Flugtage"
-        self._summary.setText(f"{text} · <b style='color:{NEW_COLOR.name()}'>{new} neu</b>" if new else text)
+        text = self.tr("%n video(s)", "", len(self._entries)) + " · " + self.tr("%n flight day(s)", "", days)
+        if new:
+            badge = self.tr("{count} new").format(count=new)
+            text += f" · <b style='color:{NEW_COLOR.name()}'>{badge}</b>"
+        self._summary.setText(text)
 
     def _update_placeholder(self) -> None:
         empty = not self._entries
@@ -292,26 +298,23 @@ class LibraryPanel(QWidget):
         new = [e.media_id for e in entries if e.is_new]
         seen = [e.media_id for e in entries if not e.is_new]
 
-        def plural(ids: list[int]) -> str:
-            return "Video" if len(ids) == 1 else f"{len(ids)} Videos"
-
         menu = QMenu(self)
         if new:
-            menu.addAction(f"{plural(new)} als gesichtet markieren", lambda: self.review_toggled.emit(new, True))
+            menu.addAction(self.tr("Mark %n video(s) as reviewed", "", len(new)), lambda: self.review_toggled.emit(new, True))
         if seen:
-            menu.addAction(f"{plural(seen)} als neu markieren", lambda: self.review_toggled.emit(seen, False))
+            menu.addAction(self.tr("Mark %n video(s) as new", "", len(seen)), lambda: self.review_toggled.emit(seen, False))
         available = [e for e in entries if not e.missing]
         if available:
             ids = [e.media_id for e in available]
             menu.addSeparator()
             menu.addAction(
-                f"{plural(ids)} zur Timeline hinzufügen (E)", lambda: self.add_to_timeline_requested.emit(ids)
+                self.tr("Add %n video(s) to timeline (E)", "", len(ids)), lambda: self.add_to_timeline_requested.emit(ids)
             )
         if len({e.path.parent for e in available}) == 1:
             folder = available[0].path.parent
             menu.addSeparator()
             menu.addAction(
-                "Ordner im Explorer öffnen", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
+                self.tr("Open folder in file manager"), lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(folder)))
             )
         menu.exec(self._tree.viewport().mapToGlobal(pos))
 

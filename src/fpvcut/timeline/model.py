@@ -10,6 +10,8 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+from fpvcut.i18n import translate
+
 FORMAT_VERSION = 1
 MIN_CLIP = 0.2  # kürzer als 0,2 s lässt sich ein Clip nicht trimmen oder teilen
 
@@ -161,7 +163,7 @@ class Timeline:
     @classmethod
     def from_dict(cls, data: dict) -> Timeline:
         if data.get("version", 1) > FORMAT_VERSION:
-            raise ValueError("Die Timeline stammt aus einer neueren FPVCut-Version.")
+            raise ValueError(translate("model", "The timeline comes from a newer FPVCut version."))
         music = data.get("music")
         return cls(
             clips=[TimelineClip(**c) for c in data.get("video_track", [])],

@@ -10,7 +10,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -31,20 +31,20 @@ from fpvcut.ui.timeline_panel import TimelinePanel
 
 # Regler: Name → (Beschriftung, Schritte pro Einheit, Anzeigeformat)
 SLIDERS = {
-    "brightness": ("Helligkeit", 1000, lambda v: f"{v:+.2f}"),
-    "contrast": ("Kontrast", 1000, lambda v: f"{v:.2f}"),
-    "gamma": ("Gamma", 1000, lambda v: f"{v:.2f}"),
-    "shadows": ("Schatten", 100, lambda v: f"{v:+.2f}"),
-    "highlights": ("Lichter", 100, lambda v: f"{v:+.2f}"),
-    "saturation": ("Sättigung", 1000, lambda v: f"{v:.2f}"),
-    "vibrance": ("Dynamik", 100, lambda v: f"{v:+.2f}"),
-    "temperature": ("Temperatur", 1, lambda v: f"{v:.0f} K"),
-    "sharpness": ("Schärfe", 100, lambda v: f"{v:+.2f}"),
+    "brightness": (QT_TRANSLATE_NOOP("GradePanel", "Brightness"), 1000, lambda v: f"{v:+.2f}"),
+    "contrast": (QT_TRANSLATE_NOOP("GradePanel", "Contrast"), 1000, lambda v: f"{v:.2f}"),
+    "gamma": (QT_TRANSLATE_NOOP("GradePanel", "Gamma"), 1000, lambda v: f"{v:.2f}"),
+    "shadows": (QT_TRANSLATE_NOOP("GradePanel", "Shadows"), 100, lambda v: f"{v:+.2f}"),
+    "highlights": (QT_TRANSLATE_NOOP("GradePanel", "Highlights"), 100, lambda v: f"{v:+.2f}"),
+    "saturation": (QT_TRANSLATE_NOOP("GradePanel", "Saturation"), 1000, lambda v: f"{v:.2f}"),
+    "vibrance": (QT_TRANSLATE_NOOP("GradePanel", "Vibrance"), 100, lambda v: f"{v:+.2f}"),
+    "temperature": (QT_TRANSLATE_NOOP("GradePanel", "Temperature"), 1, lambda v: f"{v:.0f} K"),
+    "sharpness": (QT_TRANSLATE_NOOP("GradePanel", "Sharpness"), 100, lambda v: f"{v:+.2f}"),
 }
 TOOLTIPS = {
-    "shadows": "Dunkle Bildteile aufhellen (rechts) oder absenken (links)",
-    "highlights": "Helle Bildteile zurückholen (links), z. B. einen fast weißen Himmel",
-    "vibrance": "Wie Sättigung, hebt aber blasse Farben stärker an und schont kräftige",
+    "shadows": QT_TRANSLATE_NOOP("GradePanel", "Brighten (right) or darken (left) the dark parts of the image"),
+    "highlights": QT_TRANSLATE_NOOP("GradePanel", "Recover (left) the bright parts of the image, e.g. an almost white sky"),
+    "vibrance": QT_TRANSLATE_NOOP("GradePanel", "Like saturation, but boosts pale colors more and spares strong ones"),
 }
 
 
@@ -70,13 +70,14 @@ class GradePanel(QWidget):
             slider.setRange(round(low * steps), round(high * steps))
             slider.setValue(round(neutral * steps))
             slider.setPageStep(max((slider.maximum() - slider.minimum()) // 20, 1))
-            slider.setToolTip("\n".join(filter(None, [TOOLTIPS.get(name), "Doppelklick: zurück auf neutral"])))
+            tooltip = self.tr(TOOLTIPS[name]) if name in TOOLTIPS else ""
+            slider.setToolTip("\n".join(filter(None, [tooltip, self.tr("Double-click: back to neutral")])))
             slider.sliderPressed.connect(self._on_press)
             slider.sliderReleased.connect(self._on_release)
             slider.valueChanged.connect(self._on_value)
             value = QLabel(self)
             value.setMinimumWidth(56)
-            value.setToolTip("Doppelklick: zurück auf neutral")
+            value.setToolTip(self.tr("Double-click: back to neutral"))
             # Doppelklick auf Regler oder Wert setzt zurück (Ereignisfilter, da Qt-Methoden
             # in PySide nicht per Zuweisung überschrieben werden können).
             slider.installEventFilter(self)
@@ -85,36 +86,36 @@ class GradePanel(QWidget):
             row = QHBoxLayout()
             row.addWidget(slider, 1)
             row.addWidget(value)
-            form.addRow(label + ":", row)
+            form.addRow(self.tr("{label}:").format(label=self.tr(label)), row)
             self.sliders[name] = slider
             self._labels[name] = value
 
-        self._lut_label = QLabel("keine", self)
+        self._lut_label = QLabel(self.tr("none"), self)
         self._lut_label.setWordWrap(True)
-        choose = QPushButton("LUT wählen …", self)
-        choose.setToolTip("3D-LUT im .cube-Format, z. B. zum Umwandeln von D-Log/Flat-Aufnahmen")
+        choose = QPushButton(self.tr("Choose LUT …"), self)
+        choose.setToolTip(self.tr("3D LUT in .cube format, e.g. for converting D-Log/flat footage"))
         choose.clicked.connect(self.choose_lut)
         self._clear_lut = QToolButton(self)
         self._clear_lut.setText("✕")
-        self._clear_lut.setToolTip("LUT entfernen")
+        self._clear_lut.setToolTip(self.tr("Remove LUT"))
         self._clear_lut.clicked.connect(lambda: self.set_lut(None))
         lut_row = QHBoxLayout()
         lut_row.addWidget(choose)
         lut_row.addWidget(self._clear_lut)
         lut_row.addStretch(1)
-        form.addRow("LUT:", lut_row)
+        form.addRow(self.tr("LUT:"), lut_row)
         form.addRow("", self._lut_label)
 
-        self._auto = QPushButton("✨ Automatisch", self)
+        self._auto = QPushButton(self.tr("✨ Automatic"), self)
         self._auto.setToolTip(
-            "Misst einige Bilder des Clips und stellt Helligkeit, Kontrast, Gamma, Schatten, Lichter, "
-            "Dynamik und Temperatur passend ein (LUT und Schärfe bleiben). Danach von Hand nachstellbar."
+            self.tr("Measures a few frames of the clip and sets brightness, contrast, gamma, shadows, highlights, "
+                    "vibrance and temperature to suit (LUT and sharpness stay). Can be fine-tuned by hand afterwards.")
         )
         self._auto.clicked.connect(self.auto_grade)
-        self._reset = QPushButton("Zurücksetzen", self)
+        self._reset = QPushButton(self.tr("Reset"), self)
         self._reset.clicked.connect(self.reset)
-        self._to_all = QPushButton("Auf alle Clips übertragen", self)
-        self._to_all.setToolTip("Dieselbe Korrektur für alle Clips der Timeline, z. B. bei gleicher Kamera")
+        self._to_all = QPushButton(self.tr("Apply to all clips"), self)
+        self._to_all.setToolTip(self.tr("The same correction for all clips of the timeline, e.g. with the same camera"))
         self._to_all.clicked.connect(self.apply_to_all)
         buttons = QHBoxLayout()
         buttons.addWidget(self._reset)
@@ -164,30 +165,31 @@ class GradePanel(QWidget):
         for widget in (*self.sliders.values(), self._auto, self._reset, self._to_all, self._clear_lut):
             widget.setEnabled(enabled)
         several = enabled and len(self.targets()) > 1
-        self._to_all.setText("Auf ausgewählte Clips übertragen" if several else "Auf alle Clips übertragen")
+        self._to_all.setText(self.tr("Apply to selected clips") if several else self.tr("Apply to all clips"))
         self._to_all.setToolTip(
-            "Die komplette Korrektur dieses Clips für alle ausgewählten Clips" if several
-            else "Dieselbe Korrektur für alle Clips der Timeline, z. B. bei gleicher Kamera"
+            self.tr("The complete correction of this clip for all selected clips") if several
+            else self.tr("The same correction for all clips of the timeline, e.g. with the same camera")
         )
         if several:
             targets = self.targets()
             clip = self.timeline_panel.timeline.clips[index]
             self._hint.setText(
-                f"{len(targets)} Clips ausgewählt. Die Regler zeigen „{clip.label}“ (Clip {index + 1}); "
-                "eine Änderung übernimmt nur diesen Wert in alle ausgewählten Clips."
+                self.tr("{count} clips selected. The sliders show “{label}” (clip {number}); "
+                        "a change applies only this value to all selected clips.").format(
+                    count=len(targets), label=clip.label, number=index + 1)
             )
         elif enabled:
             clip = self.timeline_panel.timeline.clips[index]
-            self._hint.setText(f"Farbkorrektur für „{clip.label}“ (Clip {index + 1}).")
+            self._hint.setText(self.tr("Color correction for “{label}” (clip {number}).").format(label=clip.label, number=index + 1))
         else:
-            self._hint.setText("Einen Clip in der Timeline anklicken, um seine Farben zu korrigieren.")
+            self._hint.setText(self.tr("Click a clip in the timeline to correct its colors."))
         grade = self.current_grade()
         self._updating = True
         for name, slider in self.sliders.items():
             steps = SLIDERS[name][1]
             slider.setValue(round(getattr(grade, name) * steps))
             self._labels[name].setText(SLIDERS[name][2](getattr(grade, name)))
-        self._lut_label.setText(Path(grade.lut).name if grade.lut else "keine")
+        self._lut_label.setText(Path(grade.lut).name if grade.lut else self.tr("none"))
         self._lut_label.setToolTip(grade.lut or "")
         self._clear_lut.setEnabled(enabled and bool(grade.lut))
         self._updating = False
@@ -247,7 +249,7 @@ class GradePanel(QWidget):
         if self.current_index() is None:
             return
         current = self.current_grade().lut
-        path, _ = QFileDialog.getOpenFileName(self, "LUT wählen", current or "", "3D-LUT (*.cube)")
+        path, _ = QFileDialog.getOpenFileName(self, self.tr("Choose LUT"), current or "", self.tr("3D LUT (*.cube)"))
         if path:
             self.set_lut(path)
 
@@ -285,7 +287,7 @@ class GradePanel(QWidget):
             self.refresh()
             self.grade_changed.emit()
         if problems:
-            self._hint.setText("Automatik nicht möglich für: " + ", ".join(problems))
+            self._hint.setText(self.tr("Automatic not possible for: {clips}").format(clips=", ".join(problems)))
 
     def reset(self) -> None:
         """Alle ausgewählten Clips ganz auf neutral."""

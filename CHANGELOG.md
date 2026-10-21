@@ -8,6 +8,10 @@ durch, wird daraus die fertige Version.
 
 ### Neu
 
+- **Englisch und Deutsch:** Die Oberfläche gibt es jetzt auf Englisch und Deutsch. FPVCut folgt
+  der Systemsprache, unter **Datei → Sprache** lässt sich eine feste Sprache wählen (gilt ab dem
+  nächsten Start). Auch Standarddialoge und Datumsangaben folgen der Sprache. Projektdateien,
+  Ordnernamen und Sicherungen bleiben unverändert
 - **Schärfe:** neuer Regler im Reiter Farbe, nach rechts schärfer, nach links weicher; wirkt in
   Vorschau und Export
 - **Automatische Farbkorrektur (✨ Automatisch):** misst fünf Bilder jedes ausgewählten Clips (nach

@@ -34,19 +34,19 @@ class FavoriteDialog(QDialog):
         known_tags: list[str],
         tags: list[str] = (),
         note: str = "",
-        title: str = "Ausschnitt speichern",
+        title: str | None = None,
         favorite: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle(title)
+        self.setWindowTitle(title or self.tr("Save clip"))
         self.setMinimumWidth(420)
 
         self.tags_edit = QLineEdit(", ".join(tags), self)
-        self.tags_edit.setPlaceholderText("z. B. Crash, Flip, Gap (mit Komma getrennt)")
+        self.tags_edit.setPlaceholderText(self.tr("e.g. crash, flip, gap (comma-separated)"))
         self.tags_edit.textChanged.connect(self._sync_buttons)
         self.note_edit = QLineEdit(note, self)
-        self.note_edit.setPlaceholderText("optional")
+        self.note_edit.setPlaceholderText(self.tr("optional"))
 
         # Bekannte Tags als Knöpfe zum schnellen An- und Abwählen; brechen um, ab 8 Zeilen wird gescrollt.
         self._quick = TagArea(max_rows=8, parent=self)
@@ -58,14 +58,14 @@ class FavoriteDialog(QDialog):
             self._buttons[tag.lower()].toggled.connect(lambda checked, t=tag: self._toggle_tag(t, checked))
 
         form = QFormLayout()
-        form.addRow("Ausschnitt:", QLabel(range_text, self))
-        form.addRow("Tags:", self.tags_edit)
+        form.addRow(self.tr("Clip:"), QLabel(range_text, self))
+        form.addRow(self.tr("Tags:"), self.tags_edit)
         if self._buttons:
             form.addRow("", self._quick)
-        form.addRow("Notiz:", self.note_edit)
-        self.favorite_check = QCheckBox("★ Favorit", self)
+        form.addRow(self.tr("Note:"), self.note_edit)
+        self.favorite_check = QCheckBox(self.tr("★ Favorite"), self)
         self.favorite_check.setChecked(favorite)
-        self.favorite_check.setToolTip("Besonders gute Ausschnitte; im Ausschnitte-Reiter separat filterbar")
+        self.favorite_check.setToolTip(self.tr("Especially good clips; can be filtered separately in the Clips tab"))
         form.addRow("", self.favorite_check)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)

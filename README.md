@@ -25,6 +25,8 @@ sie in einer Timeline mit Musik zusammenstellen und das Ergebnis mit GPU-Beschle
   Encodiert wird mit NVIDIA NVENC, ohne passende Grafikkarte auf der CPU.
 - **Ordner umbenennen:** Flugtag-Ordner lassen sich einheitlich ins Schema `JJJJ-MM-TT_Spot`
   bringen, mit Vorschau und Rückgängig.
+- **Sprachen:** Englisch und Deutsch. FPVCut folgt der Systemsprache; unter **Datei → Sprache**
+  lässt sich eine feste Sprache wählen (gilt ab dem nächsten Start).
 
 ## Installation
 
@@ -138,6 +140,20 @@ uv run --with pyinstaller pyinstaller --noconfirm packaging/fpvcut.spec
 
 Das Ergebnis liegt unter `dist\FPVCut\`. Das Vorgehen für neue Versionen ist in
 [docs/release.md](docs/release.md) beschrieben.
+
+### Übersetzungen
+
+Die Texte stehen auf Englisch im Code (`self.tr(...)`), die Übersetzungen als Qt-Dateien unter
+`src/fpvcut/resources/i18n/`. Nach Textänderungen gleicht dieser Befehl die Dateien ab und
+erzeugt die `.qm`-Dateien neu:
+
+```powershell
+uv run python packaging/update_translations.py
+```
+
+Neue Texte sind danach in `fpvcut_de.ts` als unübersetzt markiert; `uv run pyside6-linguist` zeigt
+sie an. Eine neue Sprache entsteht als Kopie von `fpvcut_de.ts` (z. B. `fpvcut_fr.ts`) plus ein
+Eintrag in `LANGUAGES` in `src/fpvcut/i18n.py`. Übersetzungen sind willkommen.
 
 ## Lizenz
 

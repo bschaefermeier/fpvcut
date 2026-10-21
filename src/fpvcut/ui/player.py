@@ -123,8 +123,8 @@ class PlayerWidget(QWidget):
         self._save_button = QPushButton(self)
         self._save_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton))
         self._save_button.setFixedWidth(40)
-        self._save_button.setToolTip("Markierten Bereich als Ausschnitt speichern (F)")
-        self._save_button.setAccessibleName("Ausschnitt speichern")
+        self._save_button.setToolTip(self.tr("Save the marked range as a clip (F)"))
+        self._save_button.setAccessibleName(self.tr("Save clip"))
         self._save_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._save_button.setEnabled(False)
         self._save_button.clicked.connect(self.save_requested)
@@ -170,9 +170,9 @@ class PlayerWidget(QWidget):
         mpv, error = load_mpv()
         if mpv is None:
             self._show_message(
-                "libmpv wurde nicht gefunden.\n\n"
-                "Bitte libmpv-2.dll nach vendor/mpv legen (siehe README).\n\n"
-                f"Details: {error}"
+                self.tr("libmpv was not found.\n\n"
+                        "Please put libmpv-2.dll into vendor/mpv (see README).\n\n"
+                        "Details: {error}").format(error=error)
             )
             return
         # libmpv verlangt einen C-Locale für Zahlen, Qt setzt sonst den System-Locale.
@@ -192,7 +192,7 @@ class PlayerWidget(QWidget):
                 hr_seek_demuxer_offset=DEMUXER_OFFSET,
             )
         except Exception as exc:  # noqa: BLE001  (mpv meldet Fehler als diverse Typen)
-            self._show_message(f"mpv konnte nicht gestartet werden:\n{exc}")
+            self._show_message(self.tr("mpv could not be started:\n{error}").format(error=exc))
             return
         self._player.observe_property("time-pos", lambda _n, v: self._mpv_time.emit(v))
         self._player.observe_property("duration", lambda _n, v: self._mpv_duration.emit(v))

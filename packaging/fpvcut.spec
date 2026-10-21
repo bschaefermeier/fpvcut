@@ -19,6 +19,7 @@ a = Analysis(
     [str(root / "packaging" / "fpvcut_main.py")],
     pathex=[str(root / "src")],
     datas=[(str(resources / "fpvcut.svg"), "fpvcut/resources")]
+    + [(str(qm), "fpvcut/resources/i18n") for qm in sorted((resources / "i18n").glob("*.qm"))]
     + [(str(src), dest) for src, dest in vendor],
     hiddenimports=["mpv"],
     excludes=["tkinter", "pytest"],

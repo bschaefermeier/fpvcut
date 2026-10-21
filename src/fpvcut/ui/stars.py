@@ -6,6 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QTreeWidgetItem
 
+from fpvcut.i18n import translate
+
 FAVORITE_COLOR = QColor("#ffc400")  # wie die Favoriten-Balken unter der Zeitleiste
 PLAIN_COLOR = QColor(128, 128, 128, 140)
 
@@ -14,7 +16,8 @@ def set_star(item: QTreeWidgetItem, column: int, favorite: bool) -> None:
     item.setText(column, "★" if favorite else "☆")
     item.setForeground(column, QBrush(FAVORITE_COLOR if favorite else PLAIN_COLOR))
     item.setTextAlignment(column, Qt.AlignmentFlag.AlignCenter)
-    item.setToolTip(column, "Favorit (Klick entfernt die Markierung)" if favorite else "Klick markiert als Favorit")
+    item.setToolTip(column, translate("stars", "Favorite (click removes the mark)") if favorite
+                    else translate("stars", "Click marks as favorite"))
     font = QFont(item.font(column))
     font.setBold(favorite)
     item.setFont(column, font)

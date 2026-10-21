@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QT_TRANSLATE_NOOP, Qt
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -28,7 +28,11 @@ from fpvcut.core.renamer import (
     undo_renames, write_log,
 )
 
-STATUS_TEXT = {OK: "OK", CHECK: "Prüfen", CONFLICT: "Konflikt", NO_DATE: "Kein Datum", SAME: "Passt"}
+STATUS_TEXT = {
+    OK: QT_TRANSLATE_NOOP("RenameDialog", "OK"), CHECK: QT_TRANSLATE_NOOP("RenameDialog", "Check"),
+    CONFLICT: QT_TRANSLATE_NOOP("RenameDialog", "Conflict"), NO_DATE: QT_TRANSLATE_NOOP("RenameDialog", "No date"),
+    SAME: QT_TRANSLATE_NOOP("RenameDialog", "Fits"),
+}
 STATUS_COLOR = {OK: "#3a9a4a", CHECK: "#d08a00", CONFLICT: "#d04040", NO_DATE: "#888888", SAME: "#888888"}
 COL_CHECK, COL_OLD, COL_NEW, COL_NOTE = range(4)
 
@@ -42,7 +46,7 @@ class RenameDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Ordner ins Schema JJJJ-MM-TT_Spot umbenennen")
+        self.setWindowTitle(self.tr("Rename folders to the scheme YYYY-MM-DD_Spot"))
         self.resize(900, 560)
         self.library = library
         self.log_dir = log_dir
@@ -54,15 +58,15 @@ class RenameDialog(QDialog):
         self.items = plan_renames([(r.id, r.path) for r in library.roots()])
 
         intro = QLabel(
-            "Neue Namen lassen sich per Doppelklick ändern. Unklare Fälle (gelb) sind nicht "
-            "vorausgewählt, Konflikte (rot) müssen erst einen anderen Namen bekommen. "
-            "Ausschnitte und Timeline bleiben erhalten.", self)
+            self.tr("Double-click a new name to change it. Unclear cases (yellow) are not "
+                    "preselected, conflicts (red) need a different name first. "
+                    "Clips and timeline are kept."), self)
         intro.setWordWrap(True)
-        self._show_same = QCheckBox("Auch Ordner zeigen, die schon passen", self)
+        self._show_same = QCheckBox(self.tr("Also show folders that already fit"), self)
         self._show_same.toggled.connect(self._fill)
 
         self.table = QTableWidget(0, 4, self)
-        self.table.setHorizontalHeaderLabels(["", "Ordner", "Neuer Name", "Hinweis"])
+        self.table.setHorizontalHeaderLabels(["", self.tr("Folder"), self.tr("New name"), self.tr("Note")])
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(COL_CHECK, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(COL_OLD, QHeaderView.ResizeMode.Stretch)
@@ -76,10 +80,10 @@ class RenameDialog(QDialog):
         self._apply = QPushButton(self)
         self._apply.setDefault(True)
         self._apply.clicked.connect(self.apply)
-        self._undo = QPushButton("Rückgängig", self)
+        self._undo = QPushButton(self.tr("Undo"), self)
         self._undo.clicked.connect(self.undo)
         self._undo.hide()
-        close = QPushButton("Schließen", self)
+        close = QPushButton(self.tr("Close"), self)
         close.clicked.connect(self.accept)
         buttons = QHBoxLayout()
         buttons.addWidget(self._undo)
@@ -117,7 +121,8 @@ class RenameDialog(QDialog):
             old.setToolTip(str(item.path))
             new = QTableWidgetItem(item.new_name)
             new.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsEditable)
-            note = QTableWidgetItem(f"{STATUS_TEXT[item.status]}{': ' + item.note if item.note else ''}")
+            status = self.tr(STATUS_TEXT[item.status])
+            note = QTableWidgetItem(f"{status}: {item.note}" if item.note else status)
             note.setFlags(Qt.ItemFlag.ItemIsEnabled)
             note.setToolTip(note.text())
             note.setForeground(QBrush(QColor(STATUS_COLOR[item.status])))
@@ -156,19 +161,19 @@ class RenameDialog(QDialog):
     def _update_summary(self) -> None:
         counts = {s: sum(1 for i in self.items if i.status == s) for s in STATUS_TEXT}
         if not self.items:
-            text = "Keine Flugtag-Ordner gefunden. Sind Bibliotheksordner eingetragen und erreichbar?"
+            text = self.tr("No flight day folders found. Are library folders set up and reachable?")
         else:
-            parts = [f"{counts[OK]} eindeutig"]
-            for status, label in ((CHECK, "zu prüfen"), (CONFLICT, "mit Konflikt"), (NO_DATE, "ohne Datum"),
-                                  (SAME, "passen schon")):
+            parts = [self.tr("{count} clear").format(count=counts[OK])]
+            for status, label in ((CHECK, self.tr("{count} to check")), (CONFLICT, self.tr("{count} with conflict")),
+                                  (NO_DATE, self.tr("{count} without date")), (SAME, self.tr("{count} already fit"))):
                 if counts[status]:
-                    parts.append(f"{counts[status]} {label}")
-            text = "Ordner: " + ", ".join(parts)
+                    parts.append(label.format(count=counts[status]))
+            text = self.tr("Folders: {parts}").format(parts=", ".join(parts))
         if self._done:
             text = self._result_text + "\n" + text
         self._summary.setText(text)
         n = len(self.selected())
-        self._apply.setText(f"{n} Ordner umbenennen")
+        self._apply.setText(self.tr("Rename %n folder(s)", "", n))
         self._apply.setEnabled(n > 0)
 
     # --- Umbenennen ------------------------------------------------------
@@ -179,8 +184,8 @@ class RenameDialog(QDialog):
             return None
         if confirm:
             answer = QMessageBox.question(
-                self, "Umbenennen", f"{len(chosen)} Ordner jetzt umbenennen?\n\n"
-                "Ein geöffnetes Video wird dafür geschlossen.")
+                self, self.tr("Rename"),
+                self.tr("Rename %n folder(s) now?\n\nAn open video will be closed for this.", "", len(chosen)))
             if answer != QMessageBox.StandardButton.Yes:
                 return None
         if self.before_apply:
@@ -193,9 +198,9 @@ class RenameDialog(QDialog):
                 write_log(result.done, self.log_dir / f"umbenannt_{datetime.now():%Y-%m-%d_%H%M%S}.json")
             except OSError:
                 pass
-        self._result_text = f"{len(result.done)} Ordner umbenannt."
+        self._result_text = self.tr("%n folder(s) renamed.", "", len(result.done))
         if result.errors:
-            self._result_text += " Nicht möglich:\n" + "\n".join(result.errors[:8])
+            self._result_text += self.tr(" Not possible:") + "\n" + "\n".join(result.errors[:8])
         self._undo.setVisible(bool(result.done))
         self._replan()
         return result
@@ -208,9 +213,9 @@ class RenameDialog(QDialog):
         result = undo_renames(self._done, self.library.conn)
         self.changed = self.changed or bool(result.done)
         self._done = []
-        self._result_text = f"{len(result.done)} Umbenennungen zurückgenommen."
+        self._result_text = self.tr("%n rename(s) undone.", "", len(result.done))
         if result.errors:
-            self._result_text += " Nicht möglich:\n" + "\n".join(result.errors[:8])
+            self._result_text += self.tr(" Not possible:") + "\n" + "\n".join(result.errors[:8])
         self._undo.hide()
         self._replan(keep_message=True)
         return result

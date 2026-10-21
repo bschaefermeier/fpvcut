@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 
 from fpvcut.core.folder_names import _DAY_FIRST, _make_date, parse_folder_name
 from fpvcut.core.scanner import VIDEO_EXTENSIONS
+from fpvcut.i18n import format_date, translate
 
 # Ab hier gelten Daten als plausibel für FPV-Aufnahmen.
 EARLIEST_YEAR = 2010
@@ -68,14 +69,14 @@ class RenameResult:
 def _date_warning(name: str, parsed: date, today: date) -> str:
     """Unklare Fälle: Datum in der Zukunft, sehr alt, oder auch anders herum lesbar."""
     if parsed > today:
-        return f"Datum {parsed:%d.%m.%Y} liegt in der Zukunft"
+        return translate("renamer", "Date {date} is in the future").format(date=format_date(parsed))
     if parsed.year < EARLIEST_YEAR:
-        return f"Datum {parsed:%d.%m.%Y} ist ungewöhnlich alt"
+        return translate("renamer", "Date {date} is unusually old").format(date=format_date(parsed))
     if m := _DAY_FIRST.match(name):
         # 12_08_15 kann 12.08.2015 oder 15.08.2012 sein.
         alt = _make_date(m.group(1), m.group(2), m.group(3)) if len(m.group(3)) == 2 else None
         if alt and alt != parsed and EARLIEST_YEAR <= alt.year and alt <= today:
-            return f"könnte auch {alt:%d.%m.%Y} sein"
+            return translate("renamer", "could also be {date}").format(date=format_date(alt))
     return ""
 
 
@@ -125,10 +126,10 @@ def refresh_status(items: list[RenameItem]) -> None:
         name = item.new_name
         parsed = parse_folder_name(item.old_name).date
         if name == item.old_name:
-            item.status, item.note = (NO_DATE, "neuen Namen von Hand eintragen") if parsed is None \
-                else (SAME, "passt schon")
+            item.status, item.note = (NO_DATE, translate("renamer", "enter a new name by hand")) if parsed is None \
+                else (SAME, translate("renamer", "already fits"))
         elif not name.strip() or _INVALID.search(name) or name.endswith((" ", ".")):
-            item.status, item.note = CONFLICT, "ungültiger Ordnername"
+            item.status, item.note = CONFLICT, translate("renamer", "invalid folder name")
         else:
             parent = item.path.parent
             if parent not in listings:
@@ -138,11 +139,13 @@ def refresh_status(items: list[RenameItem]) -> None:
                     listings[parent] = set()
             exists = name.casefold() in listings[parent] and name.casefold() != item.old_name.casefold()
             if exists:
-                item.status, item.note = CONFLICT, f"„{name}“ gibt es dort schon, z. B. _2 anhängen"
+                item.status, item.note = CONFLICT, translate(
+                    "renamer", "“{name}” already exists there, e.g. append _2").format(name=name)
             elif targets.get((item.root_id, item.parent_rel, name.casefold()), 0) > 1:
-                item.status, item.note = CONFLICT, "mehrere Ordner bekämen diesen Namen, z. B. _2 anhängen"
+                item.status, item.note = CONFLICT, translate(
+                    "renamer", "several folders would get this name, e.g. append _2")
             elif not _SCHEMA.match(name):
-                item.status, item.note = CHECK, "entspricht nicht dem Schema JJJJ-MM-TT_Spot"
+                item.status, item.note = CHECK, translate("renamer", "does not match the scheme YYYY-MM-DD_Spot")
             elif item.warning:
                 item.status, item.note = CHECK, item.warning
             else:
@@ -168,7 +171,7 @@ def apply_renames(items: list[RenameItem], conn=None) -> RenameResult:
         target = item.path.with_name(item.new_name)
         try:
             if target.exists() and target.name.casefold() != item.old_name.casefold():
-                raise FileExistsError("Ziel existiert schon")
+                raise FileExistsError(translate("renamer", "target already exists"))
             item.path.rename(target)
         except OSError as exc:
             result.errors.append(f"{item.rel_path}: {exc.strerror or exc}")

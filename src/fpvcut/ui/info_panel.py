@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
-from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtCore import QDateTime, QLocale, QPoint, Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFormLayout,
@@ -18,6 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from fpvcut.core.library import Clip, LibraryEntry
+from fpvcut.i18n import translate
 from fpvcut.ui.player import format_time
 from fpvcut.ui.stars import star_icon
 
@@ -26,8 +25,8 @@ CLIP_ROLE = Qt.ItemDataRole.UserRole
 
 def clip_range_text(clip_in: float, clip_out: float | None) -> str:
     if clip_in == 0 and clip_out is None:
-        return "Ganzes Video"
-    end = "Ende" if clip_out is None else format_time(clip_out)
+        return translate("InfoPanel", "Whole video")
+    end = translate("InfoPanel", "End") if clip_out is None else format_time(clip_out)
     length = "" if clip_out is None else f"  ({clip_out - clip_in:.1f} s)"
     return f"{format_time(clip_in)} – {end}{length}"
 
@@ -59,12 +58,12 @@ class InfoPanel(QTabWidget):
         fav_layout.setContentsMargins(4, 4, 4, 4)
         fav_layout.addWidget(self._clips, 1)
         fav_layout.addWidget(self._hint)
-        self.addTab(favorites, "Ausschnitte")
+        self.addTab(favorites, self.tr("Clips"))
 
         meta = QWidget(self)
         self._meta_form = QFormLayout(meta)
         self._meta_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
-        self.addTab(meta, "Metadaten")
+        self.addTab(meta, self.tr("Metadata"))
 
         self.set_entry(None, [])
 
@@ -79,14 +78,14 @@ class InfoPanel(QTabWidget):
             item = QListWidgetItem(star_icon(clip.favorite), text, self._clips)
             item.setData(CLIP_ROLE, clip)
             if clip.favorite:
-                item.setToolTip("Favorit")
+                item.setToolTip(self.tr("Favorite"))
         if entry is None:
-            self._hint.setText("Öffne ein Video aus der Bibliothek, um Ausschnitte zu speichern.")
+            self._hint.setText(self.tr("Open a video from the library to save clips."))
         else:
             self._hint.setText(
-                "I = In-Punkt · O = Out-Punkt · F = Ausschnitt speichern · Shift+F = ganzes Video · "
-                "Esc = Auswahl aufheben. Doppelklick auf einen Ausschnitt spielt ihn in Schleife ab, "
-                "per Rechtsklick lässt er sich als Favorit markieren."
+                self.tr("I = in point · O = out point · F = save clip · Shift+F = whole video · "
+                        "Esc = clear selection. Double-click a clip to play it in a loop, "
+                        "right-click to mark it as a favorite.")
             )
         self._fill_metadata(entry)
 
@@ -94,28 +93,29 @@ class InfoPanel(QTabWidget):
         while self._meta_form.rowCount():
             self._meta_form.removeRow(0)
         if entry is None:
-            self._meta_form.addRow(QLabel("Kein Video aus der Bibliothek geöffnet."))
+            self._meta_form.addRow(QLabel(self.tr("No video from the library open.")))
             return
         day = entry.flight_day
         rows = [
-            ("Datei", entry.path.name),
-            ("Ordner", str(entry.path.parent)),
-            ("Flugtag", day.label),
-            ("Dauer", format_time(entry.duration) if entry.duration else "–"),
-            ("Auflösung", f"{entry.width} × {entry.height}" if entry.width else "–"),
-            ("Bildrate", f"{entry.fps:g} fps" if entry.fps else "–"),
-            ("Video", f"{entry.vcodec or '–'}, {entry.bit_depth or '?'} Bit"),
-            ("Audio", entry.acodec or "kein Ton"),
-            ("Größe", f"{entry.size / 1_000_000:.1f} MB"),
-            ("Bitrate", f"{entry.size * 8 / entry.duration / 1_000_000:.1f} Mbit/s" if entry.duration else "–"),
-            ("Erfasst", datetime.fromtimestamp(entry.first_seen).strftime("%d.%m.%Y %H:%M")),
-            ("Fingerprint", entry.fingerprint[:16] + "…"),
+            (self.tr("File"), entry.path.name),
+            (self.tr("Folder"), str(entry.path.parent)),
+            (self.tr("Flight day"), day.label),
+            (self.tr("Duration"), format_time(entry.duration) if entry.duration else "–"),
+            (self.tr("Resolution"), f"{entry.width} × {entry.height}" if entry.width else "–"),
+            (self.tr("Frame rate"), f"{entry.fps:g} fps" if entry.fps else "–"),
+            (self.tr("Video"), self.tr("{codec}, {bits} bit").format(codec=entry.vcodec or "–", bits=entry.bit_depth or "?")),
+            (self.tr("Audio"), entry.acodec or self.tr("no sound")),
+            (self.tr("Size"), f"{entry.size / 1_000_000:.1f} MB"),
+            (self.tr("Bit rate"), f"{entry.size * 8 / entry.duration / 1_000_000:.1f} Mbit/s" if entry.duration else "–"),
+            (self.tr("Added"), QLocale().toString(QDateTime.fromSecsSinceEpoch(int(entry.first_seen)),
+                                                  QLocale.FormatType.ShortFormat)),
+            (self.tr("Fingerprint"), entry.fingerprint[:16] + "…"),
         ]
         for label, value in rows:
             value_label = QLabel(value)
             value_label.setWordWrap(True)
             value_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            self._meta_form.addRow(f"{label}:", value_label)
+            self._meta_form.addRow(self.tr("{label}:").format(label=label), value_label)
 
     def current_clip(self) -> Clip | None:
         return self._current_clip()
@@ -134,11 +134,11 @@ class InfoPanel(QTabWidget):
             return
         clip = item.data(CLIP_ROLE)
         menu = QMenu(self)
-        menu.addAction("Abspielen (Schleife)", lambda: self.clip_activated.emit(clip))
-        menu.addAction("Zur Timeline hinzufügen (E)", lambda: self.add_to_timeline_requested.emit([clip.id]))
-        menu.addAction("Favorit entfernen" if clip.favorite else "Als Favorit markieren",
+        menu.addAction(self.tr("Play (loop)"), lambda: self.clip_activated.emit(clip))
+        menu.addAction(self.tr("Add to timeline (E)"), lambda: self.add_to_timeline_requested.emit([clip.id]))
+        menu.addAction(self.tr("Remove favorite") if clip.favorite else self.tr("Mark as favorite"),
                        lambda: self.favorite_toggled.emit(clip, not clip.favorite))
-        menu.addAction("Tags und Notiz bearbeiten …", lambda: self.clip_edit_requested.emit(clip))
+        menu.addAction(self.tr("Edit tags and note …"), lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
-        menu.addAction("Ausschnitt löschen", lambda: self.clip_delete_requested.emit(clip))
+        menu.addAction(self.tr("Delete clip"), lambda: self.clip_delete_requested.emit(clip))
         menu.exec(self._clips.viewport().mapToGlobal(pos))

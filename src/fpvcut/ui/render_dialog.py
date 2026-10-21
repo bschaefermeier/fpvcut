@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
 from fpvcut.core.ffmpeg_tools import GPU_ENCODERS, EncoderReport
 from fpvcut.render.command import RenderSettings, SourceFormat, build_command, parse_progress
 from fpvcut.render.profiles import PROFILES, profile_by_key
+from fpvcut.i18n import translate
 from fpvcut.timeline.model import Timeline
 from fpvcut.ui.library_panel import format_duration
 
@@ -57,7 +58,7 @@ class RenderDialog(QDialog):
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Timeline rendern")
+        self.setWindowTitle(self.tr("Render timeline"))
         self.setMinimumWidth(560)
         self.timeline = timeline
         self.source = source
@@ -71,24 +72,25 @@ class RenderDialog(QDialog):
 
         self._profile = QComboBox(self)
         for profile in PROFILES:
-            self._profile.addItem(profile.label, profile.key)
+            self._profile.addItem(translate("profiles", profile.label), profile.key)
         self._hint = QLabel(self)
         self._hint.setWordWrap(True)
         self._hint.setStyleSheet("color: gray;")
 
         self._resolution = QComboBox(self)
-        self._resolution.addItem(f"Wie Quelle ({source.width} × {source.height})", f"{source.width}x{source.height}")
+        self._resolution.addItem(self.tr("Same as source ({width} × {height})").format(width=source.width, height=source.height),
+                                 f"{source.width}x{source.height}")
         for w, h in RESOLUTIONS:
             if (w, h) != (source.width, source.height):
                 self._resolution.addItem(f"{w} × {h}", f"{w}x{h}")
         self._fps = QComboBox(self)
-        self._fps.addItem(f"Wie Quelle ({source.fps:g} fps)", source.fps)
+        self._fps.addItem(self.tr("Same as source ({fps} fps)").format(fps=f"{source.fps:g}"), source.fps)
         for fps in FRAME_RATES:
             if fps != source.fps:
                 self._fps.addItem(f"{fps} fps", float(fps))
         self._quality = QSpinBox(self)
         self._quality.setRange(10, 40)
-        self._quality.setToolTip("Kleiner = bessere Qualität und größere Datei (CQ bei NVENC, CRF auf der CPU)")
+        self._quality.setToolTip(self.tr("Lower = better quality and larger file (CQ with NVENC, CRF on the CPU)"))
         self._encoder = QLabel(self)
 
         self._path = QLineEdit(self)
@@ -100,29 +102,29 @@ class RenderDialog(QDialog):
         path_row.addWidget(browse)
 
         form = QFormLayout()
-        form.addRow("Profil:", self._profile)
+        form.addRow(self.tr("Profile:"), self._profile)
         form.addRow("", self._hint)
-        form.addRow("Auflösung:", self._resolution)
-        form.addRow("Bildrate:", self._fps)
-        form.addRow("Qualität:", self._quality)
-        form.addRow("Encoder:", self._encoder)
-        form.addRow("Datei:", path_row)
+        form.addRow(self.tr("Resolution:"), self._resolution)
+        form.addRow(self.tr("Frame rate:"), self._fps)
+        form.addRow(self.tr("Quality:"), self._quality)
+        form.addRow(self.tr("Encoder:"), self._encoder)
+        form.addRow(self.tr("File:"), path_row)
 
         self._progress = QProgressBar(self)
         self._progress.setRange(0, 1000)
         self._progress.setTextVisible(False)
-        self._status = QLabel(f"Länge der Timeline: {format_duration(timeline.duration)}", self)
+        self._status = QLabel(self.tr("Timeline length: {duration}").format(duration=format_duration(timeline.duration)), self)
         self._status.setWordWrap(True)
         self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
-        self._open_folder = QPushButton("Ordner öffnen", self)
+        self._open_folder = QPushButton(self.tr("Open folder"), self)
         self._open_folder.clicked.connect(lambda: self._open(self._output.parent if self._output else None))
-        self._play = QPushButton("Abspielen", self)
+        self._play = QPushButton(self.tr("Play"), self)
         self._play.clicked.connect(lambda: self._open(self._output))
-        self._start = QPushButton("Rendern", self)
+        self._start = QPushButton(self.tr("Render"), self)
         self._start.setDefault(True)
         self._start.clicked.connect(self.start)
-        self._close = QPushButton("Schließen", self)
+        self._close = QPushButton(self.tr("Close"), self)
         self._close.clicked.connect(self.reject)
         for button in (self._open_folder, self._play):
             button.hide()
@@ -159,17 +161,17 @@ class RenderDialog(QDialog):
 
     def _apply_profile(self) -> None:
         profile = self.profile
-        self._hint.setText(profile.hint)
+        self._hint.setText(translate("profiles", profile.hint))
         self._quality.setValue(profile.quality)
         encoder = self.encoder()
-        kind = "GPU" if encoder in GPU_ENCODERS else "CPU, langsamer"
+        kind = "GPU" if encoder in GPU_ENCODERS else self.tr("CPU, slower")
         self._encoder.setText(f"{encoder} ({kind})")
         current = Path(self._path.text()) if self._path.text() else None
         if current is None or current.name.startswith("fpvcut_"):
             self._path.setText(str(default_output(profile.key)))
 
     def _choose_path(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Zieldatei", self._path.text(), "MP4-Video (*.mp4)")
+        path, _ = QFileDialog.getSaveFileName(self, self.tr("Output file"), self._path.text(), self.tr("MP4 video (*.mp4)"))
         if path:
             self._path.setText(path if path.lower().endswith(".mp4") else path + ".mp4")
 
@@ -188,13 +190,15 @@ class RenderDialog(QDialog):
     def start(self) -> bool:
         settings = self.settings()
         if settings.output.exists():
-            answer = QMessageBox.question(self, "Datei überschreiben", f"{settings.output.name} existiert schon. Überschreiben?")
+            answer = QMessageBox.question(
+                self, self.tr("Overwrite file"),
+                self.tr("{name} already exists. Overwrite?").format(name=settings.output.name))
             if answer != QMessageBox.StandardButton.Yes:
                 return False
         try:
             settings.output.parent.mkdir(parents=True, exist_ok=True)
         except OSError as exc:
-            self._status.setText(f"Ordner kann nicht angelegt werden: {exc}")
+            self._status.setText(self.tr("Folder cannot be created: {error}").format(error=exc))
             return False
         app_settings().setValue("render/dir", str(settings.output.parent))
         self.timeline.render_profile = self.profile.key
@@ -212,14 +216,14 @@ class RenderDialog(QDialog):
         self._stderr = ""
         self._started = time.monotonic()
         self._set_running(True)
-        self._status.setText("Rendern startet …")
+        self._status.setText(self.tr("Rendering starts …"))
         self._process.start()
         return True
 
     def _set_running(self, running: bool) -> None:
         for widget in (self._profile, self._resolution, self._fps, self._quality, self._path, self._start):
             widget.setEnabled(not running)
-        self._close.setText("Abbrechen" if running else "Schließen")
+        self._close.setText(self.tr("Cancel") if running else self.tr("Close"))
         self._open_folder.setVisible(False)
         self._play.setVisible(False)
 
@@ -241,9 +245,10 @@ class RenderDialog(QDialog):
         elapsed = time.monotonic() - self._started
         speed = done / elapsed if elapsed > 0 else 0
         remaining = (total - done) / speed if speed > 0 else None
-        text = f"{format_duration(done)} von {format_duration(total)} · {speed:.1f}× Echtzeit"
+        text = self.tr("{done} of {total} · {speed}× real time").format(
+            done=format_duration(done), total=format_duration(total), speed=f"{speed:.1f}")
         if remaining is not None:
-            text += f" · noch ca. {format_duration(remaining)}"
+            text += self.tr(" · about {remaining} left").format(remaining=format_duration(remaining))
         self._status.setText(text)
 
     def _read_errors(self) -> None:
@@ -253,7 +258,7 @@ class RenderDialog(QDialog):
     def _on_error(self, error: QProcess.ProcessError) -> None:
         if error == QProcess.ProcessError.FailedToStart:
             self._set_running(False)
-            self._status.setText(f"ffmpeg konnte nicht gestartet werden: {self.ffmpeg}")
+            self._status.setText(self.tr("ffmpeg could not be started: {path}").format(path=self.ffmpeg))
 
     def _on_finished(self, code: int, _status) -> None:
         self._set_running(False)
@@ -261,15 +266,16 @@ class RenderDialog(QDialog):
         if self._cancelled:
             self._output.unlink(missing_ok=True)
             self._progress.setValue(0)
-            self._status.setText("Abgebrochen, die halbfertige Datei wurde gelöscht.")
+            self._status.setText(self.tr("Cancelled, the unfinished file was deleted."))
         elif code != 0:
             self._progress.setValue(0)
             lines = [line for line in self._stderr.strip().splitlines() if line.strip()][-6:]
-            self._status.setText("Rendern fehlgeschlagen:\n" + ("\n".join(lines) or f"ffmpeg-Fehlercode {code}"))
+            details = "\n".join(lines) or self.tr("ffmpeg error code {code}").format(code=code)
+            self._status.setText(self.tr("Rendering failed:") + "\n" + details)
         else:
             self._progress.setValue(1000)
             size = self._output.stat().st_size / 1_000_000 if self._output.exists() else 0
-            self._status.setText(f"Fertig in {elapsed}: {self._output} ({size:.1f} MB)")
+            self._status.setText(self.tr("Done in {elapsed}: {path} ({size} MB)").format(elapsed=elapsed, path=self._output, size=f"{size:.1f}"))
             self._open_folder.show()
             self._play.show()
 
@@ -280,7 +286,7 @@ class RenderDialog(QDialog):
 
     def reject(self) -> None:
         if self.running:
-            answer = QMessageBox.question(self, "Rendern abbrechen", "Rendern abbrechen?")
+            answer = QMessageBox.question(self, self.tr("Cancel rendering"), self.tr("Cancel rendering?"))
             if answer == QMessageBox.StandardButton.Yes:
                 self.cancel()
             return

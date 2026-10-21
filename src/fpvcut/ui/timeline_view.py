@@ -174,7 +174,7 @@ class TimelineView(QWidget):
             painter.drawText(
                 self._video_rect().adjusted(self.PAD + 4, 0, 0, 0),
                 Qt.AlignmentFlag.AlignVCenter,
-                "Ausschnitte hierher ziehen oder im Ausschnitte-Reiter E drücken",
+                self.tr("Drag clips here or press E in the Clips tab"),
             )
 
         for index, (rect, clip) in enumerate(zip(self.clip_rects(), self.timeline.clips)):
@@ -183,7 +183,7 @@ class TimelineView(QWidget):
             self._paint_extensions(painter, rect, clip)
             if clip.grade:
                 self._paint_grade_mark(painter, rect)
-            name = clip.label + ("  (fehlt)" if clip.path is None else "")
+            name = clip.label + (self.tr("  (missing)") if clip.path is None else "")
             text_rect = rect.adjusted(5, 3, -4, -3)
             painter.setPen(Qt.GlobalColor.white)
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignTop, metrics.elidedText(name, Qt.TextElideMode.ElideRight, int(text_rect.width())))
@@ -198,7 +198,7 @@ class TimelineView(QWidget):
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignVCenter, metrics.elidedText(text, Qt.TextElideMode.ElideRight, int(text_rect.width())))
         elif self.timeline.clips:
             painter.setPen(palette.placeholderText().color())
-            painter.drawText(self._music_rect().adjusted(self.PAD + 4, 0, 0, 0), Qt.AlignmentFlag.AlignVCenter, "Keine Musik (Timeline → Musik hinzufügen)")
+            painter.drawText(self._music_rect().adjusted(self.PAD + 4, 0, 0, 0), Qt.AlignmentFlag.AlignVCenter, self.tr("No music (Timeline → Add music)"))
 
         if self._drop_index is not None:
             starts = self.timeline.starts() + [self.timeline.duration]

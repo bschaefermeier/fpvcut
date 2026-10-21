@@ -56,3 +56,9 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 - [ ] Datei → "Ordner ins Schema umbenennen …": Vorschau stimmt, Umbenennen und Rückgängig klappen,
       Ausschnitte bleiben
 - [ ] Ausschnitte exportieren und wieder importieren: nichts doppelt
+
+## Sprache
+
+- [ ] Start mit deutschem Windows: Oberfläche auf Deutsch, auch Datei- und Farbdialoge
+- [ ] Datei → Sprache → English, Neustart: alles auf Englisch, Datumsangaben im englischen Format;
+      zurück auf Systemsprache ergibt wieder Deutsch

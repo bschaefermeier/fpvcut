@@ -60,7 +60,7 @@ class FavoritesPanel(QWidget):
         self._items: list[tuple[Clip, LibraryEntry]] = []
 
         self._search = QLineEdit(self)
-        self._search.setPlaceholderText("Suche in Dateiname, Flugtag, Notiz …")
+        self._search.setPlaceholderText(self.tr("Search file name, flight day, note …"))
         self._search.setClearButtonEnabled(True)
         self._search.textChanged.connect(lambda _text: self._rebuild())
 
@@ -70,18 +70,18 @@ class FavoritesPanel(QWidget):
         self._tags_sized_by_user = False
 
         self._mode = QComboBox(self)
-        self._mode.addItems(["mind. ein Tag", "alle Tags"])
-        self._mode.setToolTip("Bei mehreren gewählten Tags: reicht einer, oder müssen alle passen?")
+        self._mode.addItems([self.tr("any tag"), self.tr("all tags")])
+        self._mode.setToolTip(self.tr("With several tags selected: is one enough, or must all match?"))
         self._mode.currentIndexChanged.connect(lambda _i: self._rebuild())
         self._favorites_only = QToolButton(self)
-        self._favorites_only.setText("★ Nur Favoriten")
+        self._favorites_only.setText(self.tr("★ Favorites only"))
         self._favorites_only.setCheckable(True)
         self._favorites_only.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self._favorites_only.toggled.connect(lambda _checked: self._rebuild())
-        reset = QPushButton("Filter zurücksetzen", self)
+        reset = QPushButton(self.tr("Reset filter"), self)
         reset.clicked.connect(self.reset_filter)
         filter_row = QHBoxLayout()
-        filter_row.addWidget(QLabel("Tags:", self))
+        filter_row.addWidget(QLabel(self.tr("Tags:"), self))
         filter_row.addWidget(self._mode)
         filter_row.addWidget(self._favorites_only)
         filter_row.addStretch(1)
@@ -93,7 +93,7 @@ class FavoritesPanel(QWidget):
         self._tree.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self._tree.setDragEnabled(True)
         self._tree.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
-        self._tree.setHeaderLabels(["★", "Ausschnitt", "Länge", "Tags"])
+        self._tree.setHeaderLabels(["★", self.tr("Clip"), self.tr("Length"), self.tr("Tags")])
         self._tree.setRootIsDecorated(False)
         self._tree.setUniformRowHeights(True)
         self._tree.setAlternatingRowColors(True)
@@ -113,7 +113,7 @@ class FavoritesPanel(QWidget):
         delete.activated.connect(self._delete_current)
 
         self._placeholder = QLabel(
-            "Noch keine Ausschnitte.\nIm Player mit I/O einen Ausschnitt wählen und F drücken.", self
+            self.tr("No clips yet.\nMark a range in the player with I/O and press F."), self
         )
         self._placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -199,7 +199,8 @@ class FavoritesPanel(QWidget):
         self._tree.clear()
         visible = self.visible_items()
         for clip, entry in visible:
-            start = "ganzes Video" if clip.is_whole_video else f"ab {format_duration(clip.in_s)}"
+            start = (self.tr("whole video") if clip.is_whole_video
+                     else self.tr("from {time}").format(time=format_duration(clip.in_s)))
             title = f"{entry.path.name}  ·  {start}"
             item = QTreeWidgetItem(
                 ["", title, format_duration(clip_duration(clip, entry)), ", ".join(clip.tags)]
@@ -208,11 +209,11 @@ class FavoritesPanel(QWidget):
             set_star(item, COL_STAR, clip.favorite)
             tooltip = [clip_range_text(clip.in_s, clip.out_s), entry.flight_day.label, str(entry.path)]
             if clip.note:
-                tooltip.append(f"Notiz: {clip.note}")
+                tooltip.append(self.tr("Note: {note}").format(note=clip.note))
             item.setToolTip(COL_TITLE, "\n".join(tooltip))
             item.setToolTip(COL_TAGS, ", ".join(clip.tags))
             if entry.missing:
-                item.setText(COL_TITLE, f"{title} (Datei fehlt)")
+                item.setText(COL_TITLE, self.tr("{title} (file missing)").format(title=title))
                 for col in (COL_TITLE, COL_LENGTH, COL_TAGS):
                     item.setForeground(col, QBrush(QColor("gray")))
             self._tree.addTopLevelItem(item)
@@ -222,10 +223,10 @@ class FavoritesPanel(QWidget):
         total = sum(clip_duration(c, e) or 0 for c, e in visible)
         filtered = len(visible) != len(self._items)
         if filtered:
-            count = f"{len(visible)} von {len(self._items)} Ausschnitten"
+            count = self.tr("{shown} of %n clip(s)", "", len(self._items)).format(shown=len(visible))
         else:
-            count = f"{len(visible)} Ausschnitt" + ("" if len(visible) == 1 else "e")
-        self._summary.setText(f"{count} · zusammen {format_duration(total)}")
+            count = self.tr("%n clip(s)", "", len(visible))
+        self._summary.setText(self.tr("{count} · total {duration}").format(count=count, duration=format_duration(total)))
         empty = not self._items
         self._tree.setVisible(not empty)
         self._summary.setVisible(not empty)
@@ -266,19 +267,20 @@ class FavoritesPanel(QWidget):
             return
         clip, entry = item.data(0, ITEM_ROLE)
         menu = QMenu(self)
-        play = menu.addAction("Abspielen (Schleife)", lambda: self.clip_activated.emit(clip, entry))
+        play = menu.addAction(self.tr("Play (loop)"), lambda: self.clip_activated.emit(clip, entry))
         play.setEnabled(not entry.missing)
         if not item.isSelected():
             self._tree.setCurrentItem(item)
         ids = self.selected_clip_ids()
         add = menu.addAction(
-            "Zur Timeline hinzufügen (E)" if len(ids) < 2 else f"{len(ids)} Ausschnitte zur Timeline hinzufügen (E)",
+            self.tr("Add to timeline (E)") if len(ids) < 2
+            else self.tr("Add %n clips to timeline (E)", "", len(ids)),
             lambda: self.add_to_timeline_requested.emit(ids),
         )
         add.setEnabled(bool(ids))
-        menu.addAction("Favorit entfernen" if clip.favorite else "Als Favorit markieren",
+        menu.addAction(self.tr("Remove favorite") if clip.favorite else self.tr("Mark as favorite"),
                        lambda: self.favorite_toggled.emit(clip, not clip.favorite))
-        menu.addAction("Tags und Notiz bearbeiten …", lambda: self.clip_edit_requested.emit(clip))
+        menu.addAction(self.tr("Edit tags and note …"), lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
-        menu.addAction("Ausschnitt löschen", lambda: self.clip_delete_requested.emit(clip))
+        menu.addAction(self.tr("Delete clip"), lambda: self.clip_delete_requested.emit(clip))
         menu.exec(self._tree.viewport().mapToGlobal(pos))

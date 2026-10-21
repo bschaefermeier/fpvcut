@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from PySide6.QtCore import QT_TRANSLATE_NOOP
+
 
 @dataclass(frozen=True)
 class Profile:
@@ -19,16 +21,16 @@ class Profile:
 
 PROFILES = [
     Profile(
-        "original", "Original", "hevc", 18, "320k",
-        hint="Wie die Quelle, H.265 in sehr hoher Qualität. Zum Aufheben oder Weiterverarbeiten.",
+        "original", QT_TRANSLATE_NOOP("profiles", "Original"), "hevc", 18, "320k",
+        hint=QT_TRANSLATE_NOOP("profiles", "Like the source, H.265 in very high quality. For keeping or further editing."),
     ),
     Profile(
-        "web", "Web", "h264", 23, "192k",
-        hint="H.264 für YouTube, Messenger und Browser: läuft überall, deutlich kleiner.",
+        "web", QT_TRANSLATE_NOOP("profiles", "Web"), "h264", 23, "192k",
+        hint=QT_TRANSLATE_NOOP("profiles", "H.264 for YouTube, messengers and browsers: plays everywhere, much smaller."),
     ),
     Profile(
-        "archiv", "Archiv (10 Bit)", "hevc", 20, "256k", ten_bit=True,
-        hint="H.265 mit 10 Bit, gut für D-Log/Flat-Material und spätere Farbkorrektur.",
+        "archiv", QT_TRANSLATE_NOOP("profiles", "Archive (10 bit)"), "hevc", 20, "256k", ten_bit=True,
+        hint=QT_TRANSLATE_NOOP("profiles", "H.265 with 10 bit, good for D-Log/flat footage and later color grading."),
     ),
 ]
 
