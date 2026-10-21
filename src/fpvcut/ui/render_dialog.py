@@ -55,6 +55,7 @@ class RenderDialog(QDialog):
         source: SourceFormat,
         ffmpeg: Path,
         report: EncoderReport | None,
+        marked: tuple[float, float] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -69,6 +70,16 @@ class RenderDialog(QDialog):
         self._started = 0.0
         self._stderr = ""
         self._output: Path | None = None
+        self._rendering = timeline  # was gerade gerendert wird: alles oder nur der Bereich
+
+        # Mit markiertem Bereich: nur ihn oder alles rendern (vorgewählt ist der Bereich).
+        self._range = QComboBox(self)
+        if marked is not None:
+            start, end = marked
+            self._range.addItem(self.tr("Marked range ({start} – {end}, {length})").format(
+                start=format_duration(start), end=format_duration(end), length=format_duration(end - start)), marked)
+        self._range.addItem(self.tr("Whole timeline ({length})").format(length=format_duration(timeline.duration)), None)
+        self._range.setVisible(marked is not None)
 
         self._profile = QComboBox(self)
         for profile in PROFILES:
@@ -102,6 +113,8 @@ class RenderDialog(QDialog):
         path_row.addWidget(browse)
 
         form = QFormLayout()
+        if marked is not None:
+            form.addRow(self.tr("Render:"), self._range)
         form.addRow(self.tr("Profile:"), self._profile)
         form.addRow("", self._hint)
         form.addRow(self.tr("Resolution:"), self._resolution)
@@ -113,7 +126,8 @@ class RenderDialog(QDialog):
         self._progress = QProgressBar(self)
         self._progress.setRange(0, 1000)
         self._progress.setTextVisible(False)
-        self._status = QLabel(self.tr("Timeline length: {duration}").format(duration=format_duration(timeline.duration)), self)
+        length = "" if marked else self.tr("Timeline length: {duration}").format(duration=format_duration(timeline.duration))
+        self._status = QLabel(length, self)
         self._status.setWordWrap(True)
         self._status.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
@@ -175,6 +189,11 @@ class RenderDialog(QDialog):
         if path:
             self._path.setText(path if path.lower().endswith(".mp4") else path + ".mp4")
 
+    def render_timeline(self) -> Timeline:
+        """Die ganze Timeline oder nur der gewählte Bereich."""
+        marked = self._range.currentData()
+        return self.timeline if marked is None else self.timeline.excerpt(*marked)
+
     def settings(self) -> RenderSettings:
         width, height = (int(v) for v in self._resolution.currentData().split("x"))
         profile = self.profile
@@ -204,7 +223,8 @@ class RenderDialog(QDialog):
         self.timeline.render_profile = self.profile.key
         self._output = settings.output
 
-        command = build_command(self.ffmpeg, self.timeline, settings)
+        self._rendering = self.render_timeline()
+        command = build_command(self.ffmpeg, self._rendering, settings)
         self._process = QProcess(self)
         self._process.setProgram(command[0])
         self._process.setArguments(command[1:])
@@ -221,7 +241,7 @@ class RenderDialog(QDialog):
         return True
 
     def _set_running(self, running: bool) -> None:
-        for widget in (self._profile, self._resolution, self._fps, self._quality, self._path, self._start):
+        for widget in (self._range, self._profile, self._resolution, self._fps, self._quality, self._path, self._start):
             widget.setEnabled(not running)
         self._close.setText(self.tr("Cancel") if running else self.tr("Close"))
         self._open_folder.setVisible(False)
@@ -237,7 +257,7 @@ class RenderDialog(QDialog):
         for line in data.splitlines():
             if (seconds := parse_progress(line)) is not None:
                 done = seconds
-        total = self.timeline.duration
+        total = self._rendering.duration
         if done is None or total <= 0:
             return
         fraction = min(done / total, 1.0)

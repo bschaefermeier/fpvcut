@@ -97,6 +97,27 @@ class Timeline:
     def missing_clips(self) -> list[TimelineClip]:
         return [c for c in self.clips if c.path is None]
 
+    def excerpt(self, start: float, end: float) -> Timeline:
+        """Nur der Bereich ``start`` … ``end`` als eigene Timeline, z. B. zum Rendern.
+
+        Angeschnittene Clips werden gekürzt, die Musik setzt an der passenden Stelle ein und blendet
+        am Ende des Bereichs aus. Eingeblendet wird sie nur, wenn der Bereich am Anfang beginnt.
+        """
+        start, end = max(start, 0.0), min(end, self.duration)
+        clips = []
+        for offset, clip in zip(self.starts(), self.clips):
+            a, b = max(start, offset), min(end, offset + clip.duration)
+            if b - a >= 0.01:
+                cut = {"src_in": clip.src_in + a - offset, "src_out": clip.src_in + b - offset}
+                clips.append(TimelineClip(**{**clip.to_dict(), **cut}, path=clip.path))
+        music = None
+        if self.music is not None:
+            src_in = self.music.src_in + start
+            if self.music.duration is None or src_in < self.music.duration:
+                music = MusicTrack(**{**asdict(self.music), "src_in": src_in,
+                                      "fade_in": self.music.fade_in if start < 0.01 else 0.0})
+        return Timeline(clips, music, self.original_volume, self.render_profile)
+
     # --- Bearbeiten ------------------------------------------------------
 
     def insert(self, clips: list[TimelineClip], index: int | None = None) -> None:

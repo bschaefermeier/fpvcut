@@ -90,6 +90,48 @@ def test_split_delete_and_scrub():
     assert panel.timeline.duration == pytest.approx(12.5, abs=0.05)
 
 
+def test_drag_in_ruler_marks_range_and_edges_adjust_it():
+    panel = panel_with_clips()
+    view = panel.view
+    view.set_selection([1])
+
+    def drag(t0, t1):
+        start, end = QPoint(int(view._x(t0)), 5), QPoint(int(view._x(t1)), 5)
+        QTest.mousePress(view, Qt.MouseButton.LeftButton, pos=start)
+        QTest.mouseMove(view, (start + end) / 2)
+        QTest.mouseMove(view, end)
+        QTest.mouseRelease(view, Qt.MouseButton.LeftButton, pos=end)
+
+    drag(9, 3)  # von rechts nach links geht auch
+    assert view.marked == (pytest.approx(3, abs=0.1), pytest.approx(9, abs=0.1))
+    assert view.selection == [1]  # Clip-Auswahl bleibt
+    assert "Bereich 00:03 – 00:09" in panel._summary.text()
+    drag(9, 12)  # Ende greifen und verschieben
+    assert view.marked == (pytest.approx(3, abs=0.1), pytest.approx(12, abs=0.1))
+    drag(13, 40)  # über das Ende hinaus: endet mit der Timeline
+    assert view.marked == (pytest.approx(13, abs=0.1), 15)
+    panel.set_timeline(Timeline(clips()[:2]))  # kürzere Timeline: Bereich passt sich an
+    assert view.marked is None
+    QTest.mouseClick(view, Qt.MouseButton.LeftButton, pos=QPoint(int(view._x(4)), 5))
+    assert view.playhead == pytest.approx(4, abs=0.1)  # Klick ohne Ziehen springt nur
+
+
+def test_range_from_playhead_and_selected_clips():
+    panel = panel_with_clips()
+    view = panel.view
+    view.set_playhead(4)
+    panel.mark_range_start()
+    assert view.marked == (4, 15)  # ohne Ende: bis zum Schluss
+    view.set_playhead(11)
+    panel.mark_range_end()
+    assert view.marked == (4, 11)
+    view.set_selection([1, 2])
+    panel.mark_selected_clips()
+    assert view.marked == (5, 15)
+    view.clear_range()
+    assert view.marked is None and "Bereich" not in panel._summary.text()
+
+
 def test_drop_favorites_emits_ids_and_position():
     panel = panel_with_clips()
     view = panel.view
@@ -262,6 +304,29 @@ def test_render_dialog_opens_with_source_format(monkeypatch, tmp_path):
     window.render_dialog()
     assert (seen["source"].width, seen["source"].height, seen["source"].fps) == (1280, 720, 50.0)
     assert seen["profile"] == "web"
+    window.close()
+
+
+def test_render_dialog_offers_marked_range(monkeypatch, tmp_path):
+    from fpvcut.ui import main_window
+
+    window = _window(monkeypatch, tmp_path)
+    window.add_videos_to_timeline([e.media_id for e in window.library.entries()])
+    seen = []
+    monkeypatch.setattr(main_window.RenderDialog, "exec", lambda dialog: seen.append(dialog) or 0)
+    monkeypatch.setattr(main_window, "find_tool", lambda name: Path("/usr/bin/ffmpeg"))
+    window.render_dialog()
+    assert seen[-1]._range.isHidden()  # ohne Bereich keine Wahl
+    window.timeline_panel.view.set_range(0.5, 1.5)
+    window.render_dialog()
+    dialog = seen[-1]
+    assert not dialog._range.isHidden()
+    assert dialog._range.itemText(0).startswith("Markierter Bereich")
+    assert dialog.render_timeline().duration == pytest.approx(1.0)
+    dialog._range.setCurrentIndex(1)  # alles
+    assert dialog.render_timeline() is window.timeline_panel.timeline
+    window._on_escape()
+    assert window.timeline_panel.view.marked is None
     window.close()
 
 

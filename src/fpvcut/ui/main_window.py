@@ -254,6 +254,12 @@ class MainWindow(QMainWindow):
         self._add_action(tl_menu, self.tr("Play timeline"), "P", lambda: self.play_timeline(None))
         self._add_action(tl_menu, self.tr("Split clip at playhead"), "S", self.split_timeline)
         self._add_action(tl_menu, self.tr("Render …"), "Ctrl+R", self.render_dialog)
+        range_menu = tl_menu.addMenu(self.tr("Render &range"))
+        panel = self.timeline_panel
+        self._add_action(range_menu, self.tr("Range start at playhead"), "Shift+I", panel.mark_range_start)
+        self._add_action(range_menu, self.tr("Range end at playhead"), "Shift+O", panel.mark_range_end)
+        self._add_action(range_menu, self.tr("Range from selected clips"), None, panel.mark_selected_clips)
+        self._add_action(range_menu, self.tr("Clear range"), None, panel.view.clear_range)
         self._add_action(tl_menu, self.tr("Remove selected clips"), None, self.timeline_panel.delete_selected)
         tl_menu.addSeparator()
         self._add_action(tl_menu, self.tr("Undo"), "Ctrl+Z", self.timeline_panel.undo)
@@ -732,7 +738,8 @@ class MainWindow(QMainWindow):
         if not self.player.paused:
             self.player.toggle_pause()  # Vorschau anhalten, solange gerendert wird
         source = source_format(timeline, self.render_formats(timeline))
-        dialog = RenderDialog(timeline, source, ffmpeg, self.encoder_report, parent=self)
+        dialog = RenderDialog(timeline, source, ffmpeg, self.encoder_report,
+                              marked=self.timeline_panel.view.marked, parent=self)
         dialog.exec()
         self._save_timeline()  # gewähltes Profil merken
         self._update_title()
@@ -920,6 +927,7 @@ class MainWindow(QMainWindow):
         else:
             self.player.clear_marks()
             self.timeline_panel.view.select(None)  # Klick in die Timeline behält die Auswahl
+            self.timeline_panel.view.clear_range()  # wie In/Out-Punkte im Player
 
     # --- Vollbild --------------------------------------------------------
 

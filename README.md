@@ -57,6 +57,8 @@ Projekte bleiben dabei erhalten.
    Speichern-Knopf rechts neben der Zeitleiste sichern.
 3. Ausschnitte aus dem Reiter **Ausschnitte** in die Timeline ziehen, optional Musik hinzufügen und
    mit **Strg+R** exportieren. Mit **Strg+S** wird das Projekt gespeichert.
+4. Soll nur ein Teil exportiert werden, im Zeitlineal über der Timeline einen Bereich ziehen. Das
+   Renderfenster fragt dann, ob nur der Bereich oder die ganze Timeline gerendert wird.
 
 ### Tastenkürzel
 
@@ -69,13 +71,14 @@ Projekte bleiben dabei erhalten.
 | I / O | In- / Out-Punkt setzen |
 | F | Auswahl als Ausschnitt speichern |
 | Umschalt + F | Ganzes Video als Ausschnitt speichern |
-| Esc | Auswahl aufheben (auch in der Timeline), Vollbild beenden |
+| Esc | Auswahl und markierten Bereich aufheben (auch in der Timeline), Vollbild beenden |
 | F11 oder Doppelklick | Vollbild |
 | E | Auswahl zur Timeline hinzufügen |
 | S | Clip am Abspielkopf teilen |
 | Entf | Ausgewählte Clips entfernen |
 | Strg + Klick / Umschalt + Klick | Mehrere Clips in der Timeline auswählen |
 | Strg + A | Alle Clips der Timeline auswählen (Timeline im Fokus) |
+| Umschalt + I / O | Anfang / Ende des Render-Bereichs am Abspielkopf der Timeline |
 | P | Timeline abspielen |
 | Strg + ← / → | Anfang / Ende der Timeline |
 | Strg + Z / Strg + Y | Rückgängig / Wiederholen |

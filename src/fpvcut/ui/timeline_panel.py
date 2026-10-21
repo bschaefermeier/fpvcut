@@ -54,6 +54,7 @@ class TimelinePanel(QWidget):
         self.view.edited.connect(self._on_edited)
         self.view.wheel_zoom.connect(self.zoom)
         self.view.wheel_scroll.connect(self._scroll_by)
+        self.view.range_changed.connect(self._sync_controls)
         self.view.clip_double_clicked.connect(
             lambda i: self.preview_requested.emit(self.timeline.starts()[i])
         )
@@ -154,7 +155,12 @@ class TimelinePanel(QWidget):
         self._play.setEnabled(bool(timeline.clips))
         self._render.setEnabled(bool(timeline.clips))
         count = len(timeline.clips)
-        self._summary.setText(self.tr("%n clip(s)", "", count) + f" · {format_duration(timeline.duration)}")
+        summary = self.tr("%n clip(s)", "", count) + f" · {format_duration(timeline.duration)}"
+        if (marked := self.view.marked) is not None:
+            summary += " · " + self.tr("Range {start} – {end}").format(
+                start=format_duration(marked[0]), end=format_duration(marked[1]))
+        self._summary.setText(summary)
+        self._summary.setToolTip(self.tr("Drag in the time ruler to mark a range for rendering."))
 
     def set_playhead(self, t: float) -> None:
         self.view.set_playhead(t)
@@ -223,6 +229,22 @@ class TimelinePanel(QWidget):
         self.view.set_timeline(self.timeline)
         self._on_edited()
         return True
+
+    def mark_range_start(self) -> None:
+        """Bereichsanfang am Abspielkopf; ohne Bereich reicht er bis zum Ende der Timeline."""
+        end = self.view.marked[1] if self.view.marked else self.timeline.duration
+        self.view.set_range(self.view.playhead, max(end, self.view.playhead))
+
+    def mark_range_end(self) -> None:
+        start = self.view.marked[0] if self.view.marked else 0.0
+        self.view.set_range(min(start, self.view.playhead), self.view.playhead)
+
+    def mark_selected_clips(self) -> None:
+        """Bereich von Anfang des ersten bis Ende des letzten ausgewählten Clips."""
+        indices = self.view.selection
+        if indices:
+            starts = self.timeline.starts()
+            self.view.set_range(starts[indices[0]], starts[indices[-1]] + self.timeline.clips[indices[-1]].duration)
 
     def delete_selected(self) -> bool:
         return self.view.delete_selected()

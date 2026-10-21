@@ -90,7 +90,7 @@
 <context>
     <name>MainWindow</name>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="365"/>
+        <location filename="../../ui/main_window.py" line="371"/>
         <source>%n clip(s) restored</source>
         <translation>
             <numerusform>%n clip restored</numerusform>
@@ -98,7 +98,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="367"/>
+        <location filename="../../ui/main_window.py" line="373"/>
         <source>, %n already existed</source>
         <translation>
             <numerusform>, %n already existed</numerusform>
@@ -106,7 +106,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="369"/>
+        <location filename="../../ui/main_window.py" line="375"/>
         <source>; %n video(s) will appear after the next scan</source>
         <translation>
             <numerusform>; %n video will appear after the next scan</numerusform>
@@ -114,7 +114,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="382"/>
+        <location filename="../../ui/main_window.py" line="388"/>
         <source>%n clip(s) exported to {path}</source>
         <translation>
             <numerusform>%n clip exported to {path}</numerusform>
@@ -122,7 +122,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="443"/>
+        <location filename="../../ui/main_window.py" line="449"/>
         <source> · %n problem(s): {first}</source>
         <translation>
             <numerusform> · %n problem: {first}</numerusform>
@@ -130,7 +130,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="563"/>
+        <location filename="../../ui/main_window.py" line="569"/>
         <source>%n clip(s) added to the timeline</source>
         <translation>
             <numerusform>%n clip added to the timeline</numerusform>
@@ -182,7 +182,7 @@ An open video will be closed for this.</numerusform>
 <context>
     <name>TimelinePanel</name>
     <message numerus="yes">
-        <location filename="../../ui/timeline_panel.py" line="157"/>
+        <location filename="../../ui/timeline_panel.py" line="158"/>
         <source>%n clip(s)</source>
         <translation>
             <numerusform>%n clip</numerusform>

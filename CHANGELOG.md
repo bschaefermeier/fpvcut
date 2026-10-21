@@ -8,6 +8,11 @@ durch, wird daraus die fertige Version.
 
 ### Neu
 
+- **Nur einen Bereich rendern:** Im Zeitlineal über der Timeline einen Bereich ziehen (Kanten
+  lassen sich nachziehen), oder unter Timeline → Bereich rendern per Umschalt+I/O am Abspielkopf
+  bzw. aus den ausgewählten Clips setzen. Das Renderfenster bietet dann „Markierter Bereich“ oder
+  „Ganze Timeline“ an. Angeschnittene Clips werden gekürzt, die Musik setzt an der passenden
+  Stelle ein und blendet am Ende des Bereichs aus. Esc hebt den Bereich auf
 - **Englisch und Deutsch:** Die Oberfläche gibt es jetzt auf Englisch und Deutsch. FPVCut folgt
   der Systemsprache, unter **Datei → Sprache** lässt sich eine feste Sprache wählen (gilt ab dem
   nächsten Start). Auch Standarddialoge und Datumsangaben folgen der Sprache. Projektdateien,

@@ -100,7 +100,7 @@ def test_render_mixed_formats_silent_clip_and_music(tmp_path):
     assert _tone_level(s.output, 3.4, 440) > 500
 
 
-def _dialog(tmp_path, monkeypatch, clip_len=1.0, profile="web"):
+def _dialog(tmp_path, monkeypatch, clip_len=1.0, profile="web", marked=None):
     import os
 
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -118,7 +118,7 @@ def _dialog(tmp_path, monkeypatch, clip_len=1.0, profile="web"):
     subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=640x360:rate=25:duration=30",
                     "-c:v", "libx264", "-preset", "ultrafast", str(src)], check=True)
     tl = Timeline([TimelineClip("s", 0, clip_len, has_audio=False, path=src)], render_profile=profile)
-    dialog = RenderDialog(tl, SourceFormat(640, 360, 25), Path(shutil.which("ffmpeg")), None)
+    dialog = RenderDialog(tl, SourceFormat(640, 360, 25), Path(shutil.which("ffmpeg")), None, marked=marked)
     dialog._path.setText(str(tmp_path / "ziel" / "out.mp4"))
     return dialog
 
@@ -137,6 +137,18 @@ def test_render_dialog_renders_and_reports(tmp_path, monkeypatch):
     assert (tmp_path / "ziel" / "out.mp4").stat().st_size > 0
     assert dialog._status.text().startswith("Fertig")
     assert not dialog._play.isHidden()
+
+
+@needs_ffmpeg
+def test_render_dialog_renders_only_marked_range(tmp_path, monkeypatch):
+    dialog = _dialog(tmp_path, monkeypatch, clip_len=6.0, marked=(2.0, 3.5))
+    assert dialog._range.currentData() == (2.0, 3.5)  # Bereich ist vorgewählt
+    assert dialog.start() and dialog.wait()
+    out = tmp_path / "ziel" / "out.mp4"
+    duration = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(out)],
+                              capture_output=True, text=True, check=True).stdout
+    assert float(duration) == pytest.approx(1.5, abs=0.1)
+    assert dialog.timeline.duration == 6.0  # die Timeline selbst bleibt ganz
 
 
 @needs_ffmpeg

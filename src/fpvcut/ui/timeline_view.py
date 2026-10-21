@@ -20,6 +20,9 @@ SELECT_COLOR = QColor("#ffc400")
 PLAYHEAD_COLOR = QColor("#e53935")
 GRADE_COLOR = QColor("#ff8a3d")  # Clip mit Farbkorrektur
 EXTENSION_COLOR = QColor(255, 255, 255, 45)  # über den Favoriten hinaus verlängert
+RANGE_COLOR = QColor("#4fa3ff")  # markierter Bereich (Lineal)
+RANGE_SHADE = QColor(79, 163, 255, 40)  # markierter Bereich über den Spuren
+MIN_RANGE = 0.1  # kürzer zählt nicht als Bereich, z. B. ein Klick mit leichtem Zittern
 TICK_STEPS = (1, 2, 5, 10, 15, 30, 60, 120, 300, 600)
 
 
@@ -33,6 +36,7 @@ class TimelineView(QWidget):
     wheel_zoom = Signal(float, float)  # Faktor, Mausposition x
     wheel_scroll = Signal(int)  # Pixel nach rechts
     selection_changed = Signal()
+    range_changed = Signal()
 
     RULER = 20
     VIDEO_H = 54
@@ -49,6 +53,7 @@ class TimelineView(QWidget):
         self._group: set[int] = set()  # alle ausgewählten Clips (Strg/Shift+Klick), enthält _selected
         self._anchor: int | None = None  # Ausgangspunkt für Shift+Klick
         self.playhead = 0.0
+        self.marked: tuple[float, float] | None = None  # markierter Bereich (Start, Ende) zum Rendern
         self._drag: dict | None = None
         self._drop_index: int | None = None
         self.setAcceptDrops(True)
@@ -102,6 +107,8 @@ class TimelineView(QWidget):
             self._set_selection(self.selected if self.selected < count else max(group, default=None), group)
         if self.selected == "music" and timeline.music is None:
             self.selected = None
+        if self.marked is not None:
+            self.set_range(*self.marked)  # an eine kürzere Timeline anpassen
         self._update_size()
         self.update()
 
@@ -113,6 +120,21 @@ class TimelineView(QWidget):
     def set_playhead(self, t: float) -> None:
         self.playhead = max(0.0, t)
         self.update()
+
+    def set_range(self, start: float, end: float) -> None:
+        """Bereich markieren (Reihenfolge egal); zu kurz oder außerhalb der Timeline hebt ihn auf."""
+        start, end = sorted((start, end))
+        start, end = max(start, 0.0), min(end, self.timeline.duration)
+        self._set_marked((start, end) if end - start >= MIN_RANGE else None)
+
+    def clear_range(self) -> None:
+        self._set_marked(None)
+
+    def _set_marked(self, marked: tuple[float, float] | None) -> None:
+        if marked != self.marked:
+            self.marked = marked
+            self.range_changed.emit()
+            self.update()
 
     def playhead_x(self) -> int:
         return int(self._x(self.playhead))
@@ -207,6 +229,9 @@ class TimelineView(QWidget):
             track = self._video_rect()
             painter.drawLine(QPointF(x, track.top() - 2), QPointF(x, track.bottom() + 2))
 
+        if self.marked is not None:
+            self._paint_range(painter)
+
         x = self._x(self.playhead)
         painter.setPen(QPen(PLAYHEAD_COLOR, 2))
         painter.drawLine(QPointF(x, 0), QPointF(x, self.height()))
@@ -216,6 +241,18 @@ class TimelineView(QWidget):
         painter.setPen(QPen(SELECT_COLOR, 2) if selected else QPen(color.darker(140), 1))
         painter.setBrush(color)
         painter.drawRoundedRect(rect.adjusted(0.5, 0.5, -0.5, -0.5), 4, 4)
+
+    def _paint_range(self, painter: QPainter) -> None:
+        """Markierter Bereich: Balken im Lineal, darunter leicht eingefärbt."""
+        x0, x1 = (self._x(t) for t in self.marked)
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.fillRect(QRectF(x0, 0, x1 - x0, self.height()), RANGE_SHADE)
+        painter.fillRect(QRectF(x0, 0, x1 - x0, 3), RANGE_COLOR)  # schmal, die Zeiten bleiben lesbar
+        painter.setPen(QPen(RANGE_COLOR, 1))
+        for x in (x0, x1):
+            painter.drawLine(QPointF(x, 0), QPointF(x, self.height()))
+        painter.restore()
 
     def _paint_grade_mark(self, painter: QPainter, rect: QRectF) -> None:
         """Farbiger Streifen am unteren Rand: Clip hat eine Farbkorrektur."""
@@ -288,6 +325,14 @@ class TimelineView(QWidget):
             return ("music",)
         return ("empty",)
 
+    def _range_edge(self, x: float) -> int | None:
+        """0 oder 1, wenn ``x`` am Anfang bzw. Ende des markierten Bereichs liegt."""
+        if self.marked is None:
+            return None
+        distances = [abs(x - self._x(t)) for t in self.marked]
+        nearest = min((0, 1), key=lambda i: distances[i])
+        return nearest if distances[nearest] <= self.EDGE else None
+
     def gap_at(self, x: float) -> int:
         """Einfügeposition (0 … Anzahl Clips) für Mausposition ``x``."""
         t = self._t(x)
@@ -300,6 +345,14 @@ class TimelineView(QWidget):
         if event.button() != Qt.MouseButton.LeftButton:
             return
         pos = event.position()
+        if pos.y() < self.RULER:
+            # Lineal: Klick versetzt den Abspielkopf, Ziehen markiert einen Bereich zum Rendern.
+            edge = self._range_edge(pos.x())
+            anchor = self.marked[1 - edge] if edge is not None else self._t(pos.x())
+            self._drag = {"mode": "range", "anchor": anchor, "x": pos.x(), "active": edge is not None}
+            if edge is None:
+                self._scrub(pos.x())
+            return
         hit = self.hit(pos)
         if hit[0] == "clip":
             _, index, part = hit
@@ -339,10 +392,17 @@ class TimelineView(QWidget):
         if drag is None:
             hit = self.hit(pos)
             edge = hit[0] == "clip" and hit[2] != "body"
+            if pos.y() < self.RULER:
+                edge = self._range_edge(pos.x()) is not None
             self.setCursor(Qt.CursorShape.SizeHorCursor if edge else Qt.CursorShape.ArrowCursor)
             return
         if drag["mode"] == "scrub":
             self._scrub(pos.x())
+            return
+        if drag["mode"] == "range":
+            if drag["active"] or abs(pos.x() - drag["x"]) >= 3:
+                drag["active"] = True
+                self.set_range(drag["anchor"], min(self._t(pos.x()), self.timeline.duration))
             return
         dx = pos.x() - drag["x"]
         if not drag["active"]:
@@ -367,6 +427,9 @@ class TimelineView(QWidget):
         if drag is None or not drag.get("active"):
             if drag is not None and drag.get("group"):
                 self.select(drag["index"])  # Klick ohne Ziehen auf einen Clip der Auswahl: nur noch dieser
+            self.update()
+            return
+        if drag["mode"] == "range":
             self.update()
             return
         if drag["mode"] == "move":

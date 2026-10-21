@@ -79,6 +79,27 @@ def test_music_length():
     assert tl.music_length() == 4  # Musikstück ist kürzer
 
 
+def test_excerpt_cuts_clips_and_shifts_music():
+    tl = make()  # a: 0–2, b: 2–6, c: 6–7 auf der Timeline
+    tl.clips[1].grade = {"contrast": 1.2}
+    tl.music = MusicTrack("m.mp3", duration=100, src_in=10, fade_in=2, fade_out=3)
+    part = tl.excerpt(1.5, 6.5)
+    assert [(c.fingerprint, c.src_in, c.src_out) for c in part.clips] == [
+        ("a", 2.5, 3), ("b", 0, 4), ("c", 5, 5.5)]
+    assert part.duration == pytest.approx(5)
+    assert part.clips[1].grade == {"contrast": 1.2} and part.clips[0].path == Path("/v/a.mp4")
+    assert (part.music.src_in, part.music.fade_in, part.music.fade_out) == (11.5, 0, 3)
+    assert tl.duration == 7 and tl.clips[0].src_in == 1  # Original bleibt unverändert
+    assert tl.excerpt(0, 2).music.fade_in == 2  # ab Anfang: Einblenden bleibt
+    assert [c.fingerprint for c in tl.excerpt(2, 6).clips] == ["b"]  # Grenzen genau auf Schnitten
+
+
+def test_excerpt_drops_music_that_already_ended():
+    tl = make()
+    tl.music = MusicTrack("m.mp3", duration=3)
+    assert tl.excerpt(4, 7).music is None
+
+
 def test_edl_puts_mixed_audio_first():
     tl = Timeline([clip("a", 1, 3), clip("b", 0, 1)])
     assert build_edl(tl) == "edl://!new_stream;%8%/v/a.mp4,1.000,2.000;%8%/v/b.mp4,0.000,1.000"

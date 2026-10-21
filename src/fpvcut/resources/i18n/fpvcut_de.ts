@@ -859,71 +859,96 @@ Datei → Bibliotheksordner hinzufügen …</translation>
     </message>
     <message>
         <location filename="../../ui/main_window.py" line="257"/>
+        <source>Render &amp;range</source>
+        <translation>&amp;Bereich rendern</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="259"/>
+        <source>Range start at playhead</source>
+        <translation>Bereichsanfang am Abspielkopf</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="260"/>
+        <source>Range end at playhead</source>
+        <translation>Bereichsende am Abspielkopf</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="261"/>
+        <source>Range from selected clips</source>
+        <translation>Bereich aus ausgewählten Clips</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="262"/>
+        <source>Clear range</source>
+        <translation>Bereich aufheben</translation>
+    </message>
+    <message>
+        <location filename="../../ui/main_window.py" line="263"/>
         <source>Remove selected clips</source>
         <translation>Ausgewählte Clips entfernen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="259"/>
+        <location filename="../../ui/main_window.py" line="265"/>
         <source>Undo</source>
         <translation>Rückgängig</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="260"/>
+        <location filename="../../ui/main_window.py" line="266"/>
         <source>Redo</source>
         <translation>Wiederholen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="262"/>
+        <location filename="../../ui/main_window.py" line="268"/>
         <source>Add music …</source>
         <translation>Musik hinzufügen …</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="263"/>
+        <location filename="../../ui/main_window.py" line="269"/>
         <source>Remove music</source>
         <translation>Musik entfernen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="267"/>
+        <location filename="../../ui/main_window.py" line="273"/>
         <source>&amp;Help</source>
         <translation>&amp;Hilfe</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="268"/>
+        <location filename="../../ui/main_window.py" line="274"/>
         <source>&amp;System check …</source>
         <translation>&amp;Systemcheck …</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="274"/>
+        <location filename="../../ui/main_window.py" line="280"/>
         <source>System language</source>
         <translation>Systemsprache</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="289"/>
+        <location filename="../../ui/main_window.py" line="295"/>
         <source>Language</source>
         <translation>Sprache</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="290"/>
+        <location filename="../../ui/main_window.py" line="296"/>
         <source>The new language is used after restarting FPVCut.</source>
         <translation>Die neue Sprache gilt nach einem Neustart von FPVCut.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="304"/>
+        <location filename="../../ui/main_window.py" line="310"/>
         <source>Open video</source>
         <translation>Video öffnen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="340"/>
+        <location filename="../../ui/main_window.py" line="346"/>
         <source>Backing up the clips failed: {error}</source>
         <translation>Sicherung der Ausschnitte fehlgeschlagen: {error}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="350"/>
+        <location filename="../../ui/main_window.py" line="356"/>
         <source>Restore clips</source>
         <translation>Ausschnitte wiederherstellen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="351"/>
+        <location filename="../../ui/main_window.py" line="357"/>
         <source>The library contains no clips, but there is a backup ({name}).
 
 Restore clips, tags and reviewed status from it?</source>
@@ -932,12 +957,12 @@ Restore clips, tags and reviewed status from it?</source>
 Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="360"/>
+        <location filename="../../ui/main_window.py" line="366"/>
         <source>Import failed</source>
         <translation>Import fehlgeschlagen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="365"/>
+        <location filename="../../ui/main_window.py" line="371"/>
         <source>%n clip(s) restored</source>
         <translation>
             <numerusform>%n Ausschnitt übernommen</numerusform>
@@ -945,7 +970,7 @@ Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="367"/>
+        <location filename="../../ui/main_window.py" line="373"/>
         <source>, %n already existed</source>
         <translation>
             <numerusform>, %n war schon da</numerusform>
@@ -953,7 +978,7 @@ Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="369"/>
+        <location filename="../../ui/main_window.py" line="375"/>
         <source>; %n video(s) will appear after the next scan</source>
         <translation>
             <numerusform>; %n Video erscheint nach dem nächsten Scan</numerusform>
@@ -961,23 +986,23 @@ Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
         </translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="375"/>
+        <location filename="../../ui/main_window.py" line="381"/>
         <source>Export clips</source>
         <translation>Ausschnitte exportieren</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="375"/>
-        <location filename="../../ui/main_window.py" line="386"/>
+        <location filename="../../ui/main_window.py" line="381"/>
+        <location filename="../../ui/main_window.py" line="392"/>
         <source>FPVCut backup (*.json)</source>
         <translation>FPVCut-Sicherung (*.json)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="380"/>
+        <location filename="../../ui/main_window.py" line="386"/>
         <source>Export failed</source>
         <translation>Export fehlgeschlagen</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="382"/>
+        <location filename="../../ui/main_window.py" line="388"/>
         <source>%n clip(s) exported to {path}</source>
         <translation>
             <numerusform>%n Ausschnitt exportiert nach {path}</numerusform>
@@ -985,62 +1010,62 @@ Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
         </translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="386"/>
+        <location filename="../../ui/main_window.py" line="392"/>
         <source>Import clips</source>
         <translation>Ausschnitte importieren</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="392"/>
+        <location filename="../../ui/main_window.py" line="398"/>
         <source>Please wait until the scan has finished.</source>
         <translation>Bitte warten, bis der Scan fertig ist.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="412"/>
+        <location filename="../../ui/main_window.py" line="418"/>
         <source>Choose library folder</source>
         <translation>Bibliotheksordner wählen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="421"/>
+        <location filename="../../ui/main_window.py" line="427"/>
         <source>Tip: File → Add library folder (e.g. E:\FPV_Videos)</source>
         <translation>Tipp: Datei → Bibliotheksordner hinzufügen (z. B. E:\FPV_Videos)</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="424"/>
+        <location filename="../../ui/main_window.py" line="430"/>
         <source>Scanning library …</source>
         <translation>Bibliothek wird gescannt …</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="427"/>
+        <location filename="../../ui/main_window.py" line="433"/>
         <source>Scanning {i}/{n}: {name}</source>
         <translation>Scanne {i}/{n}: {name}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="434"/>
+        <location filename="../../ui/main_window.py" line="440"/>
         <source>No videos found.</source>
         <translation>Keine Videos gefunden.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="436"/>
+        <location filename="../../ui/main_window.py" line="442"/>
         <source>{count} new</source>
         <translation>{count} neu</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="438"/>
+        <location filename="../../ui/main_window.py" line="444"/>
         <source>{count} moved/copied</source>
         <translation>{count} verschoben/kopiert</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="440"/>
+        <location filename="../../ui/main_window.py" line="446"/>
         <source>{count} missing</source>
         <translation>{count} fehlen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="441"/>
+        <location filename="../../ui/main_window.py" line="447"/>
         <source>Scan finished: {parts}</source>
         <translation>Scan fertig: {parts}</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="443"/>
+        <location filename="../../ui/main_window.py" line="449"/>
         <source> · %n problem(s): {first}</source>
         <translation>
             <numerusform> · %n Problem: {first}</numerusform>
@@ -1048,43 +1073,43 @@ Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
         </translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="471"/>
-        <location filename="../../ui/main_window.py" line="478"/>
+        <location filename="../../ui/main_window.py" line="477"/>
+        <location filename="../../ui/main_window.py" line="484"/>
         <source>Clips only work for videos from the library.</source>
         <translation>Ausschnitte gehen nur für Videos aus der Bibliothek.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="496"/>
+        <location filename="../../ui/main_window.py" line="502"/>
         <source>no tags</source>
         <translation>ohne Tags</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="497"/>
+        <location filename="../../ui/main_window.py" line="503"/>
         <source>Favorite saved ({tags})</source>
         <translation>Favorit gespeichert ({tags})</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="497"/>
+        <location filename="../../ui/main_window.py" line="503"/>
         <source>Clip saved ({tags})</source>
         <translation>Ausschnitt gespeichert ({tags})</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="513"/>
+        <location filename="../../ui/main_window.py" line="519"/>
         <source>Edit clip</source>
         <translation>Ausschnitt bearbeiten</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="527"/>
+        <location filename="../../ui/main_window.py" line="533"/>
         <source>Delete clip</source>
         <translation>Ausschnitt löschen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="528"/>
+        <location filename="../../ui/main_window.py" line="534"/>
         <source>Really delete clip {range}?</source>
         <translation>Ausschnitt {range} wirklich löschen?</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="563"/>
+        <location filename="../../ui/main_window.py" line="569"/>
         <source>%n clip(s) added to the timeline</source>
         <translation>
             <numerusform>%n Clip zur Timeline hinzugefügt</numerusform>
@@ -1092,188 +1117,188 @@ Ausschnitte, Tags und Gesichtet-Status daraus übernehmen?</translation>
         </translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="565"/>
+        <location filename="../../ui/main_window.py" line="571"/>
         <source>Video length unknown, nothing added.</source>
         <translation>Länge des Videos unbekannt, nichts hinzugefügt.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="575"/>
+        <location filename="../../ui/main_window.py" line="581"/>
         <source>Clip added to the timeline</source>
         <translation>Ausschnitt zur Timeline hinzugefügt</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="585"/>
+        <location filename="../../ui/main_window.py" line="591"/>
         <source>Select videos or clips first, or mark a range in the player with I/O.</source>
         <translation>Erst Videos oder Ausschnitte auswählen oder im Player mit I/O markieren.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="603"/>
+        <location filename="../../ui/main_window.py" line="609"/>
         <source>Saved timeline could not be loaded: {error}</source>
         <translation>Gespeicherte Timeline konnte nicht geladen werden: {error}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="609"/>
+        <location filename="../../ui/main_window.py" line="615"/>
         <source>Timeline could not be saved: {error}</source>
         <translation>Timeline konnte nicht gespeichert werden: {error}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="620"/>
-        <location filename="../../ui/main_window.py" line="721"/>
+        <location filename="../../ui/main_window.py" line="626"/>
+        <location filename="../../ui/main_window.py" line="727"/>
         <source>The timeline is empty.</source>
         <translation>Die Timeline ist leer.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="624"/>
+        <location filename="../../ui/main_window.py" line="630"/>
         <source>Preview not possible, files missing: {names}</source>
         <translation>Vorschau nicht möglich, Dateien fehlen: {names}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="638"/>
+        <location filename="../../ui/main_window.py" line="644"/>
         <source>Timeline preview without sound: {problem}</source>
         <translation>Timeline-Vorschau ohne Ton: {problem}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="639"/>
+        <location filename="../../ui/main_window.py" line="645"/>
         <source>Timeline preview</source>
         <translation>Timeline-Vorschau</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="707"/>
+        <location filename="../../ui/main_window.py" line="713"/>
         <source>To split, place the red playhead inside a clip.</source>
         <translation>Zum Teilen den roten Abspielkopf mitten in einen Clip setzen.</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="725"/>
-        <location filename="../../ui/main_window.py" line="730"/>
+        <location filename="../../ui/main_window.py" line="731"/>
+        <location filename="../../ui/main_window.py" line="736"/>
         <source>Render</source>
         <translation>Rendern</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="725"/>
+        <location filename="../../ui/main_window.py" line="731"/>
         <source>These files are currently missing: {names}</source>
         <translation>Diese Dateien fehlen gerade: {names}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="741"/>
+        <location filename="../../ui/main_window.py" line="748"/>
         <source>Choose music</source>
         <translation>Musik wählen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="802"/>
+        <location filename="../../ui/main_window.py" line="809"/>
         <source>No projects yet</source>
         <translation>Noch keine Projekte</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="805"/>
+        <location filename="../../ui/main_window.py" line="812"/>
         <source>Clear list</source>
         <translation>Liste leeren</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="809"/>
-        <location filename="../../ui/main_window.py" line="812"/>
-        <location filename="../../ui/main_window.py" line="864"/>
-        <location filename="../../ui/main_window.py" line="866"/>
-        <location filename="../../ui/main_window.py" line="875"/>
+        <location filename="../../ui/main_window.py" line="816"/>
+        <location filename="../../ui/main_window.py" line="819"/>
+        <location filename="../../ui/main_window.py" line="871"/>
+        <location filename="../../ui/main_window.py" line="873"/>
+        <location filename="../../ui/main_window.py" line="882"/>
         <source>Open project</source>
         <translation>Projekt öffnen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="809"/>
+        <location filename="../../ui/main_window.py" line="816"/>
         <source>The file no longer exists:
 {path}</source>
         <translation>Die Datei gibt es nicht mehr:
 {path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="824"/>
+        <location filename="../../ui/main_window.py" line="831"/>
         <source>Untitled project</source>
         <translation>Unbenanntes Projekt</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="836"/>
+        <location filename="../../ui/main_window.py" line="843"/>
         <source>Save changes to “{name}”?</source>
         <translation>Änderungen an „{name}“ speichern?</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="838"/>
+        <location filename="../../ui/main_window.py" line="845"/>
         <source>Save</source>
         <translation>Speichern</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="838"/>
+        <location filename="../../ui/main_window.py" line="845"/>
         <source>Don&apos;t save</source>
         <translation>Nicht speichern</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="839"/>
+        <location filename="../../ui/main_window.py" line="846"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="852"/>
+        <location filename="../../ui/main_window.py" line="859"/>
         <source>New project</source>
         <translation>Neues Projekt</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="875"/>
+        <location filename="../../ui/main_window.py" line="882"/>
         <source>File could not be read:
 {error}</source>
         <translation>Datei konnte nicht gelesen werden:
 {error}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="888"/>
+        <location filename="../../ui/main_window.py" line="895"/>
         <source>project</source>
         <translation>projekt</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="890"/>
-        <location filename="../../ui/main_window.py" line="900"/>
+        <location filename="../../ui/main_window.py" line="897"/>
+        <location filename="../../ui/main_window.py" line="907"/>
         <source>Save project</source>
         <translation>Projekt speichern</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="903"/>
+        <location filename="../../ui/main_window.py" line="910"/>
         <source>Project saved: {path}</source>
         <translation>Projekt gespeichert: {path}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="991"/>
+        <location filename="../../ui/main_window.py" line="999"/>
         <source>no GPU, CPU encoding</source>
         <translation>keine GPU, CPU-Encoding</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="992"/>
+        <location filename="../../ui/main_window.py" line="1000"/>
         <source>ffmpeg OK · {gpu}</source>
         <translation>ffmpeg OK · {gpu}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="995"/>
+        <location filename="../../ui/main_window.py" line="1003"/>
         <source>ffmpeg missing</source>
         <translation>ffmpeg fehlt</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1000"/>
+        <location filename="../../ui/main_window.py" line="1008"/>
         <source>not found</source>
         <translation>nicht gefunden</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1006"/>
+        <location filename="../../ui/main_window.py" line="1014"/>
         <source>not available</source>
         <translation>nicht verfügbar</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1008"/>
+        <location filename="../../ui/main_window.py" line="1016"/>
         <source>none</source>
         <translation>keine</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1013"/>
+        <location filename="../../ui/main_window.py" line="1021"/>
         <source>Working GPU encoders: {encoders}</source>
         <translation>Funktionierende GPU-Encoder: {encoders}</translation>
     </message>
     <message>
-        <location filename="../../ui/main_window.py" line="1016"/>
+        <location filename="../../ui/main_window.py" line="1024"/>
         <source>System check</source>
         <translation>Systemcheck</translation>
     </message>
@@ -1466,163 +1491,178 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>RenderDialog</name>
     <message>
-        <location filename="../../ui/render_dialog.py" line="61"/>
+        <location filename="../../ui/render_dialog.py" line="62"/>
         <source>Render timeline</source>
         <translation>Timeline rendern</translation>
     </message>
     <message>
+        <location filename="../../ui/render_dialog.py" line="79"/>
+        <source>Marked range ({start} – {end}, {length})</source>
+        <translation>Markierter Bereich ({start} – {end}, {length})</translation>
+    </message>
+    <message>
         <location filename="../../ui/render_dialog.py" line="81"/>
+        <source>Whole timeline ({length})</source>
+        <translation>Ganze Timeline ({length})</translation>
+    </message>
+    <message>
+        <location filename="../../ui/render_dialog.py" line="92"/>
         <source>Same as source ({width} × {height})</source>
         <translation>Wie Quelle ({width} × {height})</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="87"/>
+        <location filename="../../ui/render_dialog.py" line="98"/>
         <source>Same as source ({fps} fps)</source>
         <translation>Wie Quelle ({fps} fps)</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="93"/>
+        <location filename="../../ui/render_dialog.py" line="104"/>
         <source>Lower = better quality and larger file (CQ with NVENC, CRF on the CPU)</source>
         <translation>Kleiner = bessere Qualität und größere Datei (CQ bei NVENC, CRF auf der CPU)</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="105"/>
+        <location filename="../../ui/render_dialog.py" line="117"/>
+        <source>Render:</source>
+        <translation>Rendern:</translation>
+    </message>
+    <message>
+        <location filename="../../ui/render_dialog.py" line="118"/>
         <source>Profile:</source>
         <translation>Profil:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="107"/>
+        <location filename="../../ui/render_dialog.py" line="120"/>
         <source>Resolution:</source>
         <translation>Auflösung:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="108"/>
+        <location filename="../../ui/render_dialog.py" line="121"/>
         <source>Frame rate:</source>
         <translation>Bildrate:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="109"/>
+        <location filename="../../ui/render_dialog.py" line="122"/>
         <source>Quality:</source>
         <translation>Qualität:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="110"/>
+        <location filename="../../ui/render_dialog.py" line="123"/>
         <source>Encoder:</source>
         <translation>Encoder:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="111"/>
+        <location filename="../../ui/render_dialog.py" line="124"/>
         <source>File:</source>
         <translation>Datei:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="116"/>
+        <location filename="../../ui/render_dialog.py" line="129"/>
         <source>Timeline length: {duration}</source>
         <translation>Länge der Timeline: {duration}</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="120"/>
+        <location filename="../../ui/render_dialog.py" line="134"/>
         <source>Open folder</source>
         <translation>Ordner öffnen</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="122"/>
+        <location filename="../../ui/render_dialog.py" line="136"/>
         <source>Play</source>
         <translation>Abspielen</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="124"/>
+        <location filename="../../ui/render_dialog.py" line="138"/>
         <source>Render</source>
         <translation>Rendern</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="127"/>
-        <location filename="../../ui/render_dialog.py" line="226"/>
+        <location filename="../../ui/render_dialog.py" line="141"/>
+        <location filename="../../ui/render_dialog.py" line="246"/>
         <source>Close</source>
         <translation>Schließen</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="167"/>
+        <location filename="../../ui/render_dialog.py" line="181"/>
         <source>CPU, slower</source>
         <translation>CPU, langsamer</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="174"/>
+        <location filename="../../ui/render_dialog.py" line="188"/>
         <source>Output file</source>
         <translation>Zieldatei</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="174"/>
+        <location filename="../../ui/render_dialog.py" line="188"/>
         <source>MP4 video (*.mp4)</source>
         <translation>MP4-Video (*.mp4)</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="194"/>
+        <location filename="../../ui/render_dialog.py" line="213"/>
         <source>Overwrite file</source>
         <translation>Datei überschreiben</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="195"/>
+        <location filename="../../ui/render_dialog.py" line="214"/>
         <source>{name} already exists. Overwrite?</source>
         <translation>{name} existiert schon. Überschreiben?</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="201"/>
+        <location filename="../../ui/render_dialog.py" line="220"/>
         <source>Folder cannot be created: {error}</source>
         <translation>Ordner kann nicht angelegt werden: {error}</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="219"/>
+        <location filename="../../ui/render_dialog.py" line="239"/>
         <source>Rendering starts …</source>
         <translation>Rendern startet …</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="226"/>
+        <location filename="../../ui/render_dialog.py" line="246"/>
         <source>Cancel</source>
         <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="248"/>
+        <location filename="../../ui/render_dialog.py" line="268"/>
         <source>{done} of {total} · {speed}× real time</source>
         <translation>{done} von {total} · {speed}× Echtzeit</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="251"/>
+        <location filename="../../ui/render_dialog.py" line="271"/>
         <source> · about {remaining} left</source>
         <translation> · noch ca. {remaining}</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="261"/>
+        <location filename="../../ui/render_dialog.py" line="281"/>
         <source>ffmpeg could not be started: {path}</source>
         <translation>ffmpeg konnte nicht gestartet werden: {path}</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="269"/>
+        <location filename="../../ui/render_dialog.py" line="289"/>
         <source>Cancelled, the unfinished file was deleted.</source>
         <translation>Abgebrochen, die halbfertige Datei wurde gelöscht.</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="273"/>
+        <location filename="../../ui/render_dialog.py" line="293"/>
         <source>ffmpeg error code {code}</source>
         <translation>ffmpeg-Fehlercode {code}</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="274"/>
+        <location filename="../../ui/render_dialog.py" line="294"/>
         <source>Rendering failed:</source>
         <translation>Rendern fehlgeschlagen:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="278"/>
+        <location filename="../../ui/render_dialog.py" line="298"/>
         <source>Done in {elapsed}: {path} ({size} MB)</source>
         <translation>Fertig in {elapsed}: {path} ({size} MB)</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="289"/>
+        <location filename="../../ui/render_dialog.py" line="309"/>
         <source>Cancel rendering</source>
         <translation>Rendern abbrechen</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="289"/>
+        <location filename="../../ui/render_dialog.py" line="309"/>
         <source>Cancel rendering?</source>
         <translation>Rendern abbrechen?</translation>
     </message>
@@ -1630,93 +1670,103 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>TimelinePanel</name>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="66"/>
+        <location filename="../../ui/timeline_panel.py" line="67"/>
         <source>▶ Play timeline</source>
         <translation>▶ Timeline abspielen</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="67"/>
+        <location filename="../../ui/timeline_panel.py" line="68"/>
         <source>Plays the timeline from the red playhead (P). Double-click a clip: from there.</source>
         <translation>Spielt die Timeline ab dem roten Abspielkopf ab (P). Doppelklick auf einen Clip: ab dort.</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="69"/>
+        <location filename="../../ui/timeline_panel.py" line="70"/>
         <source>♪ Music …</source>
         <translation>♪ Musik …</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="71"/>
+        <location filename="../../ui/timeline_panel.py" line="72"/>
         <source>Original sound of the clips</source>
         <translation>Originalton der Clips</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="72"/>
+        <location filename="../../ui/timeline_panel.py" line="73"/>
         <source>Music volume</source>
         <translation>Lautstärke der Musik</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="77"/>
+        <location filename="../../ui/timeline_panel.py" line="78"/>
         <source>Fade out music at the end</source>
         <translation>Musik am Ende ausblenden</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="83"/>
+        <location filename="../../ui/timeline_panel.py" line="84"/>
         <source>Zoom out</source>
         <translation>Herauszoomen</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="87"/>
+        <location filename="../../ui/timeline_panel.py" line="88"/>
         <source>Zoom in</source>
         <translation>Hineinzoomen</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="90"/>
+        <location filename="../../ui/timeline_panel.py" line="91"/>
         <source>Render …</source>
         <translation>Rendern …</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="91"/>
+        <location filename="../../ui/timeline_panel.py" line="92"/>
         <source>Render the timeline as a video file (Ctrl+R)</source>
         <translation>Timeline als Video-Datei rendern (Strg+R)</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="100"/>
+        <location filename="../../ui/timeline_panel.py" line="101"/>
         <source>Original sound</source>
         <translation>Originalton</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="102"/>
+        <location filename="../../ui/timeline_panel.py" line="103"/>
         <source>Music</source>
         <translation>Musik</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="104"/>
+        <location filename="../../ui/timeline_panel.py" line="105"/>
         <source>Fade out</source>
         <translation>Ausblenden</translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/timeline_panel.py" line="157"/>
+        <location filename="../../ui/timeline_panel.py" line="158"/>
         <source>%n clip(s)</source>
         <translation>
             <numerusform>%n Clip</numerusform>
             <numerusform>%n Clips</numerusform>
         </translation>
     </message>
+    <message>
+        <location filename="../../ui/timeline_panel.py" line="160"/>
+        <source>Range {start} – {end}</source>
+        <translation>Bereich {start} – {end}</translation>
+    </message>
+    <message>
+        <location filename="../../ui/timeline_panel.py" line="163"/>
+        <source>Drag in the time ruler to mark a range for rendering.</source>
+        <translation>Im Zeitlineal ziehen, um einen Bereich zum Rendern zu markieren.</translation>
+    </message>
 </context>
 <context>
     <name>TimelineView</name>
     <message>
-        <location filename="../../ui/timeline_view.py" line="177"/>
+        <location filename="../../ui/timeline_view.py" line="199"/>
         <source>Drag clips here or press E in the Clips tab</source>
         <translation>Ausschnitte hierher ziehen oder im Ausschnitte-Reiter E drücken</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_view.py" line="186"/>
+        <location filename="../../ui/timeline_view.py" line="208"/>
         <source>  (missing)</source>
         <translation>  (fehlt)</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_view.py" line="201"/>
+        <location filename="../../ui/timeline_view.py" line="223"/>
         <source>No music (Timeline → Add music)</source>
         <translation>Keine Musik (Timeline → Musik hinzufügen)</translation>
     </message>
@@ -1753,7 +1803,7 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>model</name>
     <message>
-        <location filename="../../timeline/model.py" line="166"/>
+        <location filename="../../timeline/model.py" line="187"/>
         <source>The timeline comes from a newer FPVCut version.</source>
         <translation>Die Timeline stammt aus einer neueren FPVCut-Version.</translation>
     </message>

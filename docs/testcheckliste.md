@@ -50,6 +50,8 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 
 - [ ] Strg+R, Profil Web: Datei entsteht, läuft im Windows-Player, Farbe und Musik wie in der Vorschau
 - [ ] Profil Original mit NVENC, Abbrechen löscht die halbfertige Datei
+- [ ] Bereich im Zeitlineal ziehen, Kante nachziehen; Strg+R bietet „Markierter Bereich“ an, Datei
+      enthält genau diesen Teil samt passender Musik; „Ganze Timeline“ rendert alles; Esc hebt ihn auf
 
 ## Ordner und Sicherung
 
