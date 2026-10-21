@@ -4,7 +4,7 @@ Die Texte stehen auf Englisch im Code (``self.tr(...)`` bzw. ``translate(...)``)
 :func:`install` die Übersetzung zur gewählten Sprache; „auto“ folgt der Systemsprache und fällt auf
 Englisch zurück. Die Wahl im Menü gilt ab dem nächsten Start.
 
-Übersetzungen aktualisieren: ``uv run python packaging/update_translations.py`` (siehe README).
+Übersetzungen aktualisieren: ``uv run python packaging/update_translations.py`` (siehe docs/release.md).
 """
 
 from __future__ import annotations
