@@ -1701,41 +1701,51 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
     </message>
     <message>
         <location filename="../../ui/timeline_panel.py" line="84"/>
+        <source>Fade the picture to black at the end (0 = off)</source>
+        <translation>Bild am Ende in Schwarz ausblenden (0 = aus)</translation>
+    </message>
+    <message>
+        <location filename="../../ui/timeline_panel.py" line="90"/>
         <source>Zoom out</source>
         <translation>Herauszoomen</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="88"/>
+        <location filename="../../ui/timeline_panel.py" line="94"/>
         <source>Zoom in</source>
         <translation>Hineinzoomen</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="91"/>
+        <location filename="../../ui/timeline_panel.py" line="97"/>
         <source>Render …</source>
         <translation>Rendern …</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="92"/>
+        <location filename="../../ui/timeline_panel.py" line="98"/>
         <source>Render the timeline as a video file (Ctrl+R)</source>
         <translation>Timeline als Video-Datei rendern (Strg+R)</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="101"/>
+        <location filename="../../ui/timeline_panel.py" line="107"/>
         <source>Original sound</source>
         <translation>Originalton</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="103"/>
+        <location filename="../../ui/timeline_panel.py" line="109"/>
         <source>Music</source>
         <translation>Musik</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="105"/>
+        <location filename="../../ui/timeline_panel.py" line="111"/>
         <source>Fade out</source>
         <translation>Ausblenden</translation>
     </message>
+    <message>
+        <location filename="../../ui/timeline_panel.py" line="113"/>
+        <source>Fade to black</source>
+        <translation>Schwarzblende</translation>
+    </message>
     <message numerus="yes">
-        <location filename="../../ui/timeline_panel.py" line="158"/>
+        <location filename="../../ui/timeline_panel.py" line="168"/>
         <source>%n clip(s)</source>
         <translation>
             <numerusform>%n Clip</numerusform>
@@ -1743,12 +1753,12 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="160"/>
+        <location filename="../../ui/timeline_panel.py" line="170"/>
         <source>Range {start} – {end}</source>
         <translation>Bereich {start} – {end}</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_panel.py" line="163"/>
+        <location filename="../../ui/timeline_panel.py" line="173"/>
         <source>Drag in the time ruler to mark a range for rendering.</source>
         <translation>Im Zeitlineal ziehen, um einen Bereich zum Rendern zu markieren.</translation>
     </message>
@@ -1766,7 +1776,7 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         <translation>  (fehlt)</translation>
     </message>
     <message>
-        <location filename="../../ui/timeline_view.py" line="223"/>
+        <location filename="../../ui/timeline_view.py" line="226"/>
         <source>No music (Timeline → Add music)</source>
         <translation>Keine Musik (Timeline → Musik hinzufügen)</translation>
     </message>
@@ -1803,7 +1813,7 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>model</name>
     <message>
-        <location filename="../../timeline/model.py" line="187"/>
+        <location filename="../../timeline/model.py" line="196"/>
         <source>The timeline comes from a newer FPVCut version.</source>
         <translation>Die Timeline stammt aus einer neueren FPVCut-Version.</translation>
     </message>

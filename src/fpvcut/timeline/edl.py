@@ -38,11 +38,15 @@ def build_edl(timeline: Timeline, audio: Path | str | None = None) -> str:
 
 
 def build_vf(timeline: Timeline) -> str:
-    """Videofilter für mpvs ``vf``-Option mit der Farbkorrektur aller Clips, leer ohne Korrektur."""
+    """Videofilter für mpvs ``vf``-Option: Farbkorrektur aller Clips und Ausblendung am Ende.
+
+    Leer, wenn es weder Korrektur noch Ausblendung gibt."""
     video = []
     for clip, begin in zip(timeline.clips, timeline.starts()):
         # Zeitstempel der EDL sind Timeline-Zeit: Korrektur nur im Zeitraum dieses Clips.
         video += grade_filters(clip.grade, enable=f"gte(t,{begin:.3f})*lt(t,{begin + clip.duration:.3f})")
+    if fade := timeline.video_fade():
+        video.append(f"fade=t=out:st={fade[0]:.3f}:d={fade[1]:.2f}:color=black")
     # Die Filter laufen auf der CPU; 4K-Bilder vorher auf höchstens 1080 Zeilen verkleinern, das
     # macht sie etwa dreimal so schnell. Für die Vorschau reicht das, der Export nutzt volle Größe.
     # ``eval=frame``: mpv baut den Filter bei einem Wechsel der Auflösung nicht neu auf; so passt

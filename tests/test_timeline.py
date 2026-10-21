@@ -94,6 +94,26 @@ def test_excerpt_cuts_clips_and_shifts_music():
     assert [c.fingerprint for c in tl.excerpt(2, 6).clips] == ["b"]  # Grenzen genau auf Schnitten
 
 
+def test_video_fade_at_end_also_in_excerpt_and_saved(tmp_path):
+    tl = make()  # 7 s lang
+    assert tl.video_fade() is None
+    tl.video_fade_out = 2
+    assert tl.video_fade() == (5, 2)
+    assert tl.excerpt(1, 4).video_fade() == (1, 2)  # blendet am Ende des Bereichs aus
+    tl.video_fade_out = 30
+    assert tl.video_fade() == (0, 7)  # nie länger als die Timeline
+    tl.save(tmp_path / "t.json")
+    assert Timeline.load(tmp_path / "t.json").video_fade_out == 30
+    assert Timeline.from_dict({"video_track": []}).video_fade_out == 0  # ältere Dateien
+
+
+def test_preview_fades_picture_to_black():
+    tl = make()
+    assert build_vf(tl) == ""
+    tl.video_fade_out = 1.5
+    assert build_vf(tl).endswith(",fade=t=out:st=5.500:d=1.50:color=black]")
+
+
 def test_excerpt_drops_music_that_already_ended():
     tl = make()
     tl.music = MusicTrack("m.mp3", duration=3)

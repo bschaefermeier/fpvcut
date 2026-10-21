@@ -76,9 +76,15 @@ class TimelinePanel(QWidget):
         self._fade.setSingleStep(0.5)
         self._fade.setSuffix(" s")
         self._fade.setToolTip(self.tr("Fade out music at the end"))
-        self._fade.valueChanged.connect(self._on_audio_changed)
-        self._original.valueChanged.connect(self._on_audio_changed)
-        self._music.valueChanged.connect(self._on_audio_changed)
+        self._fade.valueChanged.connect(self._on_mix_changed)
+        self._video_fade = QDoubleSpinBox(self)
+        self._video_fade.setRange(0, 30)
+        self._video_fade.setSingleStep(0.5)
+        self._video_fade.setSuffix(" s")
+        self._video_fade.setToolTip(self.tr("Fade the picture to black at the end (0 = off)"))
+        self._video_fade.valueChanged.connect(self._on_mix_changed)
+        self._original.valueChanged.connect(self._on_mix_changed)
+        self._music.valueChanged.connect(self._on_mix_changed)
         zoom_out = QToolButton(self)
         zoom_out.setText("−")
         zoom_out.setToolTip(self.tr("Zoom out"))
@@ -91,7 +97,7 @@ class TimelinePanel(QWidget):
         self._render = QPushButton(self.tr("Render …"), self)
         self._render.setToolTip(self.tr("Render the timeline as a video file (Ctrl+R)"))
         self._render.clicked.connect(self.render_requested)
-        for widget in (self._play, music, zoom_in, zoom_out, self._fade, self._render):
+        for widget in (self._play, music, zoom_in, zoom_out, self._fade, self._video_fade, self._render):
             widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         bar = QHBoxLayout()
@@ -104,6 +110,8 @@ class TimelinePanel(QWidget):
         bar.addWidget(self._music)
         bar.addWidget(QLabel(self.tr("Fade out"), self))
         bar.addWidget(self._fade)
+        bar.addWidget(QLabel(self.tr("Fade to black"), self))
+        bar.addWidget(self._video_fade)
         bar.addStretch(1)
         bar.addWidget(self._summary)
         bar.addSpacing(12)
@@ -146,12 +154,14 @@ class TimelinePanel(QWidget):
             (self._original, round(timeline.original_volume * 100)),
             (self._music, round(timeline.music.volume * 100) if timeline.music else 80),
             (self._fade, timeline.music.fade_out if timeline.music else 3.0),
+            (self._video_fade, timeline.video_fade_out),
         ):
             widget.blockSignals(True)
             widget.setValue(value)
             widget.blockSignals(False)
         self._music.setEnabled(timeline.music is not None)
         self._fade.setEnabled(timeline.music is not None)
+        self._video_fade.setEnabled(bool(timeline.clips))
         self._play.setEnabled(bool(timeline.clips))
         self._render.setEnabled(bool(timeline.clips))
         count = len(timeline.clips)
@@ -195,9 +205,11 @@ class TimelinePanel(QWidget):
         self._sync_controls()
         self.changed.emit()
 
-    def _on_audio_changed(self) -> None:
+    def _on_mix_changed(self) -> None:
+        """Lautstärken oder Blenden geändert."""
         timeline = self.timeline
         timeline.original_volume = self._original.value() / 100
+        timeline.video_fade_out = self._video_fade.value()
         if timeline.music is not None:
             timeline.music.volume = self._music.value() / 100
             timeline.music.fade_out = self._fade.value()
