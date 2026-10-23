@@ -187,7 +187,15 @@ def test_favorite_dialog_shows_all_tags_wrapped():
     assert len(buttons) == 31  # kein Limit mehr, Groß/klein-Dubletten nur einmal
     assert len({b.y() for b in buttons}) > 1  # umgebrochen
     assert all(b.width() < 100 for b in buttons)  # so breit wie der Text
-    assert buttons[-1].geometry().bottom() <= dialog._quick.viewport().height()
+    # Bis max_rows Zeilen ist alles ohne Scrollen sichtbar, darüber wird gescrollt. Welcher Fall
+    # eintritt, hängt an der Schrift: offscreen fehlen echte Schriften, die Knöpfe werden breiter.
+    quick = dialog._quick
+    rows = len({b.y() for b in buttons})
+    if rows <= quick.max_rows:
+        assert buttons[-1].geometry().bottom() <= quick.viewport().height()
+    else:
+        assert quick.height() == quick.max_rows * quick.row_height() - quick._flow.spacing()
+        assert quick.verticalScrollBar().maximum() > 0
     dialog.close()
 
 

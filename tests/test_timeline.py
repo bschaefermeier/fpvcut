@@ -16,6 +16,11 @@ def clip(name, src_in, src_out, source=10.0):
     return TimelineClip(name, src_in, src_out, source, f"{name}.mp4", path=Path(f"/v/{name}.mp4"))
 
 
+def src(name):
+    """Pfad eines Testclips, wie ihn das Betriebssystem schreibt (unter Windows mit Backslashes)."""
+    return str(Path(f"/v/{name}.mp4"))
+
+
 def make():
     return Timeline([clip("a", 1, 3), clip("b", 0, 4), clip("c", 5, 6)])
 
@@ -122,10 +127,10 @@ def test_excerpt_drops_music_that_already_ended():
 
 def test_edl_puts_mixed_audio_first():
     tl = Timeline([clip("a", 1, 3), clip("b", 0, 1)])
-    assert build_edl(tl) == "edl://!new_stream;%8%/v/a.mp4,1.000,2.000;%8%/v/b.mp4,0.000,1.000"
+    assert build_edl(tl) == f"edl://!new_stream;%8%{src('a')},1.000,2.000;%8%{src('b')},0.000,1.000"
     # Der gemischte Ton steht vorn und ist damit immer aid1.
     assert build_edl(tl, "/t/o.wav") == (
-        "edl://!new_stream;%8%/t/o.wav,0.000,3.000;!new_stream;%8%/v/a.mp4,1.000,2.000;%8%/v/b.mp4,0.000,1.000"
+        f"edl://!new_stream;%8%/t/o.wav,0.000,3.000;!new_stream;%8%{src('a')},1.000,2.000;%8%{src('b')},0.000,1.000"
     )
 
 
@@ -134,7 +139,7 @@ def test_preview_audio_command_mixes_like_render(tmp_path):
     tl.original_volume = 0.5
     cmd = preview_audio.build_command("ffmpeg", tl, tmp_path / "o.wav")
     i = cmd.index("-i")
-    assert cmd[i - 5:i + 2] == ["-ss", "1.000", "-t", "2.000", "-vn", "-i", "/v/a.mp4"]
+    assert cmd[i - 5:i + 2] == ["-ss", "1.000", "-t", "2.000", "-vn", "-i", src("a")]
     assert cmd.count("-i") == 1  # nur Clips mit Ton werden gelesen
     graph = cmd[cmd.index("-filter_complex") + 1]
     assert "[0:a]aresample=48000" in graph and "anullsrc=r=48000:cl=stereo" in graph

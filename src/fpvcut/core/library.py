@@ -220,6 +220,11 @@ class Library:
             (media_id, root_id, rel_path, size, mtime_ns, now),
         )
 
+    def last_seen(self, root_id: int) -> float:
+        """Spätester Zeitpunkt, zu dem in diesem Ordner eine Datei gesehen wurde (0 ohne Dateien)."""
+        row = self.conn.execute("SELECT MAX(last_seen) FROM media_path WHERE root_id = ?", (root_id,)).fetchone()
+        return row[0] or 0.0
+
     def mark_unseen_missing(self, root_id: int, scan_started: float) -> int:
         cur = self.conn.execute(
             "UPDATE media_path SET missing = 1 WHERE root_id = ? AND last_seen < ? AND missing = 0",

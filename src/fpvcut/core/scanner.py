@@ -51,7 +51,9 @@ def scan_root(
         result.errors.append(translate("scanner", "Folder not reachable: {path}").format(path=root.path))
         return result  # z. B. externe Platte nicht angesteckt: nichts als fehlend markieren
 
-    started = time.time()
+    # Die Windows-Uhr tickt nur alle ~15 ms: folgen zwei Scans schneller aufeinander, muss der
+    # Start trotzdem nach allem liegen, was der vorige gesehen hat, sonst fällt nichts als fehlend auf.
+    started = max(time.time(), library.last_seen(root.id) + 0.001)
     known = library.known_paths(root.id)
     files = list(iter_videos(root.path))
     for index, path in enumerate(files, start=1):
@@ -61,7 +63,7 @@ def scan_root(
         try:
             stat = path.stat()
             row = known.get(rel_path)
-            now = time.time()
+            now = max(time.time(), started)
             if row is not None and row["size"] == stat.st_size and row["mtime_ns"] == stat.st_mtime_ns:
                 library.touch_path(row["id"], now)
                 result.unchanged += 1
