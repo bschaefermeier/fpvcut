@@ -8,6 +8,13 @@ durch, wird daraus die fertige Version.
 
 ### Neu
 
+- **Import von der SD-Karte:** Datei → Von SD-Karte importieren (Strg+I) kopiert die Videos samt
+  gleichnamigen Begleitdateien (z. B. `.srt`, `.osd`) in einen neuen Flugtag-Ordner
+  `YYYY-MM-DD_Spot` im Bibliotheksordner, liest jede Kopie zur Prüfung zurück, löscht danach die
+  Originale auf der Karte und wirft sie aus (beides abwählbar). Karte und Unterordner merkt sich
+  FPVCut beim ersten Mal und findet sie auch unter anderem Laufwerksbuchstaben wieder; steckt die
+  Karte, bietet die Statusleiste den Import an. Gleiche Dateinamen bekommen `_1`, `_2` …, schon
+  importierte Dateien werden erkannt und nicht doppelt kopiert
 - **Schwarzblende am Ende:** Neben „Ausblenden“ der Musik stellt „Schwarzblende“ ein, wie viele
   Sekunden das Bild am Ende in Schwarz ausblendet (0 = aus). Wirkt in Vorschau und Export; beim
   Rendern eines markierten Bereichs blendet das Bild wie die Musik am Bereichsende aus. Die Timeline

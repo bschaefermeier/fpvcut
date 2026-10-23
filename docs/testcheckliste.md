@@ -12,6 +12,16 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
 - [ ] Bibliothek, Ausschnitte und Timeline aus der bisherigen `uv run`-Version sind da
 - [ ] Hilfe → Systemcheck: ffmpeg aus dem Programmordner gefunden, NVENC-Encoder als funktionierend
 
+## Import von der SD-Karte
+
+- [ ] Datei → "Von SD-Karte importieren …" (Strg+I): Ordner auf der Karte einmal wählen, Datum ist
+      heute, Spot eintragen, Ziel zeigt `YYYY-MM-DD_Spot`
+- [ ] Importieren: Fortschritt läuft, Videos (und gleichnamige `.srt`/`.osd`) liegen im neuen
+      Ordner, auf der Karte sind sie gelöscht, die Karte ist ausgeworfen, die Bibliothek zeigt sie als neu
+- [ ] Karte erneut einstecken: Statusleiste meldet "SD-Karte erkannt", der Dialog ist ohne
+      Navigieren mit Karte und Ordner gefüllt, auch unter anderem Laufwerksbuchstaben
+- [ ] Abbrechen während des Kopierens: nichts auf der Karte gelöscht, keine `.part`-Dateien im Ziel
+
 ## Sichten
 
 - [ ] Video per Klick in der Bibliothek öffnen, Leertaste, ←/→, Shift+←/→, J/L, Klick, Doppelklick, F11/Esc, Alt+F4

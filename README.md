@@ -8,6 +8,9 @@ them on a timeline with music and export the result with GPU acceleration.
 
 ## Features
 
+- **Import from SD card:** Copy the videos from the SD card into a new flight day folder, check
+  every copy, delete the originals on the card and eject it, in one step. FPVCut remembers the card
+  and folder, so next time it is ready as soon as the card is inserted.
 - **Library:** Video folders are grouped by flight day automatically. New recordings you haven't
   reviewed yet are highlighted. Renamed or moved files are recognized.
 - **Reviewing and clips:** Frame-accurate playback; mark scenes with in and out points and save
@@ -47,12 +50,16 @@ kept.
 
 1. Choose the folder with your recordings via **File → Add library folder**. FPVCut recognizes
    flight days by the date in the folder name, e.g. `2026-08-28_Field` or `28_08_26_Field`.
-2. Open a video with a click, mark scenes with **I** and **O** and save them as clips with **F**.
+2. To import a flight day, insert the SD card and choose **File → Import from SD card**
+   (**Ctrl+I**). Pick the folder with the videos on the card once; FPVCut remembers it. Enter the
+   spot, and FPVCut copies the videos into `YYYY-MM-DD_Spot`, checks the copies, deletes them on
+   the card and ejects it (both can be switched off).
+3. Open a video with a click, mark scenes with **I** and **O** and save them as clips with **F**.
    Alternatively, drag a range on the bar below the seek bar and save it with the save button to
    the right of the seek bar.
-3. Drag clips from the **Clips** tab into the timeline, optionally add music, and export with
+4. Drag clips from the **Clips** tab into the timeline, optionally add music, and export with
    **Ctrl+R**. **Ctrl+S** saves the project.
-4. To export only part of the timeline, drag a range in the time ruler above the timeline. The
+5. To export only part of the timeline, drag a range in the time ruler above the timeline. The
    render window then asks whether to render just that range or the whole timeline.
 
 ### Keyboard shortcuts
@@ -78,6 +85,7 @@ kept.
 | Ctrl + ← / → | Start / end of timeline |
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 | Ctrl + R | Render |
+| Ctrl + I | Import from SD card |
 | Ctrl + N | New project |
 | Ctrl + S | Save project |
 | F5 | Rescan library |
