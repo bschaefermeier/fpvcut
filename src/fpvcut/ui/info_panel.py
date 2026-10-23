@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QDateTime, QLocale, QPoint, Qt, Signal
+import json
+
+from PySide6.QtCore import QDateTime, QLocale, QMimeData, QPoint, Qt, Signal
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QFormLayout,
     QLabel,
     QListWidget,
@@ -17,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from fpvcut.core.library import Clip, LibraryEntry
 from fpvcut.i18n import translate
+from fpvcut.ui.mime import MIME_CLIPS
 from fpvcut.ui.player import format_time
 from fpvcut.ui.stars import star_icon
 
@@ -29,6 +33,19 @@ def clip_range_text(clip_in: float, clip_out: float | None) -> str:
     end = translate("InfoPanel", "End") if clip_out is None else format_time(clip_out)
     length = "" if clip_out is None else f"  ({clip_out - clip_in:.1f} s)"
     return f"{format_time(clip_in)} – {end}{length}"
+
+
+class _ClipList(QListWidget):
+    """Ausgewählte Ausschnitte lassen sich in die Timeline ziehen, in der Reihenfolge der Liste."""
+
+    def mimeTypes(self) -> list[str]:  # noqa: N802  (Qt-Name)
+        return [MIME_CLIPS]
+
+    def mimeData(self, items) -> QMimeData:  # noqa: N802
+        ids = [item.data(CLIP_ROLE).id for item in sorted(items, key=self.row)]
+        data = QMimeData()
+        data.setData(MIME_CLIPS, json.dumps(ids).encode())
+        return data
 
 
 class InfoPanel(QTabWidget):
@@ -45,9 +62,12 @@ class InfoPanel(QTabWidget):
         self._hint = QLabel(self)
         self._hint.setWordWrap(True)
         self._hint.setStyleSheet("color: gray;")
-        self._clips = QListWidget(favorites)
+        self._clips = _ClipList(favorites)
         self._clips.setSpacing(2)
         self._clips.setAlternatingRowColors(True)
+        self._clips.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self._clips.setDragEnabled(True)
+        self._clips.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self._clips.itemActivated.connect(lambda item: self.clip_activated.emit(item.data(CLIP_ROLE)))
         self._clips.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._clips.customContextMenuRequested.connect(self._show_clip_menu)
@@ -85,6 +105,7 @@ class InfoPanel(QTabWidget):
             self._hint.setText(
                 self.tr("I = in point · O = out point · F = save clip · Shift+F = whole video · "
                         "Esc = clear selection. Double-click a clip to play it in a loop, "
+                        "drag it into the timeline (several with Ctrl/Shift), "
                         "right-click to mark it as a favorite.")
             )
         self._fill_metadata(entry)
@@ -120,6 +141,11 @@ class InfoPanel(QTabWidget):
     def current_clip(self) -> Clip | None:
         return self._current_clip()
 
+    def selected_clips(self) -> list[Clip]:
+        """Ausgewählte Ausschnitte in der Reihenfolge der Liste."""
+        items = sorted(self._clips.selectedItems(), key=self._clips.row)
+        return [item.data(CLIP_ROLE) for item in items]
+
     def _current_clip(self) -> Clip | None:
         item = self._clips.currentItem()
         return item.data(CLIP_ROLE) if item else None
@@ -130,15 +156,20 @@ class InfoPanel(QTabWidget):
 
     def _show_clip_menu(self, pos: QPoint) -> None:
         item = self._clips.itemAt(pos)
-        if item is None:
-            return
+        if item is not None:
+            self.clip_menu(item).exec(self._clips.viewport().mapToGlobal(pos))
+
+    def clip_menu(self, item: QListWidgetItem) -> QMenu:
         clip = item.data(CLIP_ROLE)
+        # Rechtsklick in eine Mehrfachauswahl: „In die Timeline“ nimmt alle ausgewählten.
+        chosen = self.selected_clips() if item.isSelected() else [clip]
         menu = QMenu(self)
         menu.addAction(self.tr("Play (loop)"), lambda: self.clip_activated.emit(clip))
-        menu.addAction(self.tr("Add to timeline (E)"), lambda: self.add_to_timeline_requested.emit([clip.id]))
+        menu.addAction(self.tr("Add %n clip(s) to timeline (E)", "", len(chosen)),
+                       lambda: self.add_to_timeline_requested.emit([c.id for c in chosen]))
         menu.addAction(self.tr("Remove favorite") if clip.favorite else self.tr("Mark as favorite"),
                        lambda: self.favorite_toggled.emit(clip, not clip.favorite))
         menu.addAction(self.tr("Edit tags and note …"), lambda: self.clip_edit_requested.emit(clip))
         menu.addSeparator()
         menu.addAction(self.tr("Delete clip"), lambda: self.clip_delete_requested.emit(clip))
-        menu.exec(self._clips.viewport().mapToGlobal(pos))
+        return menu

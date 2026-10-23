@@ -32,6 +32,9 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
       der Zeitleiste wird aktiv und öffnet den Dialog
 - [ ] Ausschnitte-Reiter: Tag-Filter, Suche, "Nur Favoriten", Klick auf den Stern schaltet um,
       Doppelklick spielt in Schleife
+- [ ] Ausschnitte des geöffneten Videos (rechts im Reiter Info): einen oder mehrere (Strg/Umschalt)
+      in die Timeline ziehen, landen an der Ablagestelle in Listenreihenfolge; Rechtsklick in die
+      Auswahl → "2 Ausschnitte zur Timeline hinzufügen", E nimmt ebenfalls alle ausgewählten
 
 ## Timeline
 

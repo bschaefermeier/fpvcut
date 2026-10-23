@@ -72,6 +72,17 @@
     </message>
 </context>
 <context>
+    <name>InfoPanel</name>
+    <message numerus="yes">
+        <location filename="../../ui/info_panel.py" line="168"/>
+        <source>Add %n clip(s) to timeline (E)</source>
+        <translation>
+            <numerusform>Add %n clip to timeline (E)</numerusform>
+            <numerusform>Add %n clips to timeline (E)</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
     <name>LibraryPanel</name>
     <message numerus="yes">
         <location filename="../../ui/library_panel.py" line="65"/>

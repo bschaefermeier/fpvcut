@@ -145,6 +145,36 @@ def test_drop_favorites_emits_ids_and_position():
     assert dropped == [([7, 9], 1)]
 
 
+def test_clips_of_open_video_can_be_dragged_into_timeline():
+    from fpvcut.core.library import Clip
+    from fpvcut.ui.info_panel import InfoPanel
+
+    app()
+    info = InfoPanel()
+    info.set_entry(None, [Clip(i, 1, i * 1000, i * 1000 + 500, "", 0.0) for i in (3, 5, 8)])
+    clip_list = info._clips
+    assert clip_list.dragEnabled()
+    assert clip_list.selectionMode() == QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection
+    # Erst den dritten, dann mit Strg den ersten wählen: gezogen wird in der Reihenfolge der Liste.
+    clip_list.item(2).setSelected(True)
+    clip_list.item(0).setSelected(True)
+    assert [c.id for c in info.selected_clips()] == [3, 8]
+    mime = clip_list.mimeData([clip_list.item(2), clip_list.item(0)])
+    assert json.loads(bytes(mime.data(MIME_CLIPS)).decode()) == [3, 8]
+    # Dasselbe Format, das die Timeline beim Ablegen annimmt.
+    assert panel_with_clips().view._accepts(mime)
+
+    added = []
+    info.add_to_timeline_requested.connect(added.append)
+    # Rechtsklick in die Auswahl nimmt alle ausgewählten, außerhalb nur den angeklickten.
+    timeline_action = next(a for a in info.clip_menu(clip_list.item(0)).actions() if "Timeline" in a.text())
+    assert "2 Ausschnitte" in timeline_action.text()
+    timeline_action.trigger()
+    assert added == [[3, 8]]
+    single = next(a for a in info.clip_menu(clip_list.item(1)).actions() if "Timeline" in a.text())
+    assert "1 Ausschnitt " in single.text()
+
+
 def _window(monkeypatch, tmp_path):
     from fpvcut.ui import player
     from fpvcut.ui.main_window import MainWindow

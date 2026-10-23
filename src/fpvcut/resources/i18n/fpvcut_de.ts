@@ -555,147 +555,150 @@ Im Player mit I/O einen Ausschnitt wählen und F drücken.</translation>
 <context>
     <name>InfoPanel</name>
     <message>
-        <location filename="../../ui/info_panel.py" line="28"/>
+        <location filename="../../ui/info_panel.py" line="32"/>
         <source>Whole video</source>
         <translation>Ganzes Video</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="29"/>
+        <location filename="../../ui/info_panel.py" line="33"/>
         <source>End</source>
         <translation>Ende</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="61"/>
+        <location filename="../../ui/info_panel.py" line="81"/>
         <source>Clips</source>
         <translation>Ausschnitte</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="66"/>
+        <location filename="../../ui/info_panel.py" line="86"/>
         <source>Metadata</source>
         <translation>Metadaten</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="81"/>
+        <location filename="../../ui/info_panel.py" line="101"/>
         <source>Favorite</source>
         <translation>Favorit</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="83"/>
+        <location filename="../../ui/info_panel.py" line="103"/>
         <source>Open a video from the library to save clips.</source>
         <translation>Öffne ein Video aus der Bibliothek, um Ausschnitte zu speichern.</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="86"/>
-        <source>I = in point · O = out point · F = save clip · Shift+F = whole video · Esc = clear selection. Double-click a clip to play it in a loop, right-click to mark it as a favorite.</source>
-        <translation>I = In-Punkt · O = Out-Punkt · F = Ausschnitt speichern · Shift+F = ganzes Video · Esc = Auswahl aufheben. Doppelklick auf einen Ausschnitt spielt ihn in Schleife ab, per Rechtsklick lässt er sich als Favorit markieren.</translation>
+        <location filename="../../ui/info_panel.py" line="106"/>
+        <source>I = in point · O = out point · F = save clip · Shift+F = whole video · Esc = clear selection. Double-click a clip to play it in a loop, drag it into the timeline (several with Ctrl/Shift), right-click to mark it as a favorite.</source>
+        <translation>I = In-Punkt · O = Out-Punkt · F = Ausschnitt speichern · Shift+F = ganzes Video · Esc = Auswahl aufheben. Doppelklick auf einen Ausschnitt spielt ihn in Schleife ab, in die Timeline ziehen (mehrere mit Strg/Umschalt), per Rechtsklick lässt er sich als Favorit markieren.</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="96"/>
+        <location filename="../../ui/info_panel.py" line="117"/>
         <source>No video from the library open.</source>
         <translation>Kein Video aus der Bibliothek geöffnet.</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="100"/>
+        <location filename="../../ui/info_panel.py" line="121"/>
         <source>File</source>
         <translation>Datei</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="101"/>
+        <location filename="../../ui/info_panel.py" line="122"/>
         <source>Folder</source>
         <translation>Ordner</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="102"/>
+        <location filename="../../ui/info_panel.py" line="123"/>
         <source>Flight day</source>
         <translation>Flugtag</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="103"/>
+        <location filename="../../ui/info_panel.py" line="124"/>
         <source>Duration</source>
         <translation>Dauer</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="104"/>
+        <location filename="../../ui/info_panel.py" line="125"/>
         <source>Resolution</source>
         <translation>Auflösung</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="105"/>
+        <location filename="../../ui/info_panel.py" line="126"/>
         <source>Frame rate</source>
         <translation>Bildrate</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="106"/>
+        <location filename="../../ui/info_panel.py" line="127"/>
         <source>Video</source>
         <translation>Video</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="106"/>
+        <location filename="../../ui/info_panel.py" line="127"/>
         <source>{codec}, {bits} bit</source>
         <translation>{codec}, {bits} Bit</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="107"/>
+        <location filename="../../ui/info_panel.py" line="128"/>
         <source>Audio</source>
         <translation>Audio</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="107"/>
+        <location filename="../../ui/info_panel.py" line="128"/>
         <source>no sound</source>
         <translation>kein Ton</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="108"/>
+        <location filename="../../ui/info_panel.py" line="129"/>
         <source>Size</source>
         <translation>Größe</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="109"/>
+        <location filename="../../ui/info_panel.py" line="130"/>
         <source>Bit rate</source>
         <translation>Bitrate</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="110"/>
+        <location filename="../../ui/info_panel.py" line="131"/>
         <source>Added</source>
         <translation>Erfasst</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="112"/>
+        <location filename="../../ui/info_panel.py" line="133"/>
         <source>Fingerprint</source>
         <translation>Fingerprint</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="118"/>
+        <location filename="../../ui/info_panel.py" line="139"/>
         <source>{label}:</source>
         <translation>{label}:</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="137"/>
+        <location filename="../../ui/info_panel.py" line="167"/>
         <source>Play (loop)</source>
         <translation>Abspielen (Schleife)</translation>
     </message>
-    <message>
-        <location filename="../../ui/info_panel.py" line="138"/>
-        <source>Add to timeline (E)</source>
-        <translation>Zur Timeline hinzufügen (E)</translation>
+    <message numerus="yes">
+        <location filename="../../ui/info_panel.py" line="168"/>
+        <source>Add %n clip(s) to timeline (E)</source>
+        <translation>
+            <numerusform>%n Ausschnitt zur Timeline hinzufügen (E)</numerusform>
+            <numerusform>%n Ausschnitte zur Timeline hinzufügen (E)</numerusform>
+        </translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="139"/>
+        <location filename="../../ui/info_panel.py" line="170"/>
         <source>Remove favorite</source>
         <translation>Favorit entfernen</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="139"/>
+        <location filename="../../ui/info_panel.py" line="170"/>
         <source>Mark as favorite</source>
         <translation>Als Favorit markieren</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="141"/>
+        <location filename="../../ui/info_panel.py" line="172"/>
         <source>Edit tags and note …</source>
         <translation>Tags und Notiz bearbeiten …</translation>
     </message>
     <message>
-        <location filename="../../ui/info_panel.py" line="143"/>
+        <location filename="../../ui/info_panel.py" line="174"/>
         <source>Delete clip</source>
         <translation>Ausschnitt löschen</translation>
     </message>

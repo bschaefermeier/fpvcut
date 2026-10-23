@@ -633,8 +633,8 @@ class MainWindow(QMainWindow):
             self.add_favorites_to_timeline(ids)
         elif tab is self.library_panel and (entries := self.library_panel.selected_entries()):
             self.add_videos_to_timeline([e.media_id for e in entries if not e.missing])
-        elif (clip := self.info_panel.current_clip()) is not None:
-            self.add_favorites_to_timeline([clip.id])
+        elif clips := self.info_panel.selected_clips():
+            self.add_favorites_to_timeline([c.id for c in clips])
         else:
             self.statusBar().showMessage(self.tr("Select videos or clips first, or mark a range in the player with I/O."))
 

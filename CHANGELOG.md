@@ -8,6 +8,10 @@ durch, wird daraus die fertige Version.
 
 ### Neu
 
+- **Ausschnitte des geöffneten Videos in die Timeline ziehen:** Die Liste rechts im Reiter Info
+  erlaubt jetzt Mehrfachauswahl mit Strg und Umschalt; ein oder mehrere Ausschnitte lassen sich
+  direkt an die gewünschte Stelle der Timeline ziehen. Rechtsklick und E nehmen ebenfalls alle
+  ausgewählten
 - **Import von der SD-Karte:** Datei → Von SD-Karte importieren (Strg+I) kopiert die Videos samt
   gleichnamigen Begleitdateien (z. B. `.srt`, `.osd`) in einen neuen Flugtag-Ordner
   `YYYY-MM-DD_Spot` im Bibliotheksordner, liest jede Kopie zur Prüfung zurück, löscht danach die
