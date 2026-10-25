@@ -1,6 +1,6 @@
 [project]
 name = "fpvcut"
-version = "1.0.0rc2"
+version = "1.0.0rc3"
 description = "Schlanke Schnittsoftware für FPV-Videos"
 readme = "README.md"
 license = "GPL-3.0-or-later"

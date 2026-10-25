@@ -1,8 +1,10 @@
 # FPVCut
 
-FPVCut is a lightweight video editor for FPV footage. It brings the usual steps after a day of
-flying together in one application: review your recordings, save the best scenes as clips, arrange
-them on a timeline with music and export the result with GPU acceleration.
+**Get the most out of your FPV footage, without the hassle.** FPVCut is a lightweight,
+high-performance video library and editor built for FPV pilots: quickly import and review your
+footage, collect and tag your best scenes and turn them into beautiful videos. Make analog recordings
+look awesome with AI-based noise and OSD removal, and polish any footage with color correction and
+LUTs. Completely free and open source.
 
 ![FPVCut with the Clips tab, preview, color correction and timeline](docs/bilder/fpvcut2.png)
 
