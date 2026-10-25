@@ -20,10 +20,10 @@ a = Analysis(
     pathex=[str(root / "src")],
     datas=[(str(resources / "fpvcut.svg"), "fpvcut/resources")]
     + [(str(qm), "fpvcut/resources/i18n") for qm in sorted((resources / "i18n").glob("*.qm"))]
-    + [(str(src), dest) for src, dest in vendor],
+    + [(str(src), dest) for src, dest in vendor]
     + [(str(model), "models") for model in sorted((root / "models").glob("*.onnx"))],
     hiddenimports=["mpv"],
-    excludes=["tkinter", "pytest", "torch", "einops"],  # KI-Reinigung nur aus dem Quellcode
+    excludes=["tkinter", "pytest", "torch", "einops"],  # Modell hoher Qualität (PyTorch) nur aus dem Quellcode
 )
 pyz = PYZ(a.pure)
 exe = EXE(
