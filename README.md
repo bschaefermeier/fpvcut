@@ -146,7 +146,7 @@ uv sync --extra ki
 ```
 
 FPVCut looks for the checkpoints `schueler_2h.pt` (student) and `lehrer_cluster.pt` (teacher) in
-`%FPVCUT_MODELS%`, `%APPDATA%\FPVCut\modelle` and `..pv-restoration\checkpoints` next to this
+`%FPVCUT_MODELS%`, `%APPDATA%\FPVCut\modelle` and `..\fpv-restoration\checkpoints` next to this
 repository; other files can be chosen under File → AI models. Both models work on half resolution
 (the BoxPro+ picture 1200 × 720 becomes 592 × 352) and the result is scaled back to the source size.
 On an RTX 3070 the student manages about 70 frames/s including decoding, the teacher about 2 frames/s
