@@ -11,6 +11,15 @@ dependencies = [
     "xxhash>=3.4",
 ]
 
+[project.optional-dependencies]
+# KI-Bildreinigung für analoges FPV-Bild (Modelle aus fpv-restoration); ohne diese Pakete fehlt
+# nur diese Funktion. Einrichten mit ``uv sync --extra ki``.
+ki = [
+    "torch>=2.6",
+    "einops>=0.8",
+    "numpy>=2.0",
+]
+
 [project.scripts]
 fpvcut = "fpvcut.app:main"
 
@@ -31,3 +40,12 @@ testpaths = ["tests"]
 # Eigenes Python von uv statt Microsoft-Store-Python: Store-Apps zeigen in der Windows-
 # Taskleiste immer das Python-Icon, egal welches Icon die App setzt.
 python-preference = "only-managed"
+
+# PyTorch mit CUDA 12.6 (wie in fpv-restoration)
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126" }]

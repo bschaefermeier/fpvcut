@@ -24,7 +24,7 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QAction, QActionGroup, QGuiApplication, QKeySequence
 from PySide6.QtWidgets import QFileDialog, QLabel, QMainWindow, QMessageBox, QPushButton, QSplitter, QTabWidget
 
-from fpvcut import __version__, i18n
+from fpvcut import __version__, i18n, restore
 from fpvcut.core import backup
 from fpvcut.core.ffmpeg_tools import EncoderReport, FFmpegNotFound, check_encoders, find_tool
 from fpvcut.core.fingerprint import fingerprint
@@ -35,6 +35,7 @@ from fpvcut.core.scanner import ScanResult, scan_library
 from fpvcut.i18n import translate
 from fpvcut.render.command import SourceFormat, source_format
 from fpvcut.timeline.edl import build_edl, build_vf
+from fpvcut.timeline.grade import Grade
 from fpvcut.timeline.model import MusicTrack, Timeline, TimelineClip
 from fpvcut.timeline.preview_audio import PreviewAudio, has_audio
 from fpvcut.ui.favorite_dialog import FavoriteDialog
@@ -135,6 +136,7 @@ class MainWindow(QMainWindow):
         self._saved_project: dict | None = None  # Stand der Projektdatei, um Änderungen zu erkennen
         self.backup_dir = self.db_path.with_name("sicherungen")
         self.preview_audio = PreviewAudio(self.db_path.with_name("vorschau"))
+        self._restore_preview = None  # restore.stream.PreviewService, beim ersten Gebrauch
 
         self.player = PlayerWidget(self)
         self.player.double_clicked.connect(self.toggle_fullscreen)
@@ -237,6 +239,7 @@ class MainWindow(QMainWindow):
         self._add_action(file_menu, self.tr("&Export clips …"), None, self.export_favorites_dialog)
         self._add_action(file_menu, self.tr("&Import clips …"), None, self.import_favorites_dialog)
         file_menu.addSeparator()
+        self._add_action(file_menu, self.tr("&AI models …"), None, self.restore_dialog)
         self._language_menu = file_menu.addMenu(self.tr("&Language"))
         file_menu.addSeparator()
         quit_action = self._add_action(file_menu, self.tr("&Quit"), "Ctrl+Q", self.close)
@@ -685,13 +688,56 @@ class MainWindow(QMainWindow):
         self.current_entry = None
         self._refresh_clips()
         audio, problem = self._preview_audio(timeline)
-        self.player.open_timeline(build_edl(timeline, audio), audio is not None, build_vf(timeline), start, paused)
+        sources, restore_problem = self._restored_sources(timeline)
+        self.player.open_timeline(build_edl(timeline, audio, sources), audio is not None, build_vf(timeline), start,
+                                  paused, own_streams=bool(sources))
         self.player.seek_handler = self._seek_timeline
         self.timeline_panel.set_playhead(start)
-        self.statusBar().showMessage(
-            self.tr("Timeline preview without sound: {problem}").format(problem=problem) if problem
-            else self.tr("Timeline preview")
-        )
+        if problem:
+            message = self.tr("Timeline preview without sound: {problem}").format(problem=problem)
+        elif restore_problem and not sources:
+            message = self.tr("Timeline preview without AI cleanup: {problem}").format(problem=restore_problem)
+        elif restore_problem:
+            message = self.tr("Error in AI cleanup: {problem}").format(problem=restore_problem)
+        elif sources:
+            message = self.tr("Timeline preview, %n clip(s) cleaned up live by AI", "", len(sources))
+        else:
+            message = self.tr("Timeline preview")
+        self.statusBar().showMessage(message)
+
+    def _restored_sources(self, timeline: Timeline) -> tuple[dict[int, str], str | None]:
+        """Clips mit KI-Reinigung: ihr Bild kommt live vom Schüler (``fpvki://…``-Quellen der EDL)."""
+        wanted = [i for i, clip in enumerate(timeline.clips) if Grade.from_dict(clip.grade).restore]
+        if not wanted:
+            return {}, None
+        if problem := restore.problem("student"):
+            return {}, problem
+        QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        try:
+            from fpvcut.restore.engine import ClipSpec, Geometry  # noqa: PLC0415  (lädt PyTorch)
+            from fpvcut.restore.stream import PreviewService  # noqa: PLC0415
+
+            if self._restore_preview is None or self._restore_preview.models is not restore.models():
+                ffmpeg = self.encoder_report.ffmpeg if self.encoder_report else find_tool("ffmpeg")
+                self._restore_preview = PreviewService(ffmpeg, restore.models())
+            service = self._restore_preview
+            if not self.player.register_stream_service(service):
+                return {}, self.tr("player not available")
+        except (ImportError, OSError, FFmpegNotFound) as exc:
+            return {}, str(exc) or type(exc).__name__
+        finally:
+            QGuiApplication.restoreOverrideCursor()
+        error, service.last_error = service.last_error, None  # z. B. vom letzten Abspielen
+        formats = self.render_formats(timeline)
+        sources = {}
+        for index in wanted:
+            clip, fmt = timeline.clips[index], formats[index]
+            if fmt is None:
+                continue
+            spec = ClipSpec(clip.path, clip.src_in, clip.duration, fmt.fps, Geometry.for_source(fmt.width, fmt.height),
+                            Grade.from_dict(clip.grade).remove_osd)
+            sources[index] = service.url(spec)
+        return sources, error
 
     def _preview_audio(self, timeline: Timeline) -> tuple[Path | None, str | None]:
         """Ton der Timeline (Originalton und Musik) als eine Datei, bei Bedarf neu gemischt."""
@@ -787,7 +833,7 @@ class MainWindow(QMainWindow):
             self.player.toggle_pause()  # Vorschau anhalten, solange gerendert wird
         source = source_format(timeline, self.render_formats(timeline))
         dialog = RenderDialog(timeline, source, ffmpeg, self.encoder_report,
-                              marked=self.timeline_panel.view.marked, parent=self)
+                              marked=self.timeline_panel.view.marked, parent=self, formats=self.render_formats)
         dialog.exec()
         self._save_timeline()  # gewähltes Profil merken
         self._update_title()
@@ -1050,6 +1096,13 @@ class MainWindow(QMainWindow):
     def _on_encoder_failed(self, message: str) -> None:
         self._ffmpeg_status.setText(self.tr("ffmpeg missing"))
         self._ffmpeg_status.setToolTip(message)
+
+    def restore_dialog(self) -> None:
+        from fpvcut.ui.restore_dialog import RestoreDialog  # noqa: PLC0415
+
+        RestoreDialog(self).exec()
+        self.grade_panel.refresh_restore()
+        self._restore_preview = None  # neue Modelle: Vorschau beim nächsten Abspielen neu aufsetzen
 
     def show_system_check(self) -> None:
         report = self.encoder_report

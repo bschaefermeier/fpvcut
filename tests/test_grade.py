@@ -145,7 +145,7 @@ def test_grade_panel_edits_selected_clip_with_undo(monkeypatch, tmp_path):
     window = MainWindow(db_path=tmp_path / "lib.sqlite")
     previews = []
     monkeypatch.setattr(window.player, "open_timeline",
-                        lambda edl, lavfi, vf, start=0, paused=False: previews.append((vf, start, paused)))
+                        lambda edl, lavfi, vf, start=0, paused=False, own_streams=False: previews.append((vf, start, paused)))
     clips = [TimelineClip(n, 0, 4, 10, f"{n}.mp4", path=Path(f"/v/{n}.mp4")) for n in "abc"]
     window.timeline_panel.set_timeline(Timeline(clips))
     panel = window.grade_panel

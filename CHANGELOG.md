@@ -8,6 +8,13 @@ durch, wird daraus die fertige Version.
 
 ### Neu
 
+- **KI-Reinigung für analoges FPV-Bild:** Im Reiter Farbe schaltet „Analogbild reinigen (KI)“ je
+  Clip die Modelle aus fpv-restoration ein, auf Wunsch mit „OSD entfernen“. Der Schüler läuft live in
+  der Timeline-Vorschau, vor der Farbkorrektur; die Regler wirken also auf das gereinigte Bild. Im
+  Renderfenster rechnet mit „Lehrer-Modell verwenden“ stattdessen der bessere, langsamere Lehrer
+  (Stride 1–5, mit Zeitschätzung); die Clips werden vor dem Rendern einzeln gereinigt. Clips mit
+  KI-Reinigung tragen in der Timeline ein „KI“-Schild. Checkpoints unter Datei → KI-Modelle.
+  Braucht PyTorch mit CUDA (`uv sync --extra ki`), ist im Windows-Paket noch nicht enthalten
 - **Ausschnitte des geöffneten Videos in die Timeline ziehen:** Die Liste rechts im Reiter Info
   erlaubt jetzt Mehrfachauswahl mit Strg und Umschalt; ein oder mehrere Ausschnitte lassen sich
   direkt an die gewünschte Stelle der Timeline ziehen. Rechtsklick und E nehmen ebenfalls alle

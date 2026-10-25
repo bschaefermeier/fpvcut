@@ -1,5 +1,8 @@
 """Farbkorrektur der in der Timeline ausgewählten Clips: Regler (auch Schärfe), LUT, Automatik, auf alle übertragen.
 
+Ganz oben der Schalter für die KI-Bildreinigung (Schüler-Modell live in der Vorschau). Sie läuft
+vor allen Farbfiltern, die Regler wirken also auf das gereinigte Bild.
+
 Sind mehrere Clips ausgewählt, zeigen die Regler die Werte des zuletzt angeklickten Clips.
 Eine Änderung übernimmt nur den bewegten Regler (bzw. die LUT) in alle ausgewählten Clips;
 ihre übrigen Werte bleiben, wie sie sind.
@@ -13,6 +16,7 @@ from pathlib import Path
 from PySide6.QtCore import QT_TRANSLATE_NOOP, QEvent, QObject, Qt, Signal
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
@@ -24,6 +28,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from fpvcut import restore
 from fpvcut.core.ffmpeg_tools import FFmpegNotFound, find_tool
 from fpvcut.timeline.auto_grade import measure, suggest
 from fpvcut.timeline.grade import RANGES, Grade
@@ -61,6 +66,19 @@ class GradePanel(QWidget):
         self._hint = QLabel(self)
         self._hint.setWordWrap(True)
         self._hint.setStyleSheet("color: gray;")
+
+        self._restore = QCheckBox(self.tr("Clean up analog image (AI)"), self)
+        self._restore.toggled.connect(lambda on: self._set_flag("restore", on))
+        self._remove_osd = QCheckBox(self.tr("Remove OSD"), self)
+        self._remove_osd.setToolTip(self.tr("The model also removes the OSD (voltage, timer, …); "
+                                            "otherwise it keeps it sharp"))
+        self._remove_osd.toggled.connect(lambda on: self._set_flag("remove_osd", on))
+        self.refresh_restore(update=False)
+        osd_row = QHBoxLayout()
+        osd_row.addSpacing(20)
+        osd_row.addWidget(self._remove_osd)
+        osd_row.addStretch(1)
+
         form = QFormLayout()
         self.sliders: dict[str, QSlider] = {}
         self._labels: dict[str, QLabel] = {}
@@ -124,6 +142,8 @@ class GradePanel(QWidget):
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._hint)
+        layout.addWidget(self._restore)
+        layout.addLayout(osd_row)
         auto_row = QHBoxLayout()
         auto_row.addWidget(self._auto)
         auto_row.addStretch(1)
@@ -135,6 +155,20 @@ class GradePanel(QWidget):
         timeline_panel.view.selection_changed.connect(self.refresh)
         timeline_panel.changed.connect(self.refresh)  # z. B. nach Rückgängig
         self.refresh()
+
+    def refresh_restore(self, update: bool = True) -> None:
+        """Prüfen, ob die KI-Reinigung verfügbar ist (PyTorch, Schüler-Checkpoint)."""
+        self._restore_problem = restore.problem("student")
+        if self._restore_problem:
+            self._restore.setToolTip(self.tr("Not available: {reason}").format(reason=self._restore_problem))
+        else:
+            self._restore.setToolTip(
+                self.tr("Removes noise, rainbow stripes and color tears from analog FPV footage "
+                        "(student model, live in the preview). Runs before the color correction. "
+                        "When rendering, the better teacher model can be used instead.")
+            )
+        if update:
+            self.refresh()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802  (Qt-Name)
         if event.type() == QEvent.Type.MouseButtonDblClick and watched in self._reset_targets:
@@ -192,6 +226,11 @@ class GradePanel(QWidget):
         self._lut_label.setText(Path(grade.lut).name if grade.lut else self.tr("none"))
         self._lut_label.setToolTip(grade.lut or "")
         self._clear_lut.setEnabled(enabled and bool(grade.lut))
+        self._restore.setChecked(grade.restore)
+        self._remove_osd.setChecked(grade.remove_osd)
+        # Ausschalten geht auch, wenn die Reinigung gerade nicht verfügbar ist.
+        self._restore.setEnabled(enabled and (not self._restore_problem or grade.restore))
+        self._remove_osd.setEnabled(enabled and grade.restore)
         self._updating = False
 
     # --- Ändern ----------------------------------------------------------
@@ -232,6 +271,14 @@ class GradePanel(QWidget):
         for name, slider in self.sliders.items():
             setattr(grade, name, slider.value() / SLIDERS[name][1])
         self._store(grade, remember=not self._dragging)
+
+    def _set_flag(self, name: str, on: bool) -> None:
+        """Schalter der KI-Reinigung (``restore`` oder ``remove_osd``) für die ausgewählten Clips."""
+        if self._updating or self.current_index() is None:
+            return
+        grade = self.current_grade()
+        setattr(grade, name, on)
+        self._store(grade, remember=True)
 
     def reset_value(self, name: str) -> None:
         if self.current_index() is None:
@@ -290,10 +337,15 @@ class GradePanel(QWidget):
             self._hint.setText(self.tr("Automatic not possible for: {clips}").format(clips=", ".join(problems)))
 
     def reset(self) -> None:
-        """Alle ausgewählten Clips ganz auf neutral."""
+        """Farben aller ausgewählten Clips ganz auf neutral; die KI-Reinigung bleibt, wie sie ist."""
         if self.current_index() is None:
             return
-        self.timeline_panel.set_grade(self.targets(), None)
+        clips = self.timeline_panel.timeline.clips
+        grades = {}
+        for index in self.targets():
+            own = Grade.from_dict(clips[index].grade)
+            grades[index] = Grade(restore=own.restore, remove_osd=own.remove_osd).to_dict()
+        self.timeline_panel.set_grades(grades)
         self.grade_changed.emit()
 
     def apply_to_all(self) -> None:
