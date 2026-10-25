@@ -6,6 +6,8 @@ them on a timeline with music and export the result with GPU acceleration.
 
 ![FPVCut with the Clips tab, preview, color correction and timeline](docs/bilder/fpvcut2.png)
 
+![Analog FPV recording before and after AI noise and OSD removal plus color editing](docs/bilder/vorher_nachher.gif)
+
 ## Features
 
 - **Import from SD card:** Copy the videos from the SD card into a new flight day folder, check
