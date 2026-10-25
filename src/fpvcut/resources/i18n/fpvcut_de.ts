@@ -2028,69 +2028,105 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>RestoreDialog</name>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="25"/>
+        <location filename="../../ui/restore_dialog.py" line="26"/>
+        <location filename="../../ui/restore_dialog.py" line="107"/>
         <source>AI models</source>
         <translation>KI-Modelle</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="28"/>
+        <location filename="../../ui/restore_dialog.py" line="29"/>
         <source>Models from fpv-restoration for cleaning up analog FPV footage. The student runs live in the timeline preview, the teacher optionally when rendering. Switch the cleanup on per clip in the Color tab.</source>
         <translation>Modelle aus fpv-restoration, die analoges FPV-Bild reinigen. Der Schüler läuft live in der Timeline-Vorschau, der Lehrer auf Wunsch beim Rendern. Eingeschaltet wird die Reinigung je Clip im Reiter Farbe.</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="34"/>
+        <location filename="../../ui/restore_dialog.py" line="35"/>
         <source>Student:</source>
         <translation>Schüler:</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="34"/>
+        <location filename="../../ui/restore_dialog.py" line="35"/>
         <source>Teacher:</source>
         <translation>Lehrer:</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="38"/>
+        <location filename="../../ui/restore_dialog.py" line="39"/>
         <source>Choose …</source>
         <translation>Wählen …</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="40"/>
+        <location filename="../../ui/restore_dialog.py" line="41"/>
         <source>Default</source>
         <translation>Standard</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="41"/>
+        <location filename="../../ui/restore_dialog.py" line="42"/>
         <source>Search in the default folders again: {folders}</source>
         <translation>Wieder in den Standardordnern suchen: {folders}</translation>
     </message>
     <message>
+        <location filename="../../ui/restore_dialog.py" line="51"/>
+        <source>Convert student to ONNX</source>
+        <translation>Schüler in ONNX umwandeln</translation>
+    </message>
+    <message>
         <location filename="../../ui/restore_dialog.py" line="52"/>
+        <source>Creates a .onnx file next to the checkpoint: half the size, faster, and works without PyTorch</source>
+        <translation>Legt eine .onnx-Datei neben den Checkpoint: halb so groß, schneller und ohne PyTorch nutzbar</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="58"/>
         <source>System:</source>
         <translation>System:</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="64"/>
+        <location filename="../../ui/restore_dialog.py" line="70"/>
         <source>not found</source>
         <translation>nicht gefunden</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="74"/>
-        <source>Graphics card: {gpu}</source>
-        <translation>Grafikkarte: {gpu}</translation>
+        <location filename="../../ui/restore_dialog.py" line="76"/>
+        <source>ONNX Runtime (student): {devices}</source>
+        <translation>ONNX Runtime (Schüler): {devices}</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="75"/>
-        <source>No CUDA graphics card found, the models would be far too slow.</source>
-        <translation>Keine CUDA-Grafikkarte gefunden, die Modelle wären viel zu langsam.</translation>
+        <location filename="../../ui/restore_dialog.py" line="77"/>
+        <source>processor only, far too slow</source>
+        <translation>nur Prozessor, viel zu langsam</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="80"/>
+        <location filename="../../ui/restore_dialog.py" line="79"/>
+        <source>ONNX Runtime is not installed.</source>
+        <translation>ONNX Runtime ist nicht installiert.</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="87"/>
+        <source>PyTorch (teacher): {gpu}</source>
+        <translation>PyTorch (Lehrer): {gpu}</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="87"/>
+        <source>no CUDA graphics card</source>
+        <translation>keine CUDA-Grafikkarte</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="89"/>
+        <source>PyTorch is not installed (uv sync --extra ki), the teacher is not available.</source>
+        <translation>PyTorch ist nicht installiert (uv sync --extra ki), der Lehrer steht nicht zur Verfügung.</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="107"/>
+        <source>Conversion failed: {error}</source>
+        <translation>Umwandeln fehlgeschlagen: {error}</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="116"/>
+        <source>Model (*.onnx *.pt *.pth)</source>
+        <translation>Modell (*.onnx *.pt *.pth)</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="115"/>
         <source>Choose checkpoint</source>
         <translation>Checkpoint wählen</translation>
-    </message>
-    <message>
-        <location filename="../../ui/restore_dialog.py" line="81"/>
-        <source>PyTorch checkpoint (*.pt *.pth)</source>
-        <translation>PyTorch-Checkpoint (*.pt *.pth)</translation>
     </message>
 </context>
 <context>
@@ -2356,24 +2392,29 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>restore</name>
     <message>
-        <location filename="../../restore/__init__.py" line="67"/>
+        <location filename="../../restore/__init__.py" line="81"/>
         <source>PyTorch is not installed (uv sync --extra ki).</source>
         <translation>PyTorch ist nicht installiert (uv sync --extra ki).</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="69"/>
+        <location filename="../../restore/__init__.py" line="75"/>
         <source>student model</source>
         <translation>Schüler-Modell</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="69"/>
+        <location filename="../../restore/__init__.py" line="75"/>
         <source>teacher model</source>
         <translation>Lehrer-Modell</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="70"/>
+        <location filename="../../restore/__init__.py" line="76"/>
         <source>The {model} was not found (File → AI models …).</source>
         <translation>Das {model} wurde nicht gefunden (Datei → KI-Modelle …).</translation>
+    </message>
+    <message>
+        <location filename="../../restore/__init__.py" line="79"/>
+        <source>ONNX Runtime is not installed.</source>
+        <translation>ONNX Runtime ist nicht installiert.</translation>
     </message>
 </context>
 <context>

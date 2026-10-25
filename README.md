@@ -26,8 +26,9 @@ them on a timeline with music and export the result with GPU acceleration.
   and on request the OSD, with the models from
   [fpv-restoration](https://github.com/bschaefermeier/fpv-restoration). Switched on per clip in the
   Color tab; the small student model runs live in the timeline preview, before the color correction.
-  When rendering, the better but much slower teacher model can be used instead (stride 1–5). Needs
-  an NVIDIA graphics card, PyTorch and the two checkpoints (see [AI cleanup](#ai-cleanup)).
+  When rendering, the better but much slower teacher model can be used instead (stride 1–5). The
+  student runs on any DirectX 12 graphics card, the teacher needs an NVIDIA card and PyTorch (see
+  [AI cleanup](#ai-cleanup)).
 - **Export:** Profiles for original quality (H.265), web (H.264) and archive (H.265, 10 bit).
   Encoding uses NVIDIA NVENC, or the CPU without a suitable graphics card.
 - **Rename folders:** Bring flight day folders into the consistent scheme `YYYY-MM-DD_Spot`, with a
@@ -139,18 +140,24 @@ uv run fpvcut
 
 ### AI cleanup
 
-The AI cleanup needs PyTorch with CUDA (about 2.5 GB), which is an optional extra:
+The student runs with ONNX Runtime (DirectML, part of the normal dependencies) from a `.onnx` file.
+The teacher, and converting the student checkpoint to ONNX, need PyTorch with CUDA (about 2.5 GB),
+which is an optional extra:
 
 ```powershell
 uv sync --extra ki
+uv run python -m fpvcut.restore.export ..\fpv-restoration\checkpoints\schueler_2h.pt
 ```
 
-FPVCut looks for the checkpoints `schueler_2h.pt` (student) and `lehrer_cluster.pt` (teacher) in
+The second line writes `schueler_2h.onnx` next to the checkpoint (FP16, 3.8 MB) and compares it
+with the PyTorch model; File → AI models offers the same as a button.
+
+FPVCut looks for `schueler_2h.onnx` (or `schueler_2h.pt`) and `lehrer_cluster.pt` in
 `%FPVCUT_MODELS%`, `%APPDATA%\FPVCut\modelle` and `..\fpv-restoration\checkpoints` next to this
 repository; other files can be chosen under File → AI models. Both models work on half resolution
-(the BoxPro+ picture 1200 × 720 becomes 592 × 352) and the result is scaled back to the source size.
-On an RTX 3070 the student manages about 70 frames/s including decoding, the teacher about 2 frames/s
-at stride 1 up to 11 frames/s at stride 5. The Windows package does not include PyTorch.
+(the BoxPro+ picture 1200 × 720 becomes 592 × 352); the preview shows that size, the render scales it
+back to the source size. On an RTX 3070 the student manages about 120 frames/s (ONNX, model alone),
+the teacher about 2 frames/s at stride 1 up to 11 frames/s at stride 5.
 
 ### Tests
 

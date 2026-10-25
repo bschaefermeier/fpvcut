@@ -1,10 +1,14 @@
-"""Bilder eines Clips lesen, durch Lehrer oder Schüler schicken und in Quellgröße zurückgeben.
+"""Bilder eines Clips lesen und durch Lehrer oder Schüler schicken.
 
 Gerechnet wird wie im Training in halber Auflösung (BoxPro+: Bild 1200 × 720 ab x = 40, also
-592 × 352). Das Ergebnis wird wieder auf die Bildfläche der Quelle vergrößert und mit schwarzen
-Rändern auf ihr volles Format gebracht, damit es in Vorschau und Render genau an die Stelle des
-Originals passt. Bild ``k`` eines Clips liegt bei ``src_in + k / fps``; die zwei Nachbarbilder
-davor und danach kommen aus der Quelle (am Dateianfang/-ende wird das Randbild wiederholt).
+592 × 352); geliefert werden gereinigte Bilder in dieser Rechengröße als ``uint8`` (H, W, 3).
+Vorschau und Render bringen sie danach wieder aufs Format der Quelle (mit deren schwarzen
+Rändern). Bild ``k`` eines Clips liegt bei ``src_in + k / fps``; die zwei Nachbarbilder davor und
+danach kommen aus der Quelle (am Dateianfang/-ende wird das Randbild wiederholt).
+
+Wer rechnet, steckt in einem „Runner“: der Schüler über ONNX Runtime (:mod:`onnx_runner`, ohne
+PyTorch) oder PyTorch, der Lehrer über PyTorch (:mod:`torch_runner`). Dieses Modul selbst braucht
+nur numpy.
 """
 
 from __future__ import annotations
@@ -15,15 +19,14 @@ from collections import deque
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Protocol
 
 import numpy as np
-import torch
-import torch.nn.functional as F
 
 from fpvcut.core.ffmpeg_tools import CREATE_FLAGS
-from fpvcut.restore.networks import TEACHER_WINDOW, load_student, load_teacher
 
 CONTEXT = 2  # Nachbarbilder auf jeder Seite (beide Modelle sehen 5 Bilder)
+WINDOW = 2 * CONTEXT + 1
 BOXPRO = (1280, 720)  # BoxPro+-Aufnahmen: Bild 1200 × 720 ab x = 40, links und rechts schwarz
 
 
@@ -46,6 +49,18 @@ class Geometry:
         _, _, w, h = self.crop
         return max(16, w // 2 // 16 * 16), max(16, h // 2 // 16 * 16)
 
+    def work_padding(self) -> tuple[int, int, int, int]:
+        """Schwarze Ränder (links, oben, rechts, unten), die das Bild in Rechengröße wieder aufs
+        Seitenverhältnis der ganzen Quelle bringen; gerade Zahlen (für halb aufgelöste Farbe)."""
+        x, y, w, h = self.crop
+        pw, ph = self.work_size
+        sx, sy = pw / w, ph / h
+
+        def even(v: float) -> int:
+            return round(v / 2) * 2
+
+        return even(x * sx), even(y * sy), even((self.width - x - w) * sx), even((self.height - y - h) * sy)
+
 
 @dataclass(frozen=True)
 class ClipSpec:
@@ -63,36 +78,50 @@ class ClipSpec:
         return max(1, round(self.duration * self.fps))
 
 
+class Runner(Protocol):
+    """Ein geladenes Modell. ``all_frames``: liefert für alle 5 Eingabebilder ein Ergebnis (Lehrer)."""
+
+    all_frames: bool
+
+    def run(self, window: list[np.ndarray], remove_osd: bool) -> np.ndarray:
+        """5 Bilder (H, W, 3) uint8 → (H, W, 3), beim Lehrer (5, H, W, 3)."""
+
+
 class Models:
-    """Lädt Lehrer und Schüler erst bei Bedarf (einmal) und rechnet nacheinander auf der Grafikkarte."""
+    """Lädt Lehrer und Schüler erst bei Bedarf (einmal); beide rechnen nacheinander, nie gleichzeitig."""
 
     def __init__(self, student: Path | None, teacher: Path | None) -> None:
         self.paths = {"student": student, "teacher": teacher}
-        self._loaded: dict[str, torch.nn.Module] = {}
+        self._loaded: dict[str, Runner] = {}
         self._load_lock = threading.Lock()
         self.run_lock = threading.Lock()  # Vorschau und Render teilen sich die Karte
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    def get(self, kind: str) -> torch.nn.Module:
+    def get(self, kind: str) -> Runner:
         with self._load_lock:
             if kind not in self._loaded:
                 path = self.paths[kind]
                 if path is None:
                     raise FileNotFoundError(kind)
-                model = load_student(path) if kind == "student" else load_teacher(path)
-                self._loaded[kind] = model.to(self.device)
+                if path.suffix.lower() == ".onnx":
+                    from fpvcut.restore.onnx_runner import OnnxStudent  # noqa: PLC0415
+
+                    self._loaded[kind] = OnnxStudent(path)
+                else:
+                    from fpvcut.restore import torch_runner  # noqa: PLC0415  (lädt PyTorch)
+
+                    self._loaded[kind] = torch_runner.load(kind, path)
             return self._loaded[kind]
 
     def release(self, kind: str) -> None:
-        """Modell aus dem Grafikspeicher nehmen (der Lehrer braucht fast 4 GB)."""
+        """Modell freigeben (der Lehrer belegt fast 4 GB Grafikspeicher)."""
         with self._load_lock:
-            if self._loaded.pop(kind, None) is not None and self.device.type == "cuda":
-                torch.cuda.empty_cache()
+            runner = self._loaded.pop(kind, None)
+        if runner is not None and hasattr(runner, "close"):
+            runner.close()
 
-    def run(self, model: torch.nn.Module, window: list[torch.Tensor], remove_osd: bool) -> torch.Tensor:
-        x = torch.stack(window).unsqueeze(0)
-        with self.run_lock, torch.inference_mode(), torch.autocast(self.device.type, dtype=torch.bfloat16):
-            return model(x, 1.0 if remove_osd else 0.0)[0].float().clamp_(0, 1)
+    def run(self, runner: Runner, window: list[np.ndarray], remove_osd: bool) -> np.ndarray:
+        with self.run_lock:
+            return runner.run(window, remove_osd)
 
 
 class FrameReader:
@@ -125,18 +154,16 @@ class FrameReader:
         self.process.wait()
 
 
-def _sequence(ffmpeg, spec: ClipSpec, models: Models, start: int, stop: int,
-              stopped: threading.Event | None) -> Iterator[torch.Tensor]:
-    """Bilder ``start - CONTEXT`` … ``stop - 1 + CONTEXT`` des Clips auf der Grafikkarte, Ränder aufgefüllt."""
+def _sequence(ffmpeg, spec: ClipSpec, start: int, stop: int,
+              stopped: threading.Event | None) -> Iterator[np.ndarray]:
+    """Bilder ``start - CONTEXT`` … ``stop - 1 + CONTEXT`` des Clips, Ränder aufgefüllt."""
     want = stop - start + 2 * CONTEXT
     reader = FrameReader(ffmpeg, spec, start - CONTEXT, want)
     sent, last = 0, None
     try:
-        for frame in reader:
+        for last in reader:
             if stopped is not None and stopped.is_set():
                 return
-            tensor = torch.from_numpy(frame.copy()).to(models.device, non_blocking=True)
-            last = tensor.permute(2, 0, 1).float().div_(255)
             for _ in range(reader.missing + 1 if sent == 0 else 1):
                 if sent < want:
                     yield last
@@ -154,8 +181,8 @@ def _sequence(ffmpeg, spec: ClipSpec, models: Models, start: int, stop: int,
 
 def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "student", stride: int = 1,
              start: int = 0, stop: int | None = None,
-             stopped: threading.Event | None = None) -> Iterator[tuple[int, torch.Tensor]]:
-    """Gereinigte Bilder ``start`` … ``stop - 1`` des Clips: ``(Index, Bild 3×H×W in 0…1)`` in Rechengröße.
+             stopped: threading.Event | None = None) -> Iterator[tuple[int, np.ndarray]]:
+    """Gereinigte Bilder ``start`` … ``stop - 1`` des Clips: ``(Index, Bild H×W×3 uint8)`` in Rechengröße.
 
     Schüler: ein Durchlauf je Bild. Lehrer: liefert je Fenster alle 5 Bilder; verwendet werden die
     mittleren ``stride`` (1…5), danach rückt das Fenster um ``stride`` weiter (am Ende auch äußere).
@@ -163,75 +190,59 @@ def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "st
     stop = spec.frames if stop is None else min(stop, spec.frames)
     if start >= stop:
         return
-    model = models.get(kind)
-    frames = _sequence(ffmpeg, spec, models, start, stop, stopped)
-    if kind == "student":
-        window: deque[torch.Tensor] = deque(maxlen=2 * CONTEXT + 1)
+    runner = models.get(kind)
+    frames = _sequence(ffmpeg, spec, start, stop, stopped)
+    if not runner.all_frames:
+        window: deque[np.ndarray] = deque(maxlen=WINDOW)
         index = start
         for frame in frames:
             window.append(frame)
-            if len(window) == window.maxlen:
-                yield index, models.run(model, list(window), spec.remove_osd)
+            if len(window) == WINDOW:
+                yield index, models.run(runner, list(window), spec.remove_osd)
                 index += 1
         return
-    stride = max(1, min(stride, TEACHER_WINDOW))
+    stride = max(1, min(stride, WINDOW))
     total = stop - start + 2 * CONTEXT  # Länge der aufgefüllten Folge
     first_use = CONTEXT - stride // 2  # erste verwendete Stelle im Fenster
-    buffer: list[torch.Tensor] = []
+    buffer: list[np.ndarray] = []
     base = 0  # Folgenposition von buffer[0]
     pos = stride // 2  # Fensteranfang in der Folge; so liefert das erste Fenster Clip-Bild 0
     need, last_need = CONTEXT, total - 1 - CONTEXT  # Folgenpositionen der Clip-Bilder
     for frame in frames:
         buffer.append(frame)
         while need <= last_need:
-            window_end = min(pos, total - TEACHER_WINDOW) + TEACHER_WINDOW
+            window_end = min(pos, total - WINDOW) + WINDOW
             if base + len(buffer) < window_end:
                 break  # noch nicht genug Bilder gelesen
-            final = pos + TEACHER_WINDOW > total
-            begin = total - TEACHER_WINDOW if final else pos
-            out = models.run(model, buffer[begin - base:begin - base + TEACHER_WINDOW], spec.remove_osd)
+            final = pos + WINDOW > total
+            begin = total - WINDOW if final else pos
+            out = models.run(runner, buffer[begin - base:begin - base + WINDOW], spec.remove_osd)
             use_to = last_need if final else min(pos + first_use + stride - 1, last_need)
             while need <= use_to:
                 yield start + need - CONTEXT, out[need - begin]
                 need += 1
             pos += stride
-            drop = min(pos, total - TEACHER_WINDOW) - base
+            drop = min(pos, total - WINDOW) - base
             if drop > 0:
                 del buffer[:drop]
                 base += drop
 
 
-def to_source(frame: torch.Tensor, geometry: Geometry, scale: float = 1.0) -> torch.Tensor:
-    """Gereinigtes Bild auf die Bildfläche der Quelle vergrößern und mit Schwarz auf ihr Format bringen.
-
-    ``scale`` verkleinert das Ganze (Vorschau: 0,5). Gibt 3×H×W in 0…1 zurück, H und W gerade.
-    """
-    x, y, w, h = (round(v * scale) for v in geometry.crop)
-    width, height = _even(round(geometry.width * scale)), _even(round(geometry.height * scale))
-    w, h = min(w, width - x), min(h, height - y)
-    resized = F.interpolate(frame.unsqueeze(0), size=(h, w), mode="bicubic", align_corners=False)[0].clamp_(0, 1)
-    if (w, h) == (width, height):
-        return resized
-    canvas = torch.zeros((3, height, width), dtype=frame.dtype, device=frame.device)
-    canvas[:, y:y + h, x:x + w] = resized
-    return canvas
-
-
-def _even(value: int) -> int:
-    return max(2, value - value % 2)
-
-
-def to_rgb24(frame: torch.Tensor) -> bytes:
-    return frame.mul(255).add_(0.5).to(torch.uint8).permute(1, 2, 0).contiguous().cpu().numpy().tobytes()
-
-
-def to_yuv420(frame: torch.Tensor) -> bytes:
-    """BT.601 mit eingeschränktem Wertebereich (wie y4m es erwartet), Farbe halb aufgelöst."""
-    r, g, b = frame[0], frame[1], frame[2]
-    luma = 16 + 219 * (0.299 * r + 0.587 * g + 0.114 * b)
-    small = F.avg_pool2d(frame.unsqueeze(0), 2)[0]
-    r, g, b = small[0], small[1], small[2]
-    u = 128 + 224 * (-0.168736 * r - 0.331264 * g + 0.5 * b)
-    v = 128 + 224 * (0.5 * r - 0.418688 * g - 0.081312 * b)
-    planes = torch.cat([luma.flatten(), u.flatten(), v.flatten()])
-    return planes.add_(0.5).clamp_(0, 255).to(torch.uint8).cpu().numpy().tobytes()
+def to_yuv420(frame: np.ndarray, padding: tuple[int, int, int, int] = (0, 0, 0, 0)) -> bytes:
+    """RGB (H, W, 3) uint8 → YUV 4:2:0 in BT.601 mit eingeschränktem Wertebereich (wie y4m es
+    erwartet), mit schwarzen Rändern ``padding`` (links, oben, rechts, unten; gerade)."""
+    rgb = frame.astype(np.float32)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    luma = 16 + (65.481 * r + 128.553 * g + 24.966 * b) / 255
+    h, w = frame.shape[0] // 2 * 2, frame.shape[1] // 2 * 2
+    small = rgb[:h, :w].reshape(h // 2, 2, w // 2, 2, 3).mean(axis=(1, 3))
+    r, g, b = small[..., 0], small[..., 1], small[..., 2]
+    u = 128 + (-37.797 * r - 74.203 * g + 112.0 * b) / 255
+    v = 128 + (112.0 * r - 93.786 * g - 18.214 * b) / 255
+    left, top, right, bottom = padding
+    planes = [
+        np.pad(luma, ((top, bottom), (left, right)), constant_values=16),
+        np.pad(u, ((top // 2, bottom // 2), (left // 2, right // 2)), constant_values=128),
+        np.pad(v, ((top // 2, bottom // 2), (left // 2, right // 2)), constant_values=128),
+    ]
+    return b"".join(np.clip(p + 0.5, 0, 255).astype(np.uint8).tobytes() for p in planes)

@@ -84,7 +84,7 @@ class _RestoreJob(QObject):
         return self._thread.is_alive()
 
     def _run(self) -> None:
-        from fpvcut.restore.render import Cancelled, restore_clip  # noqa: PLC0415  (lädt PyTorch)
+        from fpvcut.restore.render import Cancelled, restore_clip  # noqa: PLC0415
 
         models = restore.models()
         outputs, done = {}, 0
@@ -338,7 +338,7 @@ class RenderDialog(QDialog):
 
     def restore_jobs(self, timeline: Timeline) -> list:
         """(Index, ClipSpec) für jeden Clip mit KI-Reinigung."""
-        from fpvcut.restore.engine import ClipSpec, Geometry  # noqa: PLC0415  (lädt PyTorch)
+        from fpvcut.restore.engine import ClipSpec, Geometry  # noqa: PLC0415
 
         formats = self._clip_formats(timeline)
         jobs = []

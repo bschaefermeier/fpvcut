@@ -9,15 +9,20 @@ dependencies = [
     "PySide6>=6.7",
     "mpv>=1.0.6",
     "xxhash>=3.4",
+    # Schüler-Modell der KI-Reinigung (ONNX); DirectML rechnet auf jeder DirectX-12-Grafikkarte
+    "numpy>=2.0",
+    "onnxruntime-directml>=1.24; sys_platform == 'win32'",
+    "onnxruntime>=1.24; sys_platform != 'win32'",
 ]
 
 [project.optional-dependencies]
-# KI-Bildreinigung für analoges FPV-Bild (Modelle aus fpv-restoration); ohne diese Pakete fehlt
-# nur diese Funktion. Einrichten mit ``uv sync --extra ki``.
+# Lehrer-Modell der KI-Reinigung und Export des Schülers nach ONNX (PyTorch, ~2,5 GB); ohne diese
+# Pakete fehlt nur der Lehrer. Einrichten mit ``uv sync --extra ki``.
 ki = [
     "torch>=2.6",
     "einops>=0.8",
-    "numpy>=2.0",
+    "onnx>=1.17",
+    "onnxscript>=0.2",
 ]
 
 [project.scripts]

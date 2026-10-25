@@ -14,7 +14,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from fpvcut.core.ffmpeg_tools import CREATE_FLAGS
-from fpvcut.restore.engine import ClipSpec, Models, restored, to_rgb24, to_source
+from fpvcut.restore.engine import ClipSpec, Models, restored
 
 
 class Cancelled(Exception):
@@ -33,10 +33,14 @@ def restore_clip(ffmpeg: Path | str, spec: ClipSpec, models: Models, output: Pat
                  stopped: threading.Event | None = None) -> None:
     """``spec`` gereinigt nach ``output`` schreiben; ``progress`` bekommt die Zahl fertiger Bilder."""
     geometry = spec.geometry
+    work_w, work_h = geometry.work_size
+    x, y, w, h = geometry.crop
     width, height = geometry.width - geometry.width % 2, geometry.height - geometry.height % 2
+    # Zurück auf die Bildfläche der Quelle vergrößern und ihre schwarzen Ränder wieder ansetzen
+    vf = f"scale={w}:{h}:flags=bicubic,pad={width}:{height}:{x}:{y}:black"
     writer = subprocess.Popen(
         [str(ffmpeg), "-hide_banner", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24",
-         "-s", f"{width}x{height}", "-r", f"{spec.fps:.6g}", "-i", "-",
+         "-s", f"{work_w}x{work_h}", "-r", f"{spec.fps:.6g}", "-i", "-", "-vf", vf,
          *intermediate_encoder(gpu_encoder), "-pix_fmt", "yuv420p", str(output)],
         stdin=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=CREATE_FLAGS,
     )
@@ -48,7 +52,7 @@ def restore_clip(ffmpeg: Path | str, spec: ClipSpec, models: Models, output: Pat
         for _index, frame in restored(ffmpeg, spec, models, kind, stride, stopped=stopped):
             if stopped is not None and stopped.is_set():
                 raise Cancelled
-            writer.stdin.write(to_rgb24(to_source(frame, geometry)))
+            writer.stdin.write(frame.tobytes())
             done += 1
             if progress is not None:
                 progress(done)

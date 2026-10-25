@@ -714,7 +714,7 @@ class MainWindow(QMainWindow):
             return {}, problem
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
-            from fpvcut.restore.engine import ClipSpec, Geometry  # noqa: PLC0415  (lädt PyTorch)
+            from fpvcut.restore.engine import ClipSpec, Geometry  # noqa: PLC0415
             from fpvcut.restore.stream import PreviewService  # noqa: PLC0415
 
             if self._restore_preview is None or self._restore_preview.models is not restore.models():

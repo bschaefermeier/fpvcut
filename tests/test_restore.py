@@ -1,5 +1,5 @@
-"""KI-Reinigung: Render-Eingänge, Vorschau-EDL, Schalter in der Farbkorrektur und (mit PyTorch,
-Grafikkarte und Checkpoints) Lehrer/Schüler im Render und live in der Vorschau."""
+"""KI-Reinigung: Render-Eingänge, Vorschau-EDL, Schalter in der Farbkorrektur und (mit Grafikkarte
+und Checkpoints) der Schüler als ONNX live in der Vorschau, der Lehrer (PyTorch) im Render."""
 
 import shutil
 import subprocess
@@ -25,8 +25,15 @@ def _cuda() -> bool:
     return torch.cuda.is_available()
 
 
+def _onnx_student() -> bool:
+    path = restore.model_path("student")
+    return path is not None and path.suffix == ".onnx" and restore.problem("student") is None
+
+
+needs_student = pytest.mark.skipif(shutil.which("ffmpeg") is None or not _onnx_student(),
+                                   reason="ONNX Runtime oder Schüler als .onnx fehlt")
 needs_models = pytest.mark.skipif(
-    shutil.which("ffmpeg") is None or not _cuda() or restore.problem("student") or restore.problem("teacher"),
+    shutil.which("ffmpeg") is None or not _cuda() or not _onnx_student() or restore.problem("teacher"),
     reason="PyTorch mit CUDA oder Checkpoints fehlen",
 )
 
@@ -51,6 +58,21 @@ def test_restored_clip_takes_picture_from_file_and_sound_from_original(tmp_path)
     graph = cmd[cmd.index("-filter_complex") + 1]
     assert "[1:v]" in graph and "[2:a]" in graph and "[4:a]aresample" in graph  # Musik ist Eingang 4
     assert cmd[cmd.index(str(restored[1])) - 3:cmd.index(str(restored[1]))] == ["-t", "1.000", "-i"]
+
+
+def test_preview_frame_keeps_black_borders_of_boxpro():
+    import numpy as np
+
+    from fpvcut.restore.engine import Geometry, to_yuv420
+
+    geometry = Geometry.for_source(1280, 720)
+    assert geometry.work_size == (592, 352) and geometry.work_padding() == (20, 0, 20, 0)
+    white = np.full((352, 592, 3), 255, np.uint8)
+    data = np.frombuffer(to_yuv420(white, geometry.work_padding()), np.uint8)
+    luma = data[:632 * 352].reshape(352, 632)
+    assert len(data) == 632 * 352 * 3 // 2
+    assert luma[:, :20].max() == 16 and luma[:, 20:612].min() == 235 and luma[:, 612:].max() == 16
+    assert (data[632 * 352:] == 128).all()  # Weiß und Schwarz ohne Farbe
 
 
 def test_preview_edl_uses_restored_source_for_clip():
@@ -100,7 +122,7 @@ def test_teacher_delivers_every_frame_once_for_each_stride(analog_clip, stride):
     spec = ClipSpec(analog_clip, 0.5, 0.3, 60.0, Geometry.for_source(1280, 720))
     frames = list(restored("ffmpeg", spec, restore.models(), "teacher", stride))
     assert [i for i, _ in frames] == list(range(18))
-    assert frames[0][1].shape == (3, 352, 592)
+    assert frames[0][1].shape == (352, 592, 3) and frames[0][1].dtype.name == "uint8"
     restore.models().release("teacher")
 
 
@@ -138,7 +160,7 @@ def test_render_dialog_cleans_up_marked_clips_first(tmp_path, monkeypatch, analo
     assert dialog._temp is None  # Zwischendateien sind weg
 
 
-@needs_models
+@needs_student
 def test_live_preview_plays_restored_clip_in_real_time(analog_clip):
     import locale
 
@@ -161,7 +183,23 @@ def test_live_preview_plays_restored_clip_in_real_time(analog_clip):
         while (player.time_pos or 0) < 2.5 and time.monotonic() < deadline:
             time.sleep(0.05)
         assert (player.time_pos or 0) >= 2.5, service.last_error
-        assert player.video_params["w"] == 640 and player.frame_drop_count == 0
+        assert (player.video_params["w"], player.video_params["h"]) == (632, 352)  # 592 + Ränder
+        assert player.frame_drop_count == 0
         assert service.last_error is None
     finally:
         player.terminate()
+
+
+@needs_models
+def test_onnx_export_matches_pytorch(tmp_path, analog_clip):
+    from fpvcut.restore.engine import ClipSpec, FrameReader, Geometry
+    from fpvcut.restore.export import compare, export
+
+    checkpoint = restore.model_path("student").with_suffix(".pt")
+    if not checkpoint.is_file():
+        pytest.skip("Schüler-Checkpoint (.pt) fehlt")
+    export(checkpoint, tmp_path / "s.onnx")
+    reader = FrameReader("ffmpeg", ClipSpec(analog_clip, 1.0, 0.1, 60.0, Geometry.for_source(1280, 720)), 0, 5)
+    frames = list(reader)
+    reader.close()
+    assert compare(checkpoint, tmp_path / "s.onnx", __import__("numpy").stack(frames)[None]) <= 3

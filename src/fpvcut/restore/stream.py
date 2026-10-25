@@ -5,6 +5,7 @@ steht ein eigenes mpv-Stream-Protokoll, das ein y4m-Video (rohe YUV-Bilder, fest
 liefert: Beim Lesen rechnet ein Hintergrund-Thread die nächsten Bilder voraus. Weil jedes Bild
 gleich groß ist, kann mpv darin springen; ein Sprung startet das Lesen ab dem Zielbild neu. Die
 Farbkorrektur läuft danach wie bei allen Clips als mpv-Videofilter, also auf dem gereinigten Bild.
+Das Bild bleibt in Rechengröße (BoxPro+: 592 × 352 plus Ränder), mpv vergrößert es ohnehin.
 
 Zuletzt gerechnete Bilder bleiben im Speicher. Beim Neuladen der Vorschau (z. B. nach jedem
 Regler) liest mpv den Anfang jeder Quelle und die aktuelle Stelle noch einmal; das kommt dann
@@ -21,10 +22,9 @@ import time
 from collections import OrderedDict
 from pathlib import Path
 
-from fpvcut.restore.engine import ClipSpec, Models, restored, to_source, to_yuv420
+from fpvcut.restore.engine import ClipSpec, Models, restored, to_yuv420
 
 PROTOCOL = "fpvki"
-PREVIEW_SCALE = 0.5  # Vorschau in halber Größe der Quelle (so wird ohnehin gerechnet)
 CACHE_BYTES = 400 * 1024 * 1024
 AHEAD = 12  # so viele Bilder rechnet ein Thread höchstens voraus
 IDLE_STOP = 3.0  # Sekunden ohne Lesen, dann hält ein Thread an (z. B. nach dem Abtasten beim Öffnen)
@@ -72,13 +72,14 @@ class _Worker(threading.Thread):
         self.frames: queue.Queue = queue.Queue(AHEAD)
         self.stopped = threading.Event()
         self.next_index = start  # nächstes Bild, das aus der Warteschlange kommt
+        self.padding = spec.geometry.work_padding()
         self.last_access = time.monotonic()
 
     def run(self) -> None:
         try:
             for index, frame in restored(self.service.ffmpeg, self.spec, self.service.models, "student",
                                          start=self.start_index, stopped=self.stopped):
-                data = FRAME_TAG + to_yuv420(to_source(frame, self.spec.geometry, PREVIEW_SCALE))
+                data = FRAME_TAG + to_yuv420(frame, self.padding)
                 self.service.cache.put((self.key, index), data)
                 while not self.stopped.is_set():
                     try:
@@ -127,8 +128,10 @@ class RestoreStream:
     def __init__(self, service: PreviewService, key: str, spec: ClipSpec) -> None:
         self.service, self.key, self.spec = service, key, spec
         geometry = spec.geometry
-        self.width = max(2, round(geometry.width * PREVIEW_SCALE) // 2 * 2)
-        self.height = max(2, round(geometry.height * PREVIEW_SCALE) // 2 * 2)
+        # Vorschau in Rechengröße, mit Rändern im Seitenverhältnis der Quelle
+        left, top, right, bottom = geometry.work_padding()
+        work_w, work_h = geometry.work_size
+        self.width, self.height = work_w + left + right, work_h + top + bottom
         num, den = _fraction(spec.fps)
         self.header = f"YUV4MPEG2 W{self.width} H{self.height} F{num}:{den} Ip A1:1 C420jpeg\n".encode()
         self.frame_size = len(FRAME_TAG) + self.width * self.height * 3 // 2
