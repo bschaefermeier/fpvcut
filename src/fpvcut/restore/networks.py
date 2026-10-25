@@ -1,9 +1,11 @@
-"""Die beiden Reinigungsmodelle aus fpv-restoration: Lehrer (Swin-UNet) und Schüler (kleines U-Net).
+"""Die beiden Reinigungsmodelle aus fpv-restoration: „hohe Qualität“ (Swin-UNet) und „normal“ (kleines U-Net).
 
-Beide bekommen mehrere aufeinanderfolgende Bilder (B, T, 3, H, W) in 0…1 und einen OSD-Schalter
-(0 = OSD erhalten, 1 = entfernen). Der Lehrer gibt alle T = 5 Bilder gereinigt aus, der Schüler nur
-das mittlere. Übernommen aus ``fpv_restoration/student.py`` und ``swin_common.py``; die
-Checkpoints müssen zu diesem Aufbau passen. Braucht PyTorch (``uv sync --extra ki``).
+In fpv-restoration heißen sie Lehrer und Schüler: Das normale Modell ist per Destillation aus dem
+großen entstanden. Beide bekommen mehrere aufeinanderfolgende Bilder (B, T, 3, H, W) in 0…1 und
+einen OSD-Schalter (0 = OSD erhalten, 1 = entfernen). Das große Modell gibt alle T = 5 Bilder
+gereinigt aus, das normale nur das mittlere. Übernommen aus ``fpv_restoration/student.py`` und
+``swin_common.py``; die Checkpoints müssen zu diesem Aufbau passen. Braucht PyTorch
+(``uv sync --extra ki``).
 """
 
 from __future__ import annotations
@@ -13,8 +15,8 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 
-STUDENT_CONFIG = {"frames": 5, "widths": [32, 64, 96, 128], "blocks": 2}
-TEACHER_WINDOW = 5
+NORMAL_CONFIG = {"frames": 5, "widths": [32, 64, 96, 128], "blocks": 2}
+HIGH_QUALITY_WINDOW = 5
 
 
 class ResBlock(nn.Module):
@@ -27,13 +29,13 @@ class ResBlock(nn.Module):
         return x + self.body(x)
 
 
-class StudentUNet(nn.Module):
+class NormalUNet(nn.Module):
     """Nachbarbilder als Farbkanäle übereinander plus OSD-Schalter; Ausgabe: Korrektur fürs mittlere Bild.
 
     Das Bild wird dreimal halbiert, Breite und Höhe müssen durch 8 teilbar sein.
     """
 
-    def __init__(self, frames: int = 5, widths: list[int] = STUDENT_CONFIG["widths"], blocks: int = 2) -> None:
+    def __init__(self, frames: int = 5, widths: list[int] = NORMAL_CONFIG["widths"], blocks: int = 2) -> None:
         super().__init__()
         self.frames = frames
         w = list(widths)
@@ -63,10 +65,10 @@ class StudentUNet(nn.Module):
         return mid + self.tail(h)
 
 
-class OSDSwitchSwin(nn.Module):
+class HighQualitySwin(nn.Module):
     """Swin-UNet mit OSD-Schalter als viertem Eingangskanal. Ausgabe wie die Eingabe: alle Bilder."""
 
-    frames = TEACHER_WINDOW
+    frames = HIGH_QUALITY_WINDOW
 
     def __init__(self) -> None:
         super().__init__()
@@ -89,22 +91,22 @@ def _state(path: Path) -> dict:
     return state if isinstance(state, dict) else {}
 
 
-def load_student(path: Path) -> StudentUNet:
-    """Schüler aus einem Checkpoint von ``distill.py`` (der Aufbau steht mit darin)."""
+def load_normal(path: Path) -> NormalUNet:
+    """Normales Modell aus einem Checkpoint von ``distill.py`` (der Aufbau steht mit darin)."""
     state = _state(path)
     if "model" not in state:
-        raise ValueError("kein Schüler-Checkpoint")
-    model = StudentUNet(**state.get("config", STUDENT_CONFIG))
+        raise ValueError("kein Checkpoint des normalen Modells")
+    model = NormalUNet(**state.get("config", NORMAL_CONFIG))
     model.load_state_dict(state["model"])
     return model.eval()
 
 
-def load_teacher(path: Path) -> OSDSwitchSwin:
-    """Lehrer aus einem Checkpoint von ``train_swin.py``, mit OSD-Schalter trainiert."""
+def load_high_quality(path: Path) -> HighQualitySwin:
+    """Modell hoher Qualität aus einem Checkpoint von ``train_swin.py``, mit OSD-Schalter trainiert."""
     state = _state(path)
     state = state.get("model", state)
     if "base.conv_input.weight" not in state:
-        raise ValueError("kein Lehrer-Checkpoint mit OSD-Schalter")
-    model = OSDSwitchSwin()
+        raise ValueError("kein Swin-Checkpoint mit OSD-Schalter")
+    model = HighQualitySwin()
     model.load_state_dict(state)
     return model.eval()

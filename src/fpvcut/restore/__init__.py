@@ -1,12 +1,13 @@
-"""KI-Bildreinigung für analoges FPV-Bild: Modelle aus fpv-restoration (Lehrer und Schüler).
+"""KI-Bildreinigung für analoges FPV-Bild: zwei Modelle aus fpv-restoration, „normal“ und „hohe Qualität“.
 
-Der Schüler (klein, schnell) läuft live in der Timeline-Vorschau, der Lehrer (Swin-UNet, deutlich
-besser, aber langsam) auf Wunsch beim Rendern. Beides vor der Farbkorrektur.
+Das normale Modell (klein, schnell; in fpv-restoration der Schüler) läuft live in der
+Timeline-Vorschau, das hoher Qualität (Swin-UNet, der Lehrer; deutlich besser, aber langsam) auf
+Wunsch beim Rendern. Beides vor der Farbkorrektur.
 
-Den Schüler rechnet ONNX Runtime (gehört zu FPVCut, auch im Windows-Paket) aus einer ``.onnx``-Datei,
-die :mod:`export` aus dem Checkpoint erzeugt. Der Lehrer braucht PyTorch mit CUDA
-(``uv sync --extra ki``). Fehlt etwas, fehlt nur die jeweilige Funktion. Dieses Modul lädt keins von
-beiden, damit FPVCut ohne Verzögerung startet.
+Das normale Modell liegt als ``models/restore_normal.onnx`` bei FPVCut (auch im Windows-Paket) und
+läuft über ONNX Runtime. Das hoher Qualität ist zu groß fürs Repo (238 MB) und braucht PyTorch mit
+CUDA (``uv sync --extra ki``). Fehlt etwas, fehlt nur die jeweilige Funktion. Dieses Modul lädt
+keins von beiden, damit FPVCut ohne Verzögerung startet.
 """
 
 from __future__ import annotations
@@ -17,12 +18,15 @@ from pathlib import Path
 
 from PySide6.QtCore import QSettings
 
-from fpvcut.core.paths import is_frozen
+from fpvcut.core.paths import app_dir, is_frozen
 from fpvcut.i18n import translate
 
-KINDS = ("student", "teacher")
-# Gesucht wird nach diesen Namen, beim Schüler zuerst die ONNX-Fassung
-DEFAULT_NAMES = {"student": ["schueler_2h.onnx", "schueler_2h.pt"], "teacher": ["lehrer_cluster.pt"]}
+KINDS = ("normal", "high_quality")
+# Gesucht wird nach diesen Namen (zuerst die FPVCut-Namen, dann die aus fpv-restoration)
+DEFAULT_NAMES = {
+    "normal": ["restore_normal.onnx", "schueler_2h.onnx", "schueler_2h.pt"],
+    "high_quality": ["restore_high_quality.pt", "lehrer_cluster.pt"],
+}
 
 _models = None  # engine.Models, einmal je Programmlauf
 
@@ -34,6 +38,7 @@ def _settings() -> QSettings:
 def default_dirs() -> list[Path]:
     """Hier wird nach den Checkpoints gesucht, wenn keiner eingestellt ist."""
     dirs = [Path(env)] if (env := os.environ.get("FPVCUT_MODELS")) else []
+    dirs.append(app_dir("models"))  # mitgeliefert (Repo bzw. Windows-Paket)
     appdata = os.environ.get("APPDATA")
     if appdata:
         dirs.append(Path(appdata) / "FPVCut" / "modelle")
@@ -68,11 +73,11 @@ def onnx_installed() -> bool:
     return importlib.util.find_spec("onnxruntime") is not None
 
 
-def problem(kind: str = "student") -> str | None:
+def problem(kind: str = "normal") -> str | None:
     """Warum die Reinigung mit diesem Modell gerade nicht geht, sonst None."""
     path = model_path(kind)
     if path is None:
-        name = translate("restore", "student model") if kind == "student" else translate("restore", "teacher model")
+        name = translate("restore", "normal model") if kind == "normal" else translate("restore", "high-quality model")
         return translate("restore", "The {model} was not found (File → AI models …).").format(model=name)
     if path.suffix.lower() == ".onnx":
         if not onnx_installed():
@@ -88,5 +93,5 @@ def models():
     if _models is None:
         from fpvcut.restore.engine import Models  # noqa: PLC0415
 
-        _models = Models(model_path("student"), model_path("teacher"))
+        _models = Models(model_path("normal"), model_path("high_quality"))
     return _models

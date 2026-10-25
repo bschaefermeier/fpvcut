@@ -1,4 +1,4 @@
-"""Live-Vorschau: der Schüler reinigt Clips, während mpv sie abspielt.
+"""Live-Vorschau: das normale Modell reinigt Clips, während mpv sie abspielt.
 
 Jeder gereinigte Clip ist in der Timeline-EDL eine eigene Quelle ``fpvki://<id>``. Dahinter
 steht ein eigenes mpv-Stream-Protokoll, das ein y4m-Video (rohe YUV-Bilder, feste Größe je Bild)
@@ -77,8 +77,8 @@ class _Worker(threading.Thread):
 
     def run(self) -> None:
         try:
-            for index, frame in restored(self.service.ffmpeg, self.spec, self.service.models, "student",
-                                         start=self.start_index, stopped=self.stopped):
+            for index, frame in restored(self.service.ffmpeg, self.spec, self.service.models, "normal",
+                                         start=self.start_index, stopped=self.stopped, yuv=True):
                 data = FRAME_TAG + to_yuv420(frame, self.padding)
                 self.service.cache.put((self.key, index), data)
                 while not self.stopped.is_set():

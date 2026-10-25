@@ -1,4 +1,4 @@
-"""Bilder eines Clips lesen und durch Lehrer oder Schüler schicken.
+"""Bilder eines Clips lesen und durch das normale Modell oder das hoher Qualität schicken.
 
 Gerechnet wird wie im Training in halber Auflösung (BoxPro+: Bild 1200 × 720 ab x = 40, also
 592 × 352); geliefert werden gereinigte Bilder in dieser Rechengröße als ``uint8`` (H, W, 3).
@@ -6,8 +6,8 @@ Vorschau und Render bringen sie danach wieder aufs Format der Quelle (mit deren 
 Rändern). Bild ``k`` eines Clips liegt bei ``src_in + k / fps``; die zwei Nachbarbilder davor und
 danach kommen aus der Quelle (am Dateianfang/-ende wird das Randbild wiederholt).
 
-Wer rechnet, steckt in einem „Runner“: der Schüler über ONNX Runtime (:mod:`onnx_runner`, ohne
-PyTorch) oder PyTorch, der Lehrer über PyTorch (:mod:`torch_runner`). Dieses Modul selbst braucht
+Wer rechnet, steckt in einem „Runner“: das normale Modell über ONNX Runtime (:mod:`onnx_runner`,
+ohne PyTorch) oder PyTorch, das hoher Qualität über PyTorch (:mod:`torch_runner`). Dieses Modul braucht
 nur numpy.
 """
 
@@ -79,19 +79,19 @@ class ClipSpec:
 
 
 class Runner(Protocol):
-    """Ein geladenes Modell. ``all_frames``: liefert für alle 5 Eingabebilder ein Ergebnis (Lehrer)."""
+    """Ein geladenes Modell. ``all_frames``: liefert für alle 5 Eingabebilder ein Ergebnis (hohe Qualität)."""
 
     all_frames: bool
 
     def run(self, window: list[np.ndarray], remove_osd: bool) -> np.ndarray:
-        """5 Bilder (H, W, 3) uint8 → (H, W, 3), beim Lehrer (5, H, W, 3)."""
+        """5 Bilder (H, W, 3) uint8 → (H, W, 3), bei hoher Qualität (5, H, W, 3)."""
 
 
 class Models:
-    """Lädt Lehrer und Schüler erst bei Bedarf (einmal); beide rechnen nacheinander, nie gleichzeitig."""
+    """Lädt die Modelle erst bei Bedarf (einmal); sie rechnen nacheinander, nie gleichzeitig."""
 
-    def __init__(self, student: Path | None, teacher: Path | None) -> None:
-        self.paths = {"student": student, "teacher": teacher}
+    def __init__(self, normal: Path | None, high_quality: Path | None) -> None:
+        self.paths = {"normal": normal, "high_quality": high_quality}
         self._loaded: dict[str, Runner] = {}
         self._load_lock = threading.Lock()
         self.run_lock = threading.Lock()  # Vorschau und Render teilen sich die Karte
@@ -103,9 +103,9 @@ class Models:
                 if path is None:
                     raise FileNotFoundError(kind)
                 if path.suffix.lower() == ".onnx":
-                    from fpvcut.restore.onnx_runner import OnnxStudent  # noqa: PLC0415
+                    from fpvcut.restore.onnx_runner import OnnxNormal  # noqa: PLC0415
 
-                    self._loaded[kind] = OnnxStudent(path)
+                    self._loaded[kind] = OnnxNormal(path)
                 else:
                     from fpvcut.restore import torch_runner  # noqa: PLC0415  (lädt PyTorch)
 
@@ -113,15 +113,19 @@ class Models:
             return self._loaded[kind]
 
     def release(self, kind: str) -> None:
-        """Modell freigeben (der Lehrer belegt fast 4 GB Grafikspeicher)."""
+        """Modell freigeben (das Modell hoher Qualität belegt fast 4 GB Grafikspeicher)."""
         with self._load_lock:
             runner = self._loaded.pop(kind, None)
         if runner is not None and hasattr(runner, "close"):
             runner.close()
 
-    def run(self, runner: Runner, window: list[np.ndarray], remove_osd: bool) -> np.ndarray:
+    def run(self, runner: Runner, window: list[np.ndarray], remove_osd: bool, yuv: bool = False):
+        """Ergebnis als RGB oder, mit ``yuv``, als YUV-4:2:0-Ebenen (das ONNX-Modell rechnet sie gleich mit)."""
         with self.run_lock:
-            return runner.run(window, remove_osd)
+            if yuv and getattr(runner, "run_yuv", None) is not None:
+                return runner.run_yuv(window, remove_osd)
+            out = runner.run(window, remove_osd)
+        return yuv_planes(out) if yuv else out
 
 
 class FrameReader:
@@ -179,13 +183,14 @@ def _sequence(ffmpeg, spec: ClipSpec, start: int, stop: int,
         reader.close()
 
 
-def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "student", stride: int = 1,
-             start: int = 0, stop: int | None = None,
-             stopped: threading.Event | None = None) -> Iterator[tuple[int, np.ndarray]]:
+def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "normal", stride: int = 1,
+             start: int = 0, stop: int | None = None, stopped: threading.Event | None = None,
+             yuv: bool = False) -> Iterator[tuple[int, np.ndarray]]:
     """Gereinigte Bilder ``start`` … ``stop - 1`` des Clips: ``(Index, Bild H×W×3 uint8)`` in Rechengröße.
 
-    Schüler: ein Durchlauf je Bild. Lehrer: liefert je Fenster alle 5 Bilder; verwendet werden die
+    Normal: ein Durchlauf je Bild. Hohe Qualität: liefert je Fenster alle 5 Bilder; verwendet werden die
     mittleren ``stride`` (1…5), danach rückt das Fenster um ``stride`` weiter (am Ende auch äußere).
+    ``yuv``: statt RGB die YUV-Ebenen ``(y, u, v)`` liefern (für die Vorschau).
     """
     stop = spec.frames if stop is None else min(stop, spec.frames)
     if start >= stop:
@@ -198,7 +203,7 @@ def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "st
         for frame in frames:
             window.append(frame)
             if len(window) == WINDOW:
-                yield index, models.run(runner, list(window), spec.remove_osd)
+                yield index, models.run(runner, list(window), spec.remove_osd, yuv)
                 index += 1
         return
     stride = max(1, min(stride, WINDOW))
@@ -219,7 +224,8 @@ def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "st
             out = models.run(runner, buffer[begin - base:begin - base + WINDOW], spec.remove_osd)
             use_to = last_need if final else min(pos + first_use + stride - 1, last_need)
             while need <= use_to:
-                yield start + need - CONTEXT, out[need - begin]
+                frame = out[need - begin]
+                yield start + need - CONTEXT, (yuv_planes(frame) if yuv else frame)
                 need += 1
             pos += stride
             drop = min(pos, total - WINDOW) - base
@@ -228,21 +234,32 @@ def restored(ffmpeg: Path | str, spec: ClipSpec, models: Models, kind: str = "st
                 base += drop
 
 
-def to_yuv420(frame: np.ndarray, padding: tuple[int, int, int, int] = (0, 0, 0, 0)) -> bytes:
-    """RGB (H, W, 3) uint8 → YUV 4:2:0 in BT.601 mit eingeschränktem Wertebereich (wie y4m es
-    erwartet), mit schwarzen Rändern ``padding`` (links, oben, rechts, unten; gerade)."""
-    rgb = frame.astype(np.float32)
-    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
-    luma = 16 + (65.481 * r + 128.553 * g + 24.966 * b) / 255
+def yuv_planes(frame: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """RGB (H, W, 3) uint8 → YUV 4:2:0 in BT.601 mit eingeschränktem Wertebereich (wie y4m es erwartet).
+
+    Nur für Modelle ohne eigene YUV-Ausgabe; das normale ONNX-Modell rechnet das auf der Grafikkarte.
+    """
     h, w = frame.shape[0] // 2 * 2, frame.shape[1] // 2 * 2
-    small = rgb[:h, :w].reshape(h // 2, 2, w // 2, 2, 3).mean(axis=(1, 3))
+    rgb = frame[:h, :w].astype(np.int32)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    luma = (66 * r + 129 * g + 25 * b + 128 >> 8) + 16
+    small = rgb.reshape(h // 2, 2, w // 2, 2, 3).sum(axis=(1, 3))  # Summe von 4 Bildpunkten
     r, g, b = small[..., 0], small[..., 1], small[..., 2]
-    u = 128 + (-37.797 * r - 74.203 * g + 112.0 * b) / 255
-    v = 128 + (112.0 * r - 93.786 * g - 18.214 * b) / 255
+    u = (-38 * r - 74 * g + 112 * b + 512 >> 10) + 128
+    v = (112 * r - 94 * g - 18 * b + 512 >> 10) + 128
+    return luma.astype(np.uint8), u.astype(np.uint8), v.astype(np.uint8)
+
+
+def to_yuv420(frame, padding: tuple[int, int, int, int] = (0, 0, 0, 0)) -> bytes:
+    """Bild (RGB-Array oder YUV-Ebenen) als y4m-Bilddaten, mit schwarzen Rändern ``padding``
+    (links, oben, rechts, unten; gerade)."""
+    luma, u, v = frame if isinstance(frame, tuple) else yuv_planes(frame)
     left, top, right, bottom = padding
+    if not any(padding):
+        return luma.tobytes() + u.tobytes() + v.tobytes()
     planes = [
         np.pad(luma, ((top, bottom), (left, right)), constant_values=16),
         np.pad(u, ((top // 2, bottom // 2), (left // 2, right // 2)), constant_values=128),
         np.pad(v, ((top // 2, bottom // 2), (left // 2, right // 2)), constant_values=128),
     ]
-    return b"".join(np.clip(p + 0.5, 0, 255).astype(np.uint8).tobytes() for p in planes)
+    return b"".join(p.tobytes() for p in planes)

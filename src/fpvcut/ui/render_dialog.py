@@ -1,7 +1,7 @@
 """Render-Dialog: Profil wählen, ffmpeg im Hintergrund laufen lassen, Fortschritt zeigen.
 
-Haben Clips die KI-Reinigung eingeschaltet, werden sie vorher einzeln gereinigt (Schüler oder,
-mit Haken, der bessere, langsamere Lehrer mit wählbarem Stride); erst dann läuft ffmpeg.
+Haben Clips die KI-Reinigung eingeschaltet, werden sie vorher einzeln gereinigt (normales Modell
+oder, mit Haken, das langsamere hoher Qualität mit wählbarem Stride); erst dann läuft ffmpeg.
 """
 
 from __future__ import annotations
@@ -47,8 +47,8 @@ RESOLUTIONS = [(1280, 720), (1920, 1080), (2560, 1440), (3840, 2160)]
 FRAME_RATES = [24, 25, 30, 50, 60]
 CPU_FALLBACK = {"h264": "libx264", "hevc": "libx265"}
 # Ungefähre Bilder pro Sekunde auf einer RTX 3070 (halbe Auflösung), nur für die Zeitschätzung
-TEACHER_FPS_PER_STRIDE = 2.1
-STUDENT_FPS = 60.0
+HIGH_QUALITY_FPS_PER_STRIDE = 2.1
+NORMAL_FPS = 60.0
 
 
 def app_settings() -> QSettings:
@@ -102,8 +102,8 @@ class _RestoreJob(QObject):
         except Exception as exc:  # noqa: BLE001  (Grafikkarte, Speicher, ffmpeg: alles im Dialog melden)
             self.finished.emit(str(exc).strip().splitlines()[-1] if str(exc).strip() else type(exc).__name__)
         finally:
-            if self.kind == "teacher":
-                models.release("teacher")  # fast 4 GB Grafikspeicher wieder frei für die Vorschau
+            if self.kind == "high_quality":
+                models.release("high_quality")  # fast 4 GB Grafikspeicher wieder frei für die Vorschau
 
 
 class RenderDialog(QDialog):
@@ -190,13 +190,13 @@ class RenderDialog(QDialog):
         stored = app_settings()
         self._restore_info = QLabel(self)
         self._restore_info.setWordWrap(True)
-        self._teacher = QCheckBox(self.tr("Use the teacher model (best quality, much slower)"), self)
-        self._teacher.setChecked(stored.value("render/teacher", False, type=bool))
+        self._high_quality = QCheckBox(self.tr("Use the high-quality model (best result, much slower)"), self)
+        self._high_quality.setChecked(stored.value("render/high_quality", False, type=bool))
         self._stride = QSpinBox(self)
         self._stride.setRange(1, 5)
         self._stride.setValue(int(stored.value("render/stride", 3)))
         self._stride.setToolTip(
-            self.tr("The teacher cleans 5 frames at a time. Stride 1 uses only the middle one (best, slowest), "
+            self.tr("The high-quality model cleans 5 frames at a time. Stride 1 uses only the middle one (best, slowest), "
                     "stride 5 all five: about five times as fast, slightly worse, it can jump a little "
                     "every 5 frames.")
         )
@@ -206,9 +206,9 @@ class RenderDialog(QDialog):
         stride_row.addWidget(self._stride)
         stride_row.addWidget(self._stride_hint, 1)
         form.addRow(self.tr("AI cleanup:"), self._restore_info)
-        form.addRow("", self._teacher)
+        form.addRow("", self._high_quality)
         form.addRow(self.tr("Stride:"), stride_row)
-        self._teacher.toggled.connect(self._update_restore)
+        self._high_quality.toggled.connect(self._update_restore)
         self._stride.valueChanged.connect(self._update_restore)
         self._range.currentIndexChanged.connect(self._update_restore)
 
@@ -302,16 +302,16 @@ class RenderDialog(QDialog):
 
     @property
     def restore_kind(self) -> str:
-        return "teacher" if self._teacher.isChecked() else "student"
+        return "high_quality" if self._high_quality.isChecked() else "normal"
 
     def _model_name(self, kind: str) -> str:
-        return self.tr("teacher") if kind == "teacher" else self.tr("student")
+        return self.tr("high quality") if kind == "high_quality" else self.tr("normal")
 
     def _update_restore(self) -> None:
         timeline = self.render_timeline()
         clips = self.restored_clips(timeline)
-        self._teacher.setEnabled(bool(clips))
-        self._stride.setEnabled(bool(clips) and self._teacher.isChecked())
+        self._high_quality.setEnabled(bool(clips))
+        self._stride.setEnabled(bool(clips) and self._high_quality.isChecked())
         self._stride_hint.setEnabled(self._stride.isEnabled())
         if not clips:
             self._restore_info.setText(self.tr("No clip uses it (switch it on in the Color tab)."))
@@ -323,7 +323,7 @@ class RenderDialog(QDialog):
             return
         formats = self._clip_formats(timeline)
         frames = sum(round(timeline.clips[i].duration * formats[i].fps) for i in clips)
-        rate = TEACHER_FPS_PER_STRIDE * self._stride.value() if self._teacher.isChecked() else STUDENT_FPS
+        rate = HIGH_QUALITY_FPS_PER_STRIDE * self._stride.value() if self._high_quality.isChecked() else NORMAL_FPS
         self._restore_info.setText(
             self.tr("%n clip(s) with the {model} model, about {time} before rendering", "", len(clips)).format(
                 model=self._model_name(self.restore_kind), time=format_duration(frames / rate))
@@ -366,7 +366,7 @@ class RenderDialog(QDialog):
             return False
         stored = app_settings()
         stored.setValue("render/dir", str(settings.output.parent))
-        stored.setValue("render/teacher", self._teacher.isChecked())
+        stored.setValue("render/high_quality", self._high_quality.isChecked())
         stored.setValue("render/stride", self._stride.value())
         self.timeline.render_profile = self.profile.key
         self._output = settings.output
@@ -450,7 +450,7 @@ class RenderDialog(QDialog):
         for widget in (self._range, self._profile, self._resolution, self._fps, self._quality, self._path, self._start):
             widget.setEnabled(not running)
         if running:
-            self._teacher.setEnabled(False)
+            self._high_quality.setEnabled(False)
             self._stride.setEnabled(False)
         else:
             self._update_restore()

@@ -1,5 +1,5 @@
 """KI-Reinigung: Render-Eingänge, Vorschau-EDL, Schalter in der Farbkorrektur und (mit Grafikkarte
-und Checkpoints) der Schüler als ONNX live in der Vorschau, der Lehrer (PyTorch) im Render."""
+und Checkpoints) das normale Modell als ONNX live in der Vorschau, der das hoher Qualität (PyTorch) im Render."""
 
 import shutil
 import subprocess
@@ -25,15 +25,15 @@ def _cuda() -> bool:
     return torch.cuda.is_available()
 
 
-def _onnx_student() -> bool:
-    path = restore.model_path("student")
-    return path is not None and path.suffix == ".onnx" and restore.problem("student") is None
+def _onnx_normal() -> bool:
+    path = restore.model_path("normal")
+    return path is not None and path.suffix == ".onnx" and restore.problem("normal") is None
 
 
-needs_student = pytest.mark.skipif(shutil.which("ffmpeg") is None or not _onnx_student(),
+needs_normal = pytest.mark.skipif(shutil.which("ffmpeg") is None or not _onnx_normal(),
                                    reason="ONNX Runtime oder Schüler als .onnx fehlt")
 needs_models = pytest.mark.skipif(
-    shutil.which("ffmpeg") is None or not _cuda() or not _onnx_student() or restore.problem("teacher"),
+    shutil.which("ffmpeg") is None or not _cuda() or not _onnx_normal() or restore.problem("high_quality"),
     reason="PyTorch mit CUDA oder Checkpoints fehlen",
 )
 
@@ -60,6 +60,11 @@ def test_restored_clip_takes_picture_from_file_and_sound_from_original(tmp_path)
     assert cmd[cmd.index(str(restored[1])) - 3:cmd.index(str(restored[1]))] == ["-t", "1.000", "-i"]
 
 
+def test_normal_model_ships_with_fpvcut(monkeypatch):
+    monkeypatch.setattr(restore, "_settings", lambda: __import__("PySide6.QtCore").QtCore.QSettings("FPVCut-Test", "leer"))
+    assert restore.model_path("normal") == restore.app_dir("models") / "restore_normal.onnx"
+
+
 def test_preview_frame_keeps_black_borders_of_boxpro():
     import numpy as np
 
@@ -84,7 +89,7 @@ def test_preview_edl_uses_restored_source_for_clip():
 def test_grade_panel_switches_restore_and_reset_keeps_it(tmp_path, monkeypatch):
     from fpvcut.ui.main_window import MainWindow
 
-    monkeypatch.setattr(restore, "problem", lambda kind="student": None)
+    monkeypatch.setattr(restore, "problem", lambda kind="normal": None)
     window = MainWindow(db_path=tmp_path / "lib.sqlite")
     monkeypatch.setattr(window.player, "open_timeline", lambda *a, **kw: None)
     clips = [TimelineClip(n, 0, 4, 10, f"{n}.mp4", path=Path(f"/v/{n}.mp4")) for n in "ab"]
@@ -116,14 +121,14 @@ def analog_clip(tmp_path):
 
 @needs_models
 @pytest.mark.parametrize("stride", [1, 2, 3, 4, 5])
-def test_teacher_delivers_every_frame_once_for_each_stride(analog_clip, stride):
+def test_high_quality_delivers_every_frame_once_for_each_stride(analog_clip, stride):
     from fpvcut.restore.engine import ClipSpec, Geometry, restored
 
     spec = ClipSpec(analog_clip, 0.5, 0.3, 60.0, Geometry.for_source(1280, 720))
-    frames = list(restored("ffmpeg", spec, restore.models(), "teacher", stride))
+    frames = list(restored("ffmpeg", spec, restore.models(), "high_quality", stride))
     assert [i for i, _ in frames] == list(range(18))
     assert frames[0][1].shape == (352, 592, 3) and frames[0][1].dtype.name == "uint8"
-    restore.models().release("teacher")
+    restore.models().release("high_quality")
 
 
 def _probe(path: Path, entries: str) -> str:
@@ -146,8 +151,8 @@ def test_render_dialog_cleans_up_marked_clips_first(tmp_path, monkeypatch, analo
                    TimelineClip("a", 2.0, 2.5, path=analog_clip)])
     fmt = SourceFormat(1280, 720, 60.0)
     dialog = RenderDialog(tl, fmt, Path(shutil.which("ffmpeg")), None, formats=lambda t: [fmt] * len(t.clips))
-    assert dialog._teacher.isEnabled() and "1 Clip" in dialog._restore_info.text()
-    dialog._teacher.setChecked(True)
+    assert dialog._high_quality.isEnabled() and "1 Clip" in dialog._restore_info.text()
+    dialog._high_quality.setChecked(True)
     dialog._stride.setValue(5)
     dialog._path.setText(str(tmp_path / "out.mp4"))
     assert dialog.start()
@@ -160,7 +165,7 @@ def test_render_dialog_cleans_up_marked_clips_first(tmp_path, monkeypatch, analo
     assert dialog._temp is None  # Zwischendateien sind weg
 
 
-@needs_student
+@needs_normal
 def test_live_preview_plays_restored_clip_in_real_time(analog_clip):
     import locale
 
@@ -195,9 +200,9 @@ def test_onnx_export_matches_pytorch(tmp_path, analog_clip):
     from fpvcut.restore.engine import ClipSpec, FrameReader, Geometry
     from fpvcut.restore.export import compare, export
 
-    checkpoint = restore.model_path("student").with_suffix(".pt")
-    if not checkpoint.is_file():
-        pytest.skip("Schüler-Checkpoint (.pt) fehlt")
+    checkpoint = next((d / "schueler_2h.pt" for d in restore.default_dirs() if (d / "schueler_2h.pt").is_file()), None)
+    if checkpoint is None:
+        pytest.skip("Checkpoint des normalen Modells (.pt) fehlt")
     export(checkpoint, tmp_path / "s.onnx")
     reader = FrameReader("ffmpeg", ClipSpec(analog_clip, 1.0, 0.1, 60.0, Geometry.for_source(1280, 720)), 0, 5)
     frames = list(reader)

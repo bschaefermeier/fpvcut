@@ -706,11 +706,11 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
     def _restored_sources(self, timeline: Timeline) -> tuple[dict[int, str], str | None]:
-        """Clips mit KI-Reinigung: ihr Bild kommt live vom Schüler (``fpvki://…``-Quellen der EDL)."""
+        """Clips mit KI-Reinigung: ihr Bild kommt live vom normalen Modell (``fpvki://…``-Quellen der EDL)."""
         wanted = [i for i, clip in enumerate(timeline.clips) if Grade.from_dict(clip.grade).restore]
         if not wanted:
             return {}, None
-        if problem := restore.problem("student"):
+        if problem := restore.problem("normal"):
             return {}, problem
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:

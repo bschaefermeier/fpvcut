@@ -1,6 +1,6 @@
 """Gereinigte Fassung eines Clips als Zwischendatei fürs Rendern.
 
-Vor dem eigentlichen ffmpeg-Lauf wird jeder Clip mit KI-Reinigung einmal durch Lehrer oder Schüler
+Vor dem eigentlichen ffmpeg-Lauf wird jeder Clip mit KI-Reinigung einmal durch das normale Modell oder das hoher Qualität
 geschickt und in Quellgröße (mit den schwarzen Rändern der Quelle) fast verlustfrei gespeichert.
 Der Render nimmt dann das Bild aus dieser Datei und den Ton aus dem Original; die Farbkorrektur
 läuft dort wie bei allen Clips, also nach der Reinigung.
@@ -28,7 +28,7 @@ def intermediate_encoder(gpu: bool) -> list[str]:
     return ["-c:v", "libx264", "-preset", "veryfast", "-crf", "10"]
 
 
-def restore_clip(ffmpeg: Path | str, spec: ClipSpec, models: Models, output: Path, *, kind: str = "teacher",
+def restore_clip(ffmpeg: Path | str, spec: ClipSpec, models: Models, output: Path, *, kind: str = "high_quality",
                  stride: int = 1, gpu_encoder: bool = False, progress: Callable[[int], None] | None = None,
                  stopped: threading.Event | None = None) -> None:
     """``spec`` gereinigt nach ``output`` schreiben; ``progress`` bekommt die Zahl fertiger Bilder."""

@@ -1,4 +1,4 @@
-"""Datei → KI-Modelle: Checkpoints von Schüler und Lehrer wählen, Stand von PyTorch und Grafikkarte."""
+"""Datei → KI-Modelle: normales Modell und das hoher Qualität wählen, Stand von PyTorch und Grafikkarte."""
 
 from __future__ import annotations
 
@@ -26,13 +26,13 @@ class RestoreDialog(QDialog):
         self.setWindowTitle(self.tr("AI models"))
         self.setMinimumWidth(620)
         intro = QLabel(self.tr(
-            "Models from fpv-restoration for cleaning up analog FPV footage. The student runs live in the "
-            "timeline preview, the teacher optionally when rendering. Switch the cleanup on per clip in the "
+            "Models from fpv-restoration for cleaning up analog FPV footage. The normal model runs live in the "
+            "timeline preview, the high-quality model optionally when rendering. Switch the cleanup on per clip in the "
             "Color tab."), self)
         intro.setWordWrap(True)
         self._labels: dict[str, QLabel] = {}
         form = QFormLayout()
-        names = {"student": self.tr("Student:"), "teacher": self.tr("Teacher:")}
+        names = {"normal": self.tr("Normal:"), "high_quality": self.tr("High quality:")}
         for kind in restore.KINDS:
             label = QLabel(self)
             label.setWordWrap(True)
@@ -48,10 +48,10 @@ class RestoreDialog(QDialog):
             row.addWidget(default)
             form.addRow(names[kind], row)
             self._labels[kind] = label
-        self._convert = QPushButton(self.tr("Convert student to ONNX"), self)
+        self._convert = QPushButton(self.tr("Convert normal model to ONNX"), self)
         self._convert.setToolTip(self.tr("Creates a .onnx file next to the checkpoint: half the size, faster, "
                                          "and works without PyTorch"))
-        self._convert.clicked.connect(self._convert_student)
+        self._convert.clicked.connect(self._convert_normal)
         form.addRow("", self._convert)
         self._system = QLabel(self)
         self._system.setWordWrap(True)
@@ -73,7 +73,7 @@ class RestoreDialog(QDialog):
             from fpvcut.restore.onnx_runner import providers  # noqa: PLC0415
 
             gpu = [p.removesuffix("ExecutionProvider") for p in providers() if p != "CPUExecutionProvider"]
-            lines.append(self.tr("ONNX Runtime (student): {devices}").format(
+            lines.append(self.tr("ONNX Runtime (normal): {devices}").format(
                 devices=", ".join(gpu) if gpu else self.tr("processor only, far too slow")))
         else:
             lines.append(self.tr("ONNX Runtime is not installed."))
@@ -84,19 +84,19 @@ class RestoreDialog(QDialog):
                 gpu = gpu_name()
             except Exception as exc:  # noqa: BLE001  (kaputte CUDA-Installation o. Ä. nur anzeigen)
                 gpu = str(exc)
-            lines.append(self.tr("PyTorch (teacher): {gpu}").format(gpu=gpu or self.tr("no CUDA graphics card")))
+            lines.append(self.tr("PyTorch (high quality): {gpu}").format(gpu=gpu or self.tr("no CUDA graphics card")))
         else:
-            lines.append(self.tr("PyTorch is not installed (uv sync --extra ki), the teacher is not available."))
+            lines.append(self.tr("PyTorch is not installed (uv sync --extra ki), the high-quality model is not available."))
         self._system.setText("\n".join(lines))
-        student = restore.model_path("student")
-        self._convert.setVisible(student is not None and student.suffix.lower() == ".pt" and restore.torch_installed())
+        normal = restore.model_path("normal")
+        self._convert.setVisible(normal is not None and normal.suffix.lower() == ".pt" and restore.torch_installed())
 
-    def _convert_student(self) -> None:
-        """Schüler-Checkpoint nach ONNX umwandeln (daneben) und die ONNX-Datei verwenden."""
+    def _convert_normal(self) -> None:
+        """Checkpoint des normalen Modells nach ONNX umwandeln (daneben) und die ONNX-Datei verwenden."""
         from PySide6.QtGui import QGuiApplication  # noqa: PLC0415
         from PySide6.QtCore import Qt  # noqa: PLC0415
 
-        source = restore.model_path("student")
+        source = restore.model_path("normal")
         target = source.with_suffix(".onnx")
         QGuiApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         try:
@@ -108,7 +108,7 @@ class RestoreDialog(QDialog):
             return
         finally:
             QGuiApplication.restoreOverrideCursor()
-        self._set("student", target)
+        self._set("normal", target)
 
     def _choose(self, kind: str) -> None:
         current = restore.model_path(kind)

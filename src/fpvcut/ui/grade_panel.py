@@ -1,6 +1,6 @@
 """Farbkorrektur der in der Timeline ausgewählten Clips: Regler (auch Schärfe), LUT, Automatik, auf alle übertragen.
 
-Ganz oben der Schalter für die KI-Bildreinigung (Schüler-Modell live in der Vorschau). Sie läuft
+Ganz oben der Schalter für die KI-Bildreinigung (normales Modell live in der Vorschau). Sie läuft
 vor allen Farbfiltern, die Regler wirken also auf das gereinigte Bild.
 
 Sind mehrere Clips ausgewählt, zeigen die Regler die Werte des zuletzt angeklickten Clips.
@@ -157,15 +157,15 @@ class GradePanel(QWidget):
         self.refresh()
 
     def refresh_restore(self, update: bool = True) -> None:
-        """Prüfen, ob die KI-Reinigung verfügbar ist (PyTorch, Schüler-Checkpoint)."""
-        self._restore_problem = restore.problem("student")
+        """Prüfen, ob die KI-Reinigung verfügbar ist (ONNX Runtime, normales Modell)."""
+        self._restore_problem = restore.problem("normal")
         if self._restore_problem:
             self._restore.setToolTip(self.tr("Not available: {reason}").format(reason=self._restore_problem))
         else:
             self._restore.setToolTip(
                 self.tr("Removes noise, rainbow stripes and color tears from analog FPV footage "
-                        "(student model, live in the preview). Runs before the color correction. "
-                        "When rendering, the better teacher model can be used instead.")
+                        "(normal model, live in the preview). Runs before the color correction. "
+                        "When rendering, the slower high-quality model can be used instead.")
             )
         if update:
             self.refresh()

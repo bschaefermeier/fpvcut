@@ -276,11 +276,6 @@ Im Player mit I/O einen Ausschnitt wählen und F drücken.</translation>
         <translation>Nicht verfügbar: {reason}</translation>
     </message>
     <message>
-        <location filename="../../ui/grade_panel.py" line="166"/>
-        <source>Removes noise, rainbow stripes and color tears from analog FPV footage (student model, live in the preview). Runs before the color correction. When rendering, the better teacher model can be used instead.</source>
-        <translation>Entfernt Rauschen, Regenbogenstreifen und Farbrisse aus analogem FPV-Bild (Schüler-Modell, live in der Vorschau). Läuft vor der Farbkorrektur. Beim Rendern kann stattdessen das bessere Lehrer-Modell rechnen.</translation>
-    </message>
-    <message>
         <location filename="../../ui/grade_panel.py" line="92"/>
         <location filename="../../ui/grade_panel.py" line="98"/>
         <source>Double-click: back to neutral</source>
@@ -343,6 +338,11 @@ Im Player mit I/O einen Ausschnitt wählen und F drücken.</translation>
         <location filename="../../ui/grade_panel.py" line="205"/>
         <source>The same correction for all clips of the timeline, e.g. with the same camera</source>
         <translation>Dieselbe Korrektur für alle Clips der Timeline, z. B. bei gleicher Kamera</translation>
+    </message>
+    <message>
+        <location filename="../../ui/grade_panel.py" line="166"/>
+        <source>Removes noise, rainbow stripes and color tears from analog FPV footage (normal model, live in the preview). Runs before the color correction. When rendering, the slower high-quality model can be used instead.</source>
+        <translation>Entfernt Rauschen, Regenbogenstreifen und Farbrisse aus analogem FPV-Bild (normales Modell, live in der Vorschau). Läuft vor der Farbkorrektur. Beim Rendern kann stattdessen das langsamere Modell hoher Qualität rechnen.</translation>
     </message>
     <message>
         <location filename="../../ui/grade_panel.py" line="202"/>
@@ -1834,16 +1834,6 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         <translation>Datei:</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="193"/>
-        <source>Use the teacher model (best quality, much slower)</source>
-        <translation>Lehrer-Modell verwenden (beste Qualität, deutlich langsamer)</translation>
-    </message>
-    <message>
-        <location filename="../../ui/render_dialog.py" line="199"/>
-        <source>The teacher cleans 5 frames at a time. Stride 1 uses only the middle one (best, slowest), stride 5 all five: about five times as fast, slightly worse, it can jump a little every 5 frames.</source>
-        <translation>Der Lehrer reinigt immer 5 Bilder auf einmal. Stride 1 verwendet davon nur das mittlere (am besten, am langsamsten), Stride 5 alle fünf: etwa fünfmal so schnell, etwas schlechter, alle 5 Bilder kann es leicht springen.</translation>
-    </message>
-    <message>
         <location filename="../../ui/render_dialog.py" line="203"/>
         <source>1 = best, 5 = about five times as fast</source>
         <translation>1 = am besten, 5 = etwa fünfmal so schnell</translation>
@@ -1900,16 +1890,6 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         <translation>MP4-Video (*.mp4)</translation>
     </message>
     <message>
-        <location filename="../../ui/render_dialog.py" line="308"/>
-        <source>teacher</source>
-        <translation>Lehrer</translation>
-    </message>
-    <message>
-        <location filename="../../ui/render_dialog.py" line="308"/>
-        <source>student</source>
-        <translation>Schüler</translation>
-    </message>
-    <message>
         <location filename="../../ui/render_dialog.py" line="317"/>
         <source>No clip uses it (switch it on in the Color tab).</source>
         <translation>Kein Clip nutzt sie (im Reiter Farbe einschalten).</translation>
@@ -1923,8 +1903,8 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         <location filename="../../ui/render_dialog.py" line="328"/>
         <source>%n clip(s) with the {model} model, about {time} before rendering</source>
         <translation>
-            <numerusform>%n Clip mit dem {model}-Modell, vor dem Rendern etwa {time}</numerusform>
-            <numerusform>%n Clips mit dem {model}-Modell, vor dem Rendern etwa {time}</numerusform>
+            <numerusform>%n Clip mit Modell „{model}“, vor dem Rendern etwa {time}</numerusform>
+            <numerusform>%n Clips mit Modell „{model}“, vor dem Rendern etwa {time}</numerusform>
         </translation>
     </message>
     <message>
@@ -1990,6 +1970,26 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         <translation> · noch ca. {remaining}</translation>
     </message>
     <message>
+        <location filename="../../ui/render_dialog.py" line="193"/>
+        <source>Use the high-quality model (best result, much slower)</source>
+        <translation>Modell „Hohe Qualität“ verwenden (bestes Ergebnis, deutlich langsamer)</translation>
+    </message>
+    <message>
+        <location filename="../../ui/render_dialog.py" line="199"/>
+        <source>The high-quality model cleans 5 frames at a time. Stride 1 uses only the middle one (best, slowest), stride 5 all five: about five times as fast, slightly worse, it can jump a little every 5 frames.</source>
+        <translation>Das Modell hoher Qualität reinigt immer 5 Bilder auf einmal. Stride 1 verwendet davon nur das mittlere (am besten, am langsamsten), Stride 5 alle fünf: etwa fünfmal so schnell, etwas schlechter, alle 5 Bilder kann es leicht springen.</translation>
+    </message>
+    <message>
+        <location filename="../../ui/render_dialog.py" line="308"/>
+        <source>high quality</source>
+        <translation>Hohe Qualität</translation>
+    </message>
+    <message>
+        <location filename="../../ui/render_dialog.py" line="308"/>
+        <source>normal</source>
+        <translation>Normal</translation>
+    </message>
+    <message>
         <location filename="../../ui/render_dialog.py" line="495"/>
         <source>ffmpeg could not be started: {path}</source>
         <translation>ffmpeg konnte nicht gestartet werden: {path}</translation>
@@ -2035,18 +2035,18 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="29"/>
-        <source>Models from fpv-restoration for cleaning up analog FPV footage. The student runs live in the timeline preview, the teacher optionally when rendering. Switch the cleanup on per clip in the Color tab.</source>
-        <translation>Modelle aus fpv-restoration, die analoges FPV-Bild reinigen. Der Schüler läuft live in der Timeline-Vorschau, der Lehrer auf Wunsch beim Rendern. Eingeschaltet wird die Reinigung je Clip im Reiter Farbe.</translation>
+        <source>Models from fpv-restoration for cleaning up analog FPV footage. The normal model runs live in the timeline preview, the high-quality model optionally when rendering. Switch the cleanup on per clip in the Color tab.</source>
+        <translation>Modelle aus fpv-restoration, die analoges FPV-Bild reinigen. Das normale Modell läuft live in der Timeline-Vorschau, das Modell hoher Qualität auf Wunsch beim Rendern. Eingeschaltet wird die Reinigung je Clip im Reiter Farbe.</translation>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="35"/>
-        <source>Student:</source>
-        <translation>Schüler:</translation>
+        <source>Normal:</source>
+        <translation>Normal:</translation>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="35"/>
-        <source>Teacher:</source>
-        <translation>Lehrer:</translation>
+        <source>High quality:</source>
+        <translation>Hohe Qualität:</translation>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="39"/>
@@ -2065,8 +2065,23 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="51"/>
-        <source>Convert student to ONNX</source>
-        <translation>Schüler in ONNX umwandeln</translation>
+        <source>Convert normal model to ONNX</source>
+        <translation>Normales Modell in ONNX umwandeln</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="76"/>
+        <source>ONNX Runtime (normal): {devices}</source>
+        <translation>ONNX Runtime (normal): {devices}</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="87"/>
+        <source>PyTorch (high quality): {gpu}</source>
+        <translation>PyTorch (hohe Qualität): {gpu}</translation>
+    </message>
+    <message>
+        <location filename="../../ui/restore_dialog.py" line="89"/>
+        <source>PyTorch is not installed (uv sync --extra ki), the high-quality model is not available.</source>
+        <translation>PyTorch ist nicht installiert (uv sync --extra ki), das Modell hoher Qualität steht nicht zur Verfügung.</translation>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="52"/>
@@ -2084,11 +2099,6 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
         <translation>nicht gefunden</translation>
     </message>
     <message>
-        <location filename="../../ui/restore_dialog.py" line="76"/>
-        <source>ONNX Runtime (student): {devices}</source>
-        <translation>ONNX Runtime (Schüler): {devices}</translation>
-    </message>
-    <message>
         <location filename="../../ui/restore_dialog.py" line="77"/>
         <source>processor only, far too slow</source>
         <translation>nur Prozessor, viel zu langsam</translation>
@@ -2100,18 +2110,8 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="87"/>
-        <source>PyTorch (teacher): {gpu}</source>
-        <translation>PyTorch (Lehrer): {gpu}</translation>
-    </message>
-    <message>
-        <location filename="../../ui/restore_dialog.py" line="87"/>
         <source>no CUDA graphics card</source>
         <translation>keine CUDA-Grafikkarte</translation>
-    </message>
-    <message>
-        <location filename="../../ui/restore_dialog.py" line="89"/>
-        <source>PyTorch is not installed (uv sync --extra ki), the teacher is not available.</source>
-        <translation>PyTorch ist nicht installiert (uv sync --extra ki), der Lehrer steht nicht zur Verfügung.</translation>
     </message>
     <message>
         <location filename="../../ui/restore_dialog.py" line="107"/>
@@ -2392,27 +2392,27 @@ Ein geöffnetes Video wird dafür geschlossen.</numerusform>
 <context>
     <name>restore</name>
     <message>
-        <location filename="../../restore/__init__.py" line="81"/>
+        <location filename="../../restore/__init__.py" line="86"/>
         <source>PyTorch is not installed (uv sync --extra ki).</source>
         <translation>PyTorch ist nicht installiert (uv sync --extra ki).</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="75"/>
-        <source>student model</source>
-        <translation>Schüler-Modell</translation>
+        <location filename="../../restore/__init__.py" line="80"/>
+        <source>normal model</source>
+        <translation>normale Modell</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="75"/>
-        <source>teacher model</source>
-        <translation>Lehrer-Modell</translation>
+        <location filename="../../restore/__init__.py" line="80"/>
+        <source>high-quality model</source>
+        <translation>Modell hoher Qualität</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="76"/>
+        <location filename="../../restore/__init__.py" line="81"/>
         <source>The {model} was not found (File → AI models …).</source>
         <translation>Das {model} wurde nicht gefunden (Datei → KI-Modelle …).</translation>
     </message>
     <message>
-        <location filename="../../restore/__init__.py" line="79"/>
+        <location filename="../../restore/__init__.py" line="84"/>
         <source>ONNX Runtime is not installed.</source>
         <translation>ONNX Runtime ist nicht installiert.</translation>
     </message>

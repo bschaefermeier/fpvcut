@@ -1,6 +1,6 @@
-"""Lehrer (und Schüler aus dem .pt-Checkpoint) über PyTorch auf der Grafikkarte, in bf16.
+"""Modell hoher Qualität (und das normale aus dem .pt-Checkpoint) über PyTorch auf der Grafikkarte, in bf16.
 
-Braucht ``uv sync --extra ki``. Der Schüler läuft normalerweise als ONNX (:mod:`onnx_runner`).
+Braucht ``uv sync --extra ki``. Das normale Modell läuft sonst als ONNX (:mod:`onnx_runner`).
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from fpvcut.restore.networks import load_student, load_teacher
+from fpvcut.restore.networks import load_high_quality, load_normal
 
 
 class TorchRunner:
@@ -35,9 +35,9 @@ class TorchRunner:
 
 
 def load(kind: str, path: Path) -> TorchRunner:
-    if kind == "teacher":
-        return TorchRunner(load_teacher(path), all_frames=True)
-    return TorchRunner(load_student(path), all_frames=False)
+    if kind == "high_quality":
+        return TorchRunner(load_high_quality(path), all_frames=True)
+    return TorchRunner(load_normal(path), all_frames=False)
 
 
 def gpu_name() -> str | None:

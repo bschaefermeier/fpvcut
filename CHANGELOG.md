@@ -9,14 +9,14 @@ durch, wird daraus die fertige Version.
 ### Neu
 
 - **KI-Reinigung für analoges FPV-Bild:** Im Reiter Farbe schaltet „Analogbild reinigen (KI)“ je
-  Clip die Modelle aus fpv-restoration ein, auf Wunsch mit „OSD entfernen“. Der Schüler läuft live in
-  der Timeline-Vorschau, vor der Farbkorrektur; die Regler wirken also auf das gereinigte Bild. Im
-  Renderfenster rechnet mit „Lehrer-Modell verwenden“ stattdessen der bessere, langsamere Lehrer
-  (Stride 1–5, mit Zeitschätzung); die Clips werden vor dem Rendern einzeln gereinigt. Clips mit
-  KI-Reinigung tragen in der Timeline ein „KI“-Schild. Checkpoints unter Datei → KI-Modelle.
-  Den Schüler rechnet ONNX Runtime über DirectML (jede DirectX-12-Grafikkarte, auch im
-  Windows-Paket); umgewandelt wird er mit `python -m fpvcut.restore.export` oder dem Knopf unter
-  Datei → KI-Modelle. Der Lehrer braucht PyTorch mit CUDA (`uv sync --extra ki`)
+  Clip die Reinigung ein, auf Wunsch mit „OSD entfernen“. Sie entfernt Rauschen, Regenbogenstreifen
+  und Farbrisse und läuft vor der Farbkorrektur; die Regler wirken also auf das gereinigte Bild. Das
+  normale Modell liegt FPVCut bei (`models/restore_normal.onnx`, 3,8 MB), läuft über ONNX Runtime
+  mit DirectML auf jeder DirectX-12-Grafikkarte live in der Timeline-Vorschau und wird
+  standardmäßig auch zum Rendern genommen. Im Renderfenster rechnet mit „Modell ‚Hohe Qualität‘
+  verwenden“ stattdessen das bessere, deutlich langsamere Modell (Stride 1–5, mit Zeitschätzung);
+  es braucht PyTorch mit CUDA (`uv sync --extra ki`) und die eigene Modelldatei. Clips mit
+  KI-Reinigung tragen in der Timeline ein „KI“-Schild; Modelle unter Datei → KI-Modelle
 - **Ausschnitte des geöffneten Videos in die Timeline ziehen:** Die Liste rechts im Reiter Info
   erlaubt jetzt Mehrfachauswahl mit Strg und Umschalt; ein oder mehrere Ausschnitte lassen sich
   direkt an die gewünschte Stelle der Timeline ziehen. Rechtsklick und E nehmen ebenfalls alle
