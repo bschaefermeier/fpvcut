@@ -4,7 +4,7 @@ FPVCut is a lightweight video editor for FPV footage. It brings the usual steps 
 flying together in one application: review your recordings, save the best scenes as clips, arrange
 them on a timeline with music and export the result with GPU acceleration.
 
-![FPVCut with the Clips tab, preview, color correction and timeline](docs/bilder/fpvcut.png)
+![FPVCut with the Clips tab, preview, color correction and timeline](docs/bilder/fpvcut2.png)
 
 ## Features
 
@@ -22,6 +22,11 @@ them on a timeline with music and export the result with GPU acceleration.
 - **Color correction:** Brightness, contrast, gamma, shadows, highlights, saturation, vibrance,
   color temperature and sharpness per clip, an automatic mode that sets these sliders with one
   click, and 3D LUTs (`.cube`) for D-Log or flat profiles.
+- **AI cleanup for analog FPV footage:** Removes noise, rainbow stripes and color tears, and on
+  request the OSD. Overall it improves image quality, detail and colors while making the picture
+  look more natural. Switched on per clip in the Color tab; the normal model runs live in the
+  timeline preview, before the color correction, and an even better high-quality model is available
+  for the final render (see [AI cleanup](#ai-cleanup-for-analog-footage)).
 - **Export:** Profiles for original quality (H.265), web (H.264) and archive (H.265, 10 bit).
   Encoding uses NVIDIA NVENC, or the CPU without a suitable graphics card.
 - **Rename folders:** Bring flight day folders into the consistent scheme `YYYY-MM-DD_Spot`, with a
@@ -90,6 +95,48 @@ kept.
 | Ctrl + S | Save project |
 | F5 | Rescan library |
 
+## AI cleanup for analog footage
+
+![Analog FPV recording before and after the AI cleanup](docs/bilder/ki_vorher_nachher.gif)
+
+With the same color correction on both sides (brightness −0.03, contrast 1.12, gamma 0.90,
+saturation 1.09) and the OSD removed by the AI cleanup:
+
+![The same recording with color correction, on the right also cleaned up and without OSD](docs/bilder/ki_vorher_nachher_farbe.gif)
+
+Analog FPV video (here recorded with the HDZero BoxPro+) suffers from noise, rainbow stripes on fine
+structures, color tears and lines that break up when the signal gets weak. The AI cleanup removes
+most of that. Overall it improves image quality, detail and colors while making the picture look
+more natural.
+
+- **Switch it on per clip:** Color tab → *Clean up analog image (AI)*, optionally *Remove OSD*. A
+  clip with the cleanup shows an *AI* badge in the timeline. The color sliders then work on the
+  cleaned picture.
+- **Normal model:** small and fast, runs live in the timeline preview and is used for rendering by
+  default. It ships with FPVCut and runs on any DirectX 12 graphics card (NVIDIA, AMD, Intel).
+- **High-quality model:** noticeably cleaner, but much slower, so only for the final render: tick
+  *Use the high-quality model* in the render window and choose a stride from 1 to 5. Stride 1 is the
+  best and slowest; stride 5 is about five times as fast and only slightly worse, but can jump a
+  little every 5 frames. Needs an NVIDIA graphics card, PyTorch and the separate model file (see
+  [Running from source](#ai-cleanup)).
+
+Both models work at half resolution (the BoxPro+ picture of 1200 × 720 becomes 592 × 352), which
+roughly matches the real detail of an analog PAL signal (288 lines per field); the render scales the
+result back to the source size.
+
+### Speed
+
+![Speed of the normal model on an RTX 3070 and an i5-13600K](docs/bilder/ki_tempo.svg)
+
+| Normal model | Frames per second | 1 minute of 50 fps video |
+| --- | --- | --- |
+| RTX 3070 (GPU) | 95 | about 30 s |
+| i5-13600K (CPU only) | 1.9 | about 26 min |
+
+Measured for the model alone at 592 × 352 (median of several runs). Including reading the video,
+the preview reaches about 90 frames/s on the RTX 3070, enough for 50/60 fps live. On the processor
+alone it is about 50 times slower, so the AI cleanup needs a graphics card.
+
 ## Data and backups
 
 FPVCut never modifies your video files. Library, clips and tags are stored in `%APPDATA%\FPVCut`.
@@ -130,6 +177,29 @@ ffmpeg is also found via `PATH`.
 ```powershell
 uv run fpvcut
 ```
+
+### AI cleanup
+
+The normal model is part of the repository (`models/restore_normal.onnx`, FP16, 3.8 MB) and runs
+with ONNX Runtime (DirectML), which comes with the normal dependencies. The high-quality model and
+converting a new normal model to ONNX need PyTorch with CUDA (about 2.5 GB), an optional extra:
+
+```powershell
+uv sync --extra ki
+```
+
+The high-quality model (238 MB) is too large for the repository. Put it in `models\` as
+`restore_high_quality.pt` (ignored by git), in `%APPDATA%\FPVCut\modelle`, or choose it under File →
+AI models. The Windows package contains the normal model but not PyTorch, so it offers the
+high-quality model only when running from source.
+
+A newer normal model (PyTorch checkpoint) is converted with
+
+```powershell
+uv run python -m fpvcut.restore.export path\to\checkpoint.pt --out models\restore_normal.onnx
+```
+
+which also compares the result with the PyTorch model; File → AI models offers the same as a button.
 
 ### Tests
 

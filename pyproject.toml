@@ -9,6 +9,20 @@ dependencies = [
     "PySide6>=6.7",
     "mpv>=1.0.6",
     "xxhash>=3.4",
+    # Schüler-Modell der KI-Reinigung (ONNX); DirectML rechnet auf jeder DirectX-12-Grafikkarte
+    "numpy>=2.0",
+    "onnxruntime-directml>=1.24; sys_platform == 'win32'",
+    "onnxruntime>=1.24; sys_platform != 'win32'",
+]
+
+[project.optional-dependencies]
+# Lehrer-Modell der KI-Reinigung und Export des Schülers nach ONNX (PyTorch, ~2,5 GB); ohne diese
+# Pakete fehlt nur der Lehrer. Einrichten mit ``uv sync --extra ki``.
+ki = [
+    "torch>=2.6",
+    "einops>=0.8",
+    "onnx>=1.17",
+    "onnxscript>=0.2",
 ]
 
 [project.scripts]
@@ -31,3 +45,12 @@ testpaths = ["tests"]
 # Eigenes Python von uv statt Microsoft-Store-Python: Store-Apps zeigen in der Windows-
 # Taskleiste immer das Python-Icon, egal welches Icon die App setzt.
 python-preference = "only-managed"
+
+# PyTorch mit CUDA 12.6 (wie in fpv-restoration)
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126" }]

@@ -26,14 +26,22 @@ def _quote(path: str) -> str:
     return f"%{len(path.encode('utf-8'))}%{path}"
 
 
-def build_edl(timeline: Timeline, audio: Path | str | None = None) -> str:
-    """``edl://``-URL für mpv. Fehlende Clips müssen vorher geprüft werden."""
+def build_edl(timeline: Timeline, audio: Path | str | None = None, sources: dict[int, str] | None = None) -> str:
+    """``edl://``-URL für mpv. Fehlende Clips müssen vorher geprüft werden.
+
+    ``sources``: Bild einzelner Clips (nach Index) aus einer anderen Quelle, die genau den
+    Ausschnitt des Clips ab 0 enthält, z. B. die KI-gereinigte Fassung (``fpvki://…``).
+    """
+    sources = sources or {}
     parts = []
     if audio is not None:
         parts += ["!new_stream", f"{_quote(str(audio))},0.000,{timeline.duration:.3f}"]
     parts.append("!new_stream")
-    for clip in timeline.clips:
-        parts.append(f"{_quote(str(clip.path))},{clip.src_in:.3f},{clip.duration:.3f}")
+    for index, clip in enumerate(timeline.clips):
+        if index in sources:
+            parts.append(f"{_quote(sources[index])},0.000,{clip.duration:.3f}")
+        else:
+            parts.append(f"{_quote(str(clip.path))},{clip.src_in:.3f},{clip.duration:.3f}")
     return "edl://" + ";".join(parts)
 
 

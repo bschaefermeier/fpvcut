@@ -88,9 +88,9 @@ def _kelvin_for_shift(shift: float) -> float:
 
 
 def suggest(stats: Stats, base: Grade | None = None) -> Grade:
-    """Korrektur aus den Kennzahlen; LUT und Schärfe von ``base`` bleiben, der Rest wird neu gesetzt."""
+    """Korrektur aus den Kennzahlen; LUT, Schärfe und KI-Reinigung von ``base`` bleiben, der Rest wird neu gesetzt."""
     base = base or Grade()
-    grade = Grade(lut=base.lut, sharpness=base.sharpness)
+    grade = Grade(lut=base.lut, sharpness=base.sharpness, restore=base.restore, remove_osd=base.remove_osd)
 
     # Tonwerte spreizen: dunkelste Stellen fast schwarz, hellste fast weiß (Y 20…231, innerhalb
     # des Videobereichs). eq rechnet ((x − 0,5) · Kontrast + 0,5 + Helligkeit) ^ (1/Gamma).

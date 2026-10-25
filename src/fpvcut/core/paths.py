@@ -1,4 +1,4 @@
-"""Wo die mitgelieferten Programme (libmpv, ffmpeg) liegen: im Projekt oder in der .exe."""
+"""Wo Mitgeliefertes (libmpv, ffmpeg, KI-Modell) liegt: im Projekt oder in der .exe."""
 
 from __future__ import annotations
 
@@ -11,10 +11,15 @@ def is_frozen() -> bool:
     return bool(getattr(sys, "frozen", False))
 
 
-def vendor_dir(name: str) -> Path:
-    """``vendor/<name>``: neben dem Quellcode, in der .exe im entpackten Programmordner."""
+def app_dir(name: str) -> Path:
+    """Ordner ``<name>`` im Repo, in der .exe im entpackten Programmordner (z. B. ``models``)."""
     if is_frozen():
         base = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
     else:
         base = Path(__file__).resolve().parents[3]
-    return base / "vendor" / name
+    return base / name
+
+
+def vendor_dir(name: str) -> Path:
+    """``vendor/<name>``: neben dem Quellcode, in der .exe im entpackten Programmordner."""
+    return app_dir("vendor") / name

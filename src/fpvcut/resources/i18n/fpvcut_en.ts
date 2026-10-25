@@ -144,7 +144,7 @@
 <context>
     <name>MainWindow</name>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="386"/>
+        <location filename="../../ui/main_window.py" line="389"/>
         <source>%n clip(s) restored</source>
         <translation>
             <numerusform>%n clip restored</numerusform>
@@ -152,7 +152,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="388"/>
+        <location filename="../../ui/main_window.py" line="391"/>
         <source>, %n already existed</source>
         <translation>
             <numerusform>, %n already existed</numerusform>
@@ -160,7 +160,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="390"/>
+        <location filename="../../ui/main_window.py" line="393"/>
         <source>; %n video(s) will appear after the next scan</source>
         <translation>
             <numerusform>; %n video will appear after the next scan</numerusform>
@@ -168,7 +168,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="403"/>
+        <location filename="../../ui/main_window.py" line="406"/>
         <source>%n clip(s) exported to {path}</source>
         <translation>
             <numerusform>%n clip exported to {path}</numerusform>
@@ -176,7 +176,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="497"/>
+        <location filename="../../ui/main_window.py" line="500"/>
         <source> · %n problem(s): {first}</source>
         <translation>
             <numerusform> · %n problem: {first}</numerusform>
@@ -184,11 +184,19 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="617"/>
+        <location filename="../../ui/main_window.py" line="620"/>
         <source>%n clip(s) added to the timeline</source>
         <translation>
             <numerusform>%n clip added to the timeline</numerusform>
             <numerusform>%n clips added to the timeline</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../ui/main_window.py" line="703"/>
+        <source>Timeline preview, %n clip(s) cleaned up live by AI</source>
+        <translation>
+            <numerusform>Timeline preview, %n clip cleaned up live by AI</numerusform>
+            <numerusform>Timeline preview, %n clips cleaned up live by AI</numerusform>
         </translation>
     </message>
 </context>
@@ -230,6 +238,17 @@ An open video will be closed for this.</numerusform>
         <translation>
             <numerusform>%n rename undone.</numerusform>
             <numerusform>%n renames undone.</numerusform>
+        </translation>
+    </message>
+</context>
+<context>
+    <name>RenderDialog</name>
+    <message numerus="yes">
+        <location filename="../../ui/render_dialog.py" line="328"/>
+        <source>%n clip(s) with the {model} model, about {time} before rendering</source>
+        <translation>
+            <numerusform>%n clip with the {model} model, about {time} before rendering</numerusform>
+            <numerusform>%n clips with the {model} model, about {time} before rendering</numerusform>
         </translation>
     </message>
 </context>

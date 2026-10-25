@@ -1,5 +1,8 @@
 """Farbkorrektur eines Timeline-Clips und ihre Übersetzung in ffmpeg-Filter.
 
+Dazu gehört auch der Schalter für die KI-Bildreinigung; sie ist kein ffmpeg-Filter, sondern
+ersetzt vorher das Bild des Clips (siehe :mod:`fpvcut.restore`).
+
 Dieselben Filter laufen in der Vorschau (mpv ``vf``, per ``enable`` auf den
 Zeitraum des Clips beschränkt) und beim Rendern (in der Filterkette des Clips). So sieht
 der Export aus wie die Vorschau.
@@ -41,6 +44,9 @@ class Grade:
     vibrance: float = 0.0
     sharpness: float = 0.0
     lut: str | None = None  # .cube-Datei, z. B. für D-Log oder Flat-Profile
+    # KI-Bildreinigung vor allen Farbfiltern (siehe fpvcut.restore), kein ffmpeg-Filter
+    restore: bool = False
+    remove_osd: bool = False  # dabei das OSD entfernen statt erhalten
 
     @classmethod
     def from_dict(cls, data: dict | None) -> Grade:

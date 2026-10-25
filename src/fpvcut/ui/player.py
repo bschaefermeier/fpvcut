@@ -85,6 +85,7 @@ class PlayerWidget(QWidget):
         self._duration = 0.0
         self._slider_dragging = False
         self._player = None
+        self._mpv_module = None
         self._loaded = False
         # Ersetzt Sprünge, z. B. durch Neuladen der Timeline-Vorschau ab der Zielposition.
         self.seek_handler: Callable[[float], None] | None = None
@@ -175,6 +176,7 @@ class PlayerWidget(QWidget):
                         "Details: {error}").format(error=error)
             )
             return
+        self._mpv_module = mpv
         # libmpv verlangt einen C-Locale für Zahlen, Qt setzt sonst den System-Locale.
         locale.setlocale(locale.LC_NUMERIC, "C")
         try:
@@ -285,8 +287,19 @@ class PlayerWidget(QWidget):
             self._player.loadfile(str(path), **options)
         self._player.pause = False
 
-    def open_timeline(self, edl: str, audio: bool, vf: str, start: float = 0.0, paused: bool = False) -> None:
-        """Timeline als EDL abspielen; ``audio``: die EDL beginnt mit dem gemischten Ton, ``vf`` korrigiert Farben."""
+    def register_stream_service(self, service) -> bool:
+        """Eigenes Stream-Protokoll anmelden, z. B. die KI-Vorschau (siehe ``fpvcut.restore.stream``)."""
+        if self._player is None:
+            return False
+        service.register(self._mpv_module, self._player)
+        return True
+
+    def open_timeline(self, edl: str, audio: bool, vf: str, start: float = 0.0, paused: bool = False,
+                      own_streams: bool = False) -> None:
+        """Timeline als EDL abspielen; ``audio``: die EDL beginnt mit dem gemischten Ton, ``vf`` korrigiert Farben.
+
+        ``own_streams``: Die EDL enthält Quellen eines eigenen Protokolls (KI-Vorschau).
+        """
         self.clear_marks()
         self.set_clips([])
         if self._player is None:
@@ -294,6 +307,9 @@ class PlayerWidget(QWidget):
         self._loaded = True
         # Als Datei-Optionen gelten sie nur für die Timeline und verschwinden beim nächsten Video.
         options = {"aid": "1" if audio else "no"}
+        if own_streams:
+            # Sonst öffnet mpv aus einer EDL heraus nur Dateien, keine eigenen Protokolle.
+            options["load_unsafe_playlists"] = "yes"
         if vf:
             options["vf"] = quote_option(vf)  # %Länge% schützt Kommas im Filter
             # Filter laufen auf der CPU. Ohne Kopie stecken hardware-dekodierte Bilder im

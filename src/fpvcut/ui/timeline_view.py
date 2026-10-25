@@ -205,6 +205,8 @@ class TimelineView(QWidget):
             self._paint_extensions(painter, rect, clip)
             if clip.grade:
                 self._paint_grade_mark(painter, rect)
+                if clip.grade.get("restore"):
+                    self._paint_restore_mark(painter, rect, metrics)
             name = clip.label + (self.tr("  (missing)") if clip.path is None else "")
             text_rect = rect.adjusted(5, 3, -4, -3)
             painter.setPen(Qt.GlobalColor.white)
@@ -272,6 +274,21 @@ class TimelineView(QWidget):
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(GRADE_COLOR)
         painter.drawRect(QRectF(rect.left() + 3, rect.bottom() - 4, max(rect.width() - 6, 0), 2))
+        painter.restore()
+
+    def _paint_restore_mark(self, painter: QPainter, rect: QRectF, metrics) -> None:
+        """Kleines Schild unten rechts (neben der Dauer): Clip wird per KI gereinigt."""
+        text = self.tr("AI")
+        width, height = metrics.horizontalAdvance(text) + 8, metrics.height()
+        if rect.width() < width + 50:
+            return
+        badge = QRectF(rect.right() - width - 4, rect.bottom() - height - 6, width, height)
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(GRADE_COLOR)
+        painter.drawRoundedRect(badge, 3, 3)
+        painter.setPen(Qt.GlobalColor.black)
+        painter.drawText(badge, Qt.AlignmentFlag.AlignCenter, text)
         painter.restore()
 
     def _paint_extensions(self, painter: QPainter, rect: QRectF, clip) -> None:
