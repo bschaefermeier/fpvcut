@@ -19,5 +19,6 @@ GitHub-Release. Tags mit Bindestrich (`-rc1`) werden als Vorabversion markiert.
 Ohne Tag lässt sich der Workflow unter **Actions → Windows-Build → Run workflow** starten; das ZIP
 liegt dann als Artefakt am jeweiligen Lauf.
 
-Das Programmsymbol `src/fpvcut/resources/fpvcut.ico` wird bei Änderungen am SVG mit
+Das Programmsymbol `src/fpvcut/resources/fpvcut.ico` wird bei Änderungen an `fpvcut.svg` oder
+`fpvcut_small.svg` (Fassung für 16 und 24 px) mit
 `uv run python packaging/make_icon.py` neu erzeugt.

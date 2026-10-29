@@ -1,61 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1b2a4a"/>
-      <stop offset="1" stop-color="#0b1020"/>
+      <stop offset="0" stop-color="#323841"/>
+      <stop offset="1" stop-color="#0f1216"/>
     </linearGradient>
-    <radialGradient id="glow" cx="0.5" cy="0.45" r="0.55">
-      <stop offset="0" stop-color="#ff7a1a" stop-opacity="0.35"/>
-      <stop offset="1" stop-color="#ff7a1a" stop-opacity="0"/>
-    </radialGradient>
-    <radialGradient id="prop" cx="0.5" cy="0.5" r="0.5">
-      <stop offset="0.55" stop-color="#5fd4ff" stop-opacity="0.10"/>
-      <stop offset="0.92" stop-color="#5fd4ff" stop-opacity="0.55"/>
-      <stop offset="1" stop-color="#5fd4ff" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffa040"/>
-      <stop offset="1" stop-color="#e8550f"/>
+    <!-- Blatt: Vorderkante hell, Hinterkante dunkel -->
+    <linearGradient id="blade" gradientUnits="userSpaceOnUse" x1="0" y1="-118" x2="30" y2="80">
+      <stop offset="0" stop-color="#eaffb0"/>
+      <stop offset="0.45" stop-color="#b8ff2e"/>
+      <stop offset="1" stop-color="#5f9a06"/>
     </linearGradient>
+    <radialGradient id="hub" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#eaffb0"/>
+      <stop offset="0.5" stop-color="#b8ff2e"/>
+      <stop offset="1" stop-color="#5f9a06"/>
+    </radialGradient>
   </defs>
-  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#bg)"/>
-  <rect x="8" y="8" width="240" height="240" rx="52" fill="url(#glow)"/>
-  <g transform="translate(128 134)">
-    <!-- X-Rahmen -->
-    <g stroke="#2a3550" stroke-width="22" stroke-linecap="round">
-      <line x1="-62" y1="-62" x2="62" y2="62"/>
-      <line x1="62" y1="-62" x2="-62" y2="62"/>
+  <rect width="1024" height="1024" rx="210" fill="url(#bg)"/>
+  <g transform="translate(512.0,512.0) scale(0.970000)">
+    <g transform="translate(14,22)" fill="#000000" fill-opacity="0.18" stroke="#000000" stroke-linejoin="round">
+      <g stroke-width="44" stroke-opacity="0.05">
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(-90) scale(1,1.18)"/>
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(30) scale(1,1.18)"/>
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(150) scale(1,1.18)"/>
+        <circle r="125"/>
+      </g>
+      <g stroke-width="28" stroke-opacity="0.07">
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(-90) scale(1,1.18)"/>
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(30) scale(1,1.18)"/>
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(150) scale(1,1.18)"/>
+        <circle r="125"/>
+      </g>
+      <g stroke-width="12" stroke-opacity="0.1">
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(-90) scale(1,1.18)"/>
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(30) scale(1,1.18)"/>
+        <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" transform="rotate(150) scale(1,1.18)"/>
+        <circle r="125"/>
+      </g>
     </g>
-    <g stroke="#3d4b6e" stroke-width="12" stroke-linecap="round">
-      <line x1="-62" y1="-62" x2="62" y2="62"/>
-      <line x1="62" y1="-62" x2="-62" y2="62"/>
+    <g transform="rotate(-90) scale(1,1.18)">
+      <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" fill="url(#blade)"/>
+      <path d="M 112,-54 C 196,-98 322,-114 436,-108 Q 450,-107 446,-98 C 330,-100 206,-84 126,-44 Z" fill="#ffffff" fill-opacity="0.7"/>
     </g>
-    <!-- Propeller (in Bewegung) -->
-    <g>
-      <circle cx="-62" cy="-62" r="40" fill="url(#prop)"/>
-      <circle cx="62" cy="-62" r="40" fill="url(#prop)"/>
-      <circle cx="-62" cy="62" r="40" fill="url(#prop)"/>
-      <circle cx="62" cy="62" r="40" fill="url(#prop)"/>
+    <g transform="rotate(30) scale(1,1.18)">
+      <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" fill="url(#blade)"/>
+      <path d="M 112,-54 C 196,-98 322,-114 436,-108 Q 450,-107 446,-98 C 330,-100 206,-84 126,-44 Z" fill="#ffffff" fill-opacity="0.7"/>
     </g>
-    <g fill="none" stroke="#9be6ff" stroke-width="5" stroke-linecap="round" opacity="0.9">
-      <path d="M -94.9 -74.0 A 35 35 0 0 1 -58.9 -96.9"/>
-      <path d="M 74.0 -94.9 A 35 35 0 0 1 96.9 -58.9"/>
-      <path d="M -74.0 94.9 A 35 35 0 0 1 -96.9 58.9"/>
-      <path d="M 94.9 74.0 A 35 35 0 0 1 58.9 96.9"/>
+    <g transform="rotate(150) scale(1,1.18)">
+      <path d="M 82,-40 C 170,-96 320,-118 440,-112 Q 462,-111 467,-96 L 480,-52 Q 484,-37 469,-32 C 400,-12 305,16 240,52 C 185,84 120,88 82,50 Z" fill="url(#blade)"/>
+      <path d="M 112,-54 C 196,-98 322,-114 436,-108 Q 450,-107 446,-98 C 330,-100 206,-84 126,-44 Z" fill="#ffffff" fill-opacity="0.7"/>
     </g>
-    <!-- Motoren -->
-    <g fill="#c9d3e6" stroke="#0b1020" stroke-width="3">
-      <circle cx="-62" cy="-62" r="11"/>
-      <circle cx="62" cy="-62" r="11"/>
-      <circle cx="-62" cy="62" r="11"/>
-      <circle cx="62" cy="62" r="11"/>
-    </g>
-    <!-- Body mit Kamera (vorne = oben) -->
-    <rect x="-24" y="-38" width="48" height="76" rx="14" fill="url(#body)" stroke="#0b1020" stroke-width="4"/>
-    <circle cx="0" cy="-20" r="13" fill="#0b1020"/>
-    <circle cx="0" cy="-20" r="7.5" fill="#2e7dff"/>
-    <circle cx="-2.5" cy="-22.5" r="2.6" fill="#ffffff" opacity="0.9"/>
-    <!-- Play-Symbol als Hinweis auf Video -->
-    <path d="M -7 4 L 11 14 L -7 24 Z" fill="#ffffff"/>
+    <circle r="125" fill="url(#hub)"/>
+    <circle r="100.0" fill="none" stroke="#5f9a06" stroke-opacity="0.55" stroke-width="10.0"/>
+    <!-- Bohrung der Nabe als Play-Symbol -->
+    <path d="M -35.6,-57.5 L 57.5,0 L -35.6,57.5 Z" fill="#0d0f11" stroke="#0d0f11" stroke-width="15.0" stroke-linejoin="round"/>
+    <path d="M -77.5,-52.5 A 93.8,93.8 0 0 1 37.5,-87.5" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="12.5" stroke-linecap="round"/>
   </g>
 </svg>

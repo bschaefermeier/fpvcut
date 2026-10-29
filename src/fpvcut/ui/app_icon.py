@@ -1,4 +1,8 @@
-"""App-Icon: Quadcopter von oben mit Kamera und Play-Symbol (resources/fpvcut.svg)."""
+"""App-Icon: FPV-Dreiblatt-Propeller, die Bohrung der Nabe ist ein Play-Symbol.
+
+``resources/fpvcut.svg`` ist die große Fassung, ``resources/fpvcut_small.svg`` eine vereinfachte,
+an ganzen Pixeln ausgerichtete Fassung für 16 und 24 px (Taskleiste, Titelleiste).
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,8 @@ from PySide6.QtGui import QIcon, QImage, QPainter, QPixmap
 from PySide6.QtSvg import QSvgRenderer
 
 ICON_SVG = Path(__file__).resolve().parent.parent / "resources" / "fpvcut.svg"
+ICON_SVG_SMALL = ICON_SVG.with_name("fpvcut_small.svg")
+SMALL_MAX = 24  # bis zu dieser Größe die vereinfachte Fassung
 SIZES = (16, 24, 32, 48, 64, 128, 256)
 
 
@@ -18,7 +24,7 @@ def render_icon(size: int) -> QImage:
     image.fill(Qt.GlobalColor.transparent)
     painter = QPainter(image)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-    QSvgRenderer(str(ICON_SVG)).render(painter)
+    QSvgRenderer(str(ICON_SVG_SMALL if size <= SMALL_MAX else ICON_SVG)).render(painter)
     painter.end()
     return image
 

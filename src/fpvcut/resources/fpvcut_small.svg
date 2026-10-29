@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#323841"/>
+      <stop offset="1" stop-color="#0f1216"/>
+    </linearGradient>
+    <!-- Blatt: Vorderkante hell, Hinterkante dunkel -->
+    <linearGradient id="blade" gradientUnits="userSpaceOnUse" x1="0" y1="-118" x2="30" y2="80">
+      <stop offset="0" stop-color="#eaffb0"/>
+      <stop offset="0.45" stop-color="#b8ff2e"/>
+      <stop offset="1" stop-color="#5f9a06"/>
+    </linearGradient>
+    <radialGradient id="hub" cx="0.35" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#eaffb0"/>
+      <stop offset="0.5" stop-color="#b8ff2e"/>
+      <stop offset="1" stop-color="#5f9a06"/>
+    </radialGradient>
+  </defs>
+  <rect width="24" height="24" rx="5" fill="url(#bg)"/>
+  <g transform="translate(12.0,12.0) scale(0.022734)">
+    <g transform="rotate(-90) scale(1,1.18)">
+      <path d="M 100,-70 C 190,-150 330,-172 444,-166 Q 468,-165 474,-146 L 492,-82 Q 497,-62 478,-55 C 405,-24 310,24 248,80 C 190,128 130,134 100,90 Z" fill="url(#blade)"/>
+    </g>
+    <g transform="rotate(30) scale(1,1.18)">
+      <path d="M 100,-70 C 190,-150 330,-172 444,-166 Q 468,-165 474,-146 L 492,-82 Q 497,-62 478,-55 C 405,-24 310,24 248,80 C 190,128 130,134 100,90 Z" fill="url(#blade)"/>
+    </g>
+    <g transform="rotate(150) scale(1,1.18)">
+      <path d="M 100,-70 C 190,-150 330,-172 444,-166 Q 468,-165 474,-146 L 492,-82 Q 497,-62 478,-55 C 405,-24 310,24 248,80 C 190,128 130,134 100,90 Z" fill="url(#blade)"/>
+    </g>
+    <circle r="185" fill="url(#hub)"/>
+    <circle r="148.0" fill="none" stroke="#5f9a06" stroke-opacity="0.55" stroke-width="14.8"/>
+    <!-- Bohrung der Nabe als Play-Symbol -->
+    <path d="M -52.8,-85.1 L 85.1,0 L -52.8,85.1 Z" fill="#0d0f11" stroke="#0d0f11" stroke-width="22.2" stroke-linejoin="round"/>
+  </g>
+</svg>
