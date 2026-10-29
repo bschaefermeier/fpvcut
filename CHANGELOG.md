@@ -11,7 +11,7 @@ durch, wird daraus die fertige Version.
 - **Neues Programmsymbol:** Ein lime-grüner FPV-Dreiblatt-Propeller auf dunkler Kachel, die Bohrung
   der Nabe ist ein Play-Symbol. Für 16 und 24 px (Taskleiste, Titelleiste) gibt es eine eigene,
   vereinfachte Fassung (`fpvcut_small.svg`), damit das Symbol auch klein scharf bleibt
-- **README-Kopf:** Schriftzug „FPVCut“ (Exo 2) zwischen zwei gegenläufig drehenden Propellern, als
+- **README-Kopf:** Schriftzug „FPVCut“ (Chakra Petch) zwischen zwei gegenläufig drehenden Propellern, als
   animiertes SVG in einer hellen und einer dunklen Fassung passend zum GitHub-Theme
 
 ## 1.0.0-rc3 (2026-10-25)
