@@ -1,4 +1,9 @@
-# FPVCut
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/bilder/fpvcut_schriftzug_dunkel.svg">
+    <img src="docs/bilder/fpvcut_schriftzug_hell.svg" alt="FPVCut" height="64">
+  </picture>
+</h1>
 
 **Get the most out of your FPV footage, without the hassle.** FPVCut is a lightweight,
 high-performance video library and editor built for FPV pilots: quickly import and review your
