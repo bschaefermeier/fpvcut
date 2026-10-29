@@ -21,7 +21,7 @@ def self_test(report: Path) -> int:
     """
     from fpvcut import __version__
     from fpvcut.core.ffmpeg_tools import FFmpegNotFound, ffmpeg_version, find_tool
-    from fpvcut.ui.app_icon import ICON_SVG
+    from fpvcut.ui.app_icon import ICON_SVG, ICON_SVG_SMALL
     from fpvcut.ui.player import load_mpv
 
     lines, ok = [f"FPVCut {__version__}"], True
@@ -35,8 +35,9 @@ def self_test(report: Path) -> int:
         except (FFmpegNotFound, OSError, subprocess.SubprocessError) as exc:
             lines.append(f"{name}: FEHLER {exc}")
             ok = False
-    lines.append(f"Icon: {'OK' if ICON_SVG.is_file() else 'FEHLER fehlt ' + str(ICON_SVG)}")
-    ok &= ICON_SVG.is_file()
+    for svg in (ICON_SVG, ICON_SVG_SMALL):
+        lines.append(f"Icon: {'OK ' + svg.name if svg.is_file() else 'FEHLER fehlt ' + str(svg)}")
+        ok &= svg.is_file()
     report.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return 0 if ok else 1
 
