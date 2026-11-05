@@ -6,6 +6,17 @@ durch, wird daraus die fertige Version.
 
 ## Unveröffentlicht
 
+### Neu
+
+- **Blackbox-Logs vom Flugcontroller importieren:** Datei → „Blackbox-Logs importieren …“
+  (Strg+Umschalt+I) holt die Betaflight-Logs (`.bbl`/`.bfl`) vom Flugcontroller, der per USB im
+  Massenspeicher-Modus angeschlossen ist, in den Unterordner `Blackbox` des Flugtags. Kopiert und
+  geprüft wird wie bei den Videos; Ordner und Flugcontroller merkt sich FPVCut getrennt von der
+  SD-Karte, die Statusleiste meldet „Flugcontroller erkannt“. Das Datum kommt aus dem Kopf der Logs
+  (sofern die Uhr des Flugcontrollers gestellt war), der Spot von einem schon vorhandenen Flugtag
+  desselben Datums. Beim Flash-Speicher wird der Sammel-Log `BTFL_ALL.BBL` neben den einzelnen Logs
+  übersprungen; Löschen ist anfangs aus, weil sich der Flash nur im Configurator löschen lässt
+
 ### Geändert
 
 - **Neues Programmsymbol:** Ein lime-grüner FPV-Dreiblatt-Propeller auf dunkler Kachel, die Bohrung

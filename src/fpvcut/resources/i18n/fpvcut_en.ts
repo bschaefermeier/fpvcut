@@ -31,7 +31,7 @@
 <context>
     <name>ImportDialog</name>
     <message numerus="yes">
-        <location filename="../../ui/import_dialog.py" line="236"/>
+        <location filename="../../ui/import_dialog.py" line="261"/>
         <source>{path}: %n video(s)</source>
         <translation>
             <numerusform>{path}: %n video</numerusform>
@@ -39,7 +39,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/import_dialog.py" line="238"/>
+        <location filename="../../ui/import_dialog.py" line="263"/>
         <source> + %n accompanying file(s)</source>
         <translation>
             <numerusform> + %n accompanying file</numerusform>
@@ -47,7 +47,15 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/import_dialog.py" line="340"/>
+        <location filename="../../ui/import_dialog.py" line="289"/>
+        <source>{path}: %n Blackbox log(s)</source>
+        <translation>
+            <numerusform>{path}: %n Blackbox log</numerusform>
+            <numerusform>{path}: %n Blackbox logs</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../ui/import_dialog.py" line="435"/>
         <source>%n file(s) copied and checked.</source>
         <translation>
             <numerusform>%n file copied and checked.</numerusform>
@@ -55,7 +63,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/import_dialog.py" line="342"/>
+        <location filename="../../ui/import_dialog.py" line="437"/>
         <source>%n file(s) were already in the folder.</source>
         <translation>
             <numerusform>%n file was already in the folder.</numerusform>
@@ -63,11 +71,19 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/import_dialog.py" line="344"/>
+        <location filename="../../ui/import_dialog.py" line="442"/>
         <source>%n file(s) deleted on the SD card.</source>
         <translation>
             <numerusform>%n file deleted on the SD card.</numerusform>
             <numerusform>%n files deleted on the SD card.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../../ui/import_dialog.py" line="461"/>
+        <source>%n log(s) deleted on the flight controller.</source>
+        <translation>
+            <numerusform>%n log deleted on the flight controller.</numerusform>
+            <numerusform>%n logs deleted on the flight controller.</numerusform>
         </translation>
     </message>
 </context>
@@ -144,7 +160,7 @@
 <context>
     <name>MainWindow</name>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="389"/>
+        <location filename="../../ui/main_window.py" line="398"/>
         <source>%n clip(s) restored</source>
         <translation>
             <numerusform>%n clip restored</numerusform>
@@ -152,7 +168,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="391"/>
+        <location filename="../../ui/main_window.py" line="400"/>
         <source>, %n already existed</source>
         <translation>
             <numerusform>, %n already existed</numerusform>
@@ -160,7 +176,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="393"/>
+        <location filename="../../ui/main_window.py" line="402"/>
         <source>; %n video(s) will appear after the next scan</source>
         <translation>
             <numerusform>; %n video will appear after the next scan</numerusform>
@@ -168,7 +184,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="406"/>
+        <location filename="../../ui/main_window.py" line="415"/>
         <source>%n clip(s) exported to {path}</source>
         <translation>
             <numerusform>%n clip exported to {path}</numerusform>
@@ -176,7 +192,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="500"/>
+        <location filename="../../ui/main_window.py" line="536"/>
         <source> · %n problem(s): {first}</source>
         <translation>
             <numerusform> · %n problem: {first}</numerusform>
@@ -184,7 +200,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="620"/>
+        <location filename="../../ui/main_window.py" line="656"/>
         <source>%n clip(s) added to the timeline</source>
         <translation>
             <numerusform>%n clip added to the timeline</numerusform>
@@ -192,7 +208,7 @@
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../../ui/main_window.py" line="703"/>
+        <location filename="../../ui/main_window.py" line="739"/>
         <source>Timeline preview, %n clip(s) cleaned up live by AI</source>
         <translation>
             <numerusform>Timeline preview, %n clip cleaned up live by AI</numerusform>

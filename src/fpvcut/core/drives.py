@@ -96,11 +96,14 @@ def find_source(
     drives: Callable[[], list[str]] = mounted_drives,
     info: Callable[[str], VolumeInfo | None] = volume_info,
     removable: Callable[[str], bool] = is_removable,
+    accept: Callable[[Path], bool] | None = None,
 ) -> Path | None:
     """Wo der gemerkte Importordner gerade liegt, ``None`` wenn die Karte nicht steckt.
 
     Vorrang hat dieselbe Karte (Seriennummer), dann eine Karte mit gleicher Bezeichnung, dann der
     gemerkte Laufwerksbuchstabe; Festplatten kommen nur über den gemerkten Buchstaben in Frage.
+    ``accept`` prüft zusätzlich den Inhalt des Ordners, z. B. ob Blackbox-Logs darin liegen: sonst
+    passt bei einem gemerkten ganzen Laufwerk jeder Wechseldatenträger.
     """
     remembered = source.drive.upper()
     best: tuple[int, str] | None = None
@@ -111,6 +114,8 @@ def find_source(
         volume = info(drive)
         if volume is None or not source.path_on(drive).is_dir():
             continue  # kein Datenträger im Leser oder Ordner fehlt
+        if accept is not None and not accept(source.path_on(drive)):
+            continue
         if volume and source.serial is not None and volume.serial == source.serial:
             rank = 0
         elif volume and source.label and volume.label == source.label:
