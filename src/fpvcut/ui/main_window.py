@@ -203,8 +203,16 @@ class MainWindow(QMainWindow):
         self._card_button.clicked.connect(self.import_dialog)
         self._card_button.hide()
         self.statusBar().addPermanentWidget(self._card_button)
+        # Ebenso der Flugcontroller für die Blackbox-Logs (eigene Einstellungen, eigener Knopf).
+        self.log_import_settings_path = self.db_path.with_name("import_logs.json")
+        self._fc_button = QPushButton(self.tr("Import Blackbox logs …"), self)
+        self._fc_button.setFlat(True)
+        self._fc_button.clicked.connect(self.log_import_dialog)
+        self._fc_button.hide()
+        self.statusBar().addPermanentWidget(self._fc_button)
         self._import_open = False
         self._card_seen = False
+        self._fc_seen = False
         self._card_poll = QTimer(self)
         self._card_poll.setInterval(3000)
         self._card_poll.timeout.connect(self._check_sd_card)
@@ -232,6 +240,7 @@ class MainWindow(QMainWindow):
         self._add_action(file_menu, self.tr("Open &video …"), "Ctrl+O", self.open_video_dialog)
         file_menu.addSeparator()
         self._add_action(file_menu, self.tr("&Import from SD card …"), "Ctrl+I", self.import_dialog)
+        self._add_action(file_menu, self.tr("Import &Blackbox logs …"), "Ctrl+Shift+I", self.log_import_dialog)
         self._add_action(file_menu, self.tr("Add library &folder …"), "Ctrl+Shift+O", self.add_root_dialog)
         self._add_action(file_menu, self.tr("Re&scan library"), "F5", self.rescan_library)
         self._add_action(file_menu, self.tr("Re&name folders to scheme …"), None, self.rename_dialog)
@@ -444,26 +453,53 @@ class MainWindow(QMainWindow):
         dialog.open()
         return dialog
 
+    def log_import_dialog(self) -> ImportDialog | None:
+        """Blackbox-Logs vom Flugcontroller in den Flugtag-Ordner holen (Unterordner „Blackbox“)."""
+        if not self.library.roots():
+            QMessageBox.information(self, self.tr("Import Blackbox logs"), self.tr(
+                "Add a library folder first (File → Add library folder). The logs are copied there."))
+            return None
+        dialog = ImportDialog(self.library, self.log_import_settings_path, self, logs=True)
+        dialog.finished.connect(lambda _code: self._after_import(dialog))
+        self._import_open = True
+        self._fc_button.hide()
+        dialog.open()
+        return dialog
+
     def _after_import(self, dialog: ImportDialog) -> None:
         self._import_open = False
         self._card_seen = locate_source(load_settings(self.import_settings_path)) is not None
-        if dialog.imported:
+        self._fc_seen = locate_source(load_settings(self.log_import_settings_path), logs=True) is not None
+        if dialog.imported and not dialog.logs:
             self.rescan_library()
 
     def _check_sd_card(self) -> None:
-        """Gemerkte Karte eingesteckt? Dann den Import in der Statusleiste anbieten."""
-        settings = load_settings(self.import_settings_path)
-        if not settings.get("source") or self._import_open:
+        """Gemerkte Karte oder gemerkter Flugcontroller eingesteckt? Dann den Import in der Statusleiste anbieten."""
+        if self._import_open:
             return
-        found = locate_source(settings)
-        if found is None:
-            self._card_button.hide()
-        elif not self._card_seen:
-            self._card_button.setText(self.tr("SD card detected: import …"))
-            self._card_button.setToolTip(str(found))
-            self._card_button.show()
-            self.statusBar().showMessage(self.tr("SD card detected: {path}").format(path=found), 10000)
-        self._card_seen = found is not None
+        settings = load_settings(self.import_settings_path)
+        if settings.get("source"):
+            found = locate_source(settings)
+            if found is None:
+                self._card_button.hide()
+            elif not self._card_seen:
+                self._card_button.setText(self.tr("SD card detected: import …"))
+                self._card_button.setToolTip(str(found))
+                self._card_button.show()
+                self.statusBar().showMessage(self.tr("SD card detected: {path}").format(path=found), 10000)
+            self._card_seen = found is not None
+        settings = load_settings(self.log_import_settings_path)
+        if settings.get("source"):
+            found = locate_source(settings, logs=True)
+            if found is None:
+                self._fc_button.hide()
+            elif not self._fc_seen:
+                self._fc_button.setText(self.tr("Flight controller detected: import logs …"))
+                self._fc_button.setToolTip(str(found))
+                self._fc_button.show()
+                self.statusBar().showMessage(
+                    self.tr("Flight controller detected: {path}").format(path=found), 10000)
+            self._fc_seen = found is not None
 
     def add_root_dialog(self) -> None:
         folder = QFileDialog.getExistingDirectory(self, self.tr("Choose library folder"))

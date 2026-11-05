@@ -34,13 +34,18 @@ class ScanResult:
         self.errors += other.errors
 
 
-def iter_videos(root: Path) -> Iterator[Path]:
+def iter_files(root: Path, extensions: set[str]) -> Iterator[Path]:
+    """Dateien mit einer der Endungen (klein geschrieben, mit Punkt) im Ordner und seinen Unterordnern."""
     for dirpath, dirnames, filenames in os.walk(root):
         # Versteckte Ordner (z. B. .thumbnails) und Systemordner überspringen.
         dirnames[:] = sorted(d for d in dirnames if not d.startswith((".", "$")))
         for name in sorted(filenames):
-            if Path(name).suffix.lower() in VIDEO_EXTENSIONS and not name.startswith("._"):
+            if Path(name).suffix.lower() in extensions and not name.startswith("._"):
                 yield Path(dirpath) / name
+
+
+def iter_videos(root: Path) -> Iterator[Path]:
+    return iter_files(root, VIDEO_EXTENSIONS)
 
 
 def scan_root(

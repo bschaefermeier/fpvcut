@@ -22,6 +22,19 @@ Tipp: vorher Datei → "Ausschnitte exportieren …", dann ist nichts verloren.
       Navigieren mit Karte und Ordner gefüllt, auch unter anderem Laufwerksbuchstaben
 - [ ] Abbrechen während des Kopierens: nichts auf der Karte gelöscht, keine `.part`-Dateien im Ziel
 
+## Blackbox-Logs vom Flugcontroller
+
+- [ ] Flugcontroller per USB anschließen, im Configurator „Massenspeicher aktivieren“, dann Datei →
+      "Blackbox-Logs importieren …" (Strg+Umschalt+I): Laufwerk des Flugcontrollers einmal wählen,
+      die Liste zeigt die Logs mit Uhrzeit, bei Flash-Speicher ohne `BTFL_ALL.BBL`
+- [ ] Sind die Videos des Tages schon importiert: "Aufgenommen am …" übernimmt das Datum, der Spot
+      wird vom vorhandenen Flugtag übernommen, Ziel zeigt `…\Blackbox` mit "Flugtag vorhanden"
+- [ ] Importieren: Logs liegen im Unterordner `Blackbox`, die Bibliothek zeigt keine neuen Videos,
+      der Flugcontroller ist ausgeworfen (startet neu)
+- [ ] Mit SD-Karte im Flugcontroller und Häkchen "Löschen": Logs danach auf der Karte gelöscht
+- [ ] Flugcontroller erneut im Massenspeicher-Modus: Statusleiste meldet "Flugcontroller erkannt";
+      die Kamera-SD-Karte allein löst diese Meldung nicht aus
+
 ## Sichten
 
 - [ ] Video per Klick in der Bibliothek öffnen, Leertaste, ←/→, Shift+←/→, J/L, Klick, Doppelklick, F11/Esc, Alt+F4

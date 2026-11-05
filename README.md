@@ -20,6 +20,9 @@ LUTs. Completely free and open source.
 - **Import from SD card:** Copy the videos from the SD card into a new flight day folder, check
   every copy, delete the originals on the card and eject it, in one step. FPVCut remembers the card
   and folder, so next time it is ready as soon as the card is inserted.
+- **Import Betaflight Blackbox logs:** Copy the logs (`.bbl`/`.bfl`) from the flight controller,
+  connected via USB in mass storage mode, into the `Blackbox` subfolder of the flight day, checked
+  just like the videos. If the flight day's videos are already there, the logs land next to them.
 - **Library:** Video folders are grouped by flight day automatically. New recordings you haven't
   reviewed yet are highlighted. Renamed or moved files are recognized.
 - **Reviewing and clips:** Frame-accurate playback; mark scenes with in and out points and save
@@ -68,6 +71,11 @@ kept.
    (**Ctrl+I**). Pick the folder with the videos on the card once; FPVCut remembers it. Enter the
    spot, and FPVCut copies the videos into `YYYY-MM-DD_Spot`, checks the copies, deletes them on
    the card and ejects it (both can be switched off).
+   For the Blackbox logs, connect the flight controller via USB in mass storage mode (Betaflight
+   Configurator: Blackbox → Activate Mass Storage Device Mode) and choose **File → Import Blackbox
+   logs** (**Ctrl+Shift+I**). FPVCut reads the flight day from the logs and suggests the spot of an
+   existing flight day; the logs are copied into its `Blackbox` subfolder. Onboard flash cannot be
+   deleted file by file, erase it in the Configurator.
 3. Open a video with a click, mark scenes with **I** and **O** and save them as clips with **F**.
    Alternatively, drag a range on the bar below the seek bar and save it with the save button to
    the right of the seek bar.
@@ -100,6 +108,7 @@ kept.
 | Ctrl + Z / Ctrl + Y | Undo / redo |
 | Ctrl + R | Render |
 | Ctrl + I | Import from SD card |
+| Ctrl + Shift + I | Import Blackbox logs from the flight controller |
 | Ctrl + N | New project |
 | Ctrl + S | Save project |
 | F5 | Rescan library |
