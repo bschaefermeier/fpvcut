@@ -118,6 +118,23 @@ class _Worker(threading.Thread):
             if got >= index:
                 return data
 
+    def skip_through(self, index: int) -> None:
+        """Bilder bis einschließlich ``index`` aus der Warteschlange werfen, ohne zu warten.
+
+        Sie kamen schon aus dem Speicher (dort legt der Thread jedes Bild zuerst ab). Bleiben sie
+        liegen, ist die Warteschlange voll, der Thread steht und ``next_index`` bleibt zurück.
+        """
+        self.last_access = time.monotonic()
+        while self.next_index <= index:
+            try:
+                item = self.frames.get_nowait()
+            except queue.Empty:
+                return
+            if item is None:  # Ende: Merker wieder hineinlegen, damit take() es auch erfährt
+                self._put_end()
+                return
+            self.next_index = item[0] + 1
+
     def stop(self) -> None:
         self.stopped.set()
 
@@ -162,23 +179,31 @@ class RestoreStream:
     def _frame(self, index: int) -> bytes | None:
         if self._current is not None and self._current[0] == index:
             return self._current[1]
+        worker = self._worker
+        running = worker is not None and worker.is_alive()
         data = self.service.cache.get((self.key, index))
         if data is None:
-            worker = self._worker
             # Läuft schon ein Thread, der gleich bei diesem Bild ankommt? Sonst ab hier neu starten.
-            if worker is None or not worker.is_alive() or not worker.next_index <= index < worker.next_index + AHEAD:
+            if not running or not worker.next_index <= index < worker.next_index + AHEAD:
                 self._start(index)
             data = self._worker.take(index, self.cancelled)
             if data is None:
                 return None
+        elif running:
+            # Ist der Thread voraus, liegt das Bild schon im Speicher; seine Warteschlange trotzdem
+            # mitleeren, sonst bleibt er nach AHEAD Bildern stehen und muss neu starten.
+            worker.skip_through(index)
         else:
-            worker = self._worker
-            if worker is not None and worker.is_alive():
-                worker.last_access = time.monotonic()
-            elif index + 1 < self.spec.frames and self.service.cache.get((self.key, index + 1)) is None:
-                self._start(index + 1)  # Bilder kommen aus dem Speicher: das nächste schon vorausrechnen
+            self._prefetch(index + 1)  # Bilder kommen aus dem Speicher: die nächsten schon vorausrechnen
         self._current = (index, data)
         return data
+
+    def _prefetch(self, index: int) -> None:
+        """Thread beim ersten der nächsten ``AHEAD`` Bilder ab ``index`` starten, das noch nicht im Speicher liegt."""
+        for candidate in range(index, min(index + AHEAD, self.spec.frames)):
+            if self.service.cache.get((self.key, candidate)) is None:
+                self._start(candidate)
+                return
 
     def _start(self, index: int) -> None:
         if self._worker is not None:
