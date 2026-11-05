@@ -14,6 +14,13 @@ durch, wird daraus die fertige Version.
 - **README-Kopf:** Schriftzug „FPVCut“ (Chakra Petch) zwischen zwei gegenläufig drehenden Propellern, als
   animiertes SVG in einer hellen und einer dunklen Fassung passend zum GitHub-Theme
 
+### Behoben
+
+- **Ruckelnde Vorschau mit KI-Reinigung:** War die Grafikkarte schneller als die Wiedergabe, blieb
+  das Vorausrechnen nach 12 Bildern stehen und musste neu anlaufen (neues ffmpeg samt Sprung). Die
+  Vorschau stockte dadurch etwa jede Sekunde für bis zu einer halben Sekunde. Jetzt rechnet ein Clip
+  ohne Unterbrechung durch; liegen Bilder schon im Speicher, geht es erst ab dem ersten fehlenden weiter
+
 ## 1.0.0-rc3 (2026-10-25)
 
 ### Neu
