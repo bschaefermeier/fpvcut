@@ -4,10 +4,11 @@ Versionen nach [Semantic Versioning](https://semver.org/lang/de/). Vorabversione
 sind Release-Kandidaten zum Testen; ist die [Testcheckliste](docs/testcheckliste.md) ohne Fehler
 durch, wird daraus die fertige Version.
 
-## Unveröffentlicht
+## 1.0.0-rc4 (2026-11-05)
 
 ### Geändert
 
+- **Besseres normales KI-Modell:** `models/restore_normal.onnx` ist durch ein länger trainiertes Modell ersetzt
 - **Neues Programmsymbol:** Ein lime-grüner FPV-Dreiblatt-Propeller auf dunkler Kachel, die Bohrung
   der Nabe ist ein Play-Symbol. Für 16 und 24 px (Taskleiste, Titelleiste) gibt es eine eigene,
   vereinfachte Fassung (`fpvcut_small.svg`), damit das Symbol auch klein scharf bleibt
