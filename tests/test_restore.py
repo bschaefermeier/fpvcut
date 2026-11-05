@@ -86,6 +86,58 @@ def test_preview_edl_uses_restored_source_for_clip():
     assert edl.endswith("%5%a.mp4,1.000,2.000;%11%fpvki://123,0.000,1.000")
 
 
+def test_preview_stream_keeps_one_worker_when_it_runs_ahead(monkeypatch):
+    """Rechnet die Grafikkarte schneller, als mpv liest, kommen die Bilder aus dem Speicher. Der
+    Thread darf trotzdem nicht nach AHEAD Bildern stehen bleiben und neu starten müssen
+    (neues ffmpeg samt Sprung: die Vorschau stockte alle paar Bilder)."""
+    import numpy as np
+
+    from fpvcut.restore import stream
+    from fpvcut.restore.engine import ClipSpec, Geometry
+
+    starts = []
+
+    def fake_restored(ffmpeg, spec, models, kind, start=0, stop=None, stopped=None, yuv=False):
+        starts.append(start)
+        h, w = spec.geometry.work_size[1], spec.geometry.work_size[0]
+        for index in range(start, spec.frames):
+            if stopped.is_set():
+                return
+            yield index, (np.full((h, w), index, np.uint8), np.zeros((h // 2, w // 2), np.uint8),
+                          np.zeros((h // 2, w // 2), np.uint8))
+
+    monkeypatch.setattr(stream, "restored", fake_restored)
+    service = stream.PreviewService("ffmpeg", None)
+    spec = ClipSpec(Path("a.mp4"), 0.0, 2.0, 30.0, Geometry.for_source(64, 32))
+    s = service.open(service.url(spec))
+    s.read(len(s.header))
+    try:
+        for index in range(spec.frames):
+            time.sleep(0.002)  # mpv liest langsamer, als gerechnet wird
+            data = s.read(s.frame_size)
+            assert len(data) == s.frame_size and data[len(stream.FRAME_TAG)] == index
+    finally:
+        s.close()
+    assert starts == [0]
+
+
+def test_preview_stream_prefetches_after_cached_frames(monkeypatch):
+    """Liegt der Anfang schon im Speicher, rechnet der Thread erst ab dem ersten fehlenden Bild."""
+    from fpvcut.restore import stream
+    from fpvcut.restore.engine import ClipSpec, Geometry
+
+    starts = []
+    monkeypatch.setattr(stream.RestoreStream, "_start", lambda self, index: starts.append(index))
+    service = stream.PreviewService("ffmpeg", None)
+    spec = ClipSpec(Path("a.mp4"), 0.0, 2.0, 30.0, Geometry.for_source(64, 32))
+    s = service.open(service.url(spec))
+    for index in range(5):
+        service.cache.put((s.key, index), b"x" * s.frame_size)
+    s.seek(len(s.header))
+    s.read(s.frame_size)
+    assert starts == [5]
+
+
 def test_grade_panel_switches_restore_and_reset_keeps_it(tmp_path, monkeypatch):
     from fpvcut.ui.main_window import MainWindow
 
